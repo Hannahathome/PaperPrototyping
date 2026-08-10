@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# PaperPrototyping toolbox
+#
+# The predecessor repo (PaperVoxels) grew to 652 MB because exported artefacts,
+# zipped snapshots and texture libraries were committed as if they were source.
+# Everything below is the stuff that caused that. Keep it out.
+# ---------------------------------------------------------------------------
+
+# --- Exported artefacts -----------------------------------------------------
+# Every tool writes timestamped PDF/SVG here. These are outputs, not source.
+output/
+**/output/
+
+# --- Version snapshots ------------------------------------------------------
+# Use a git branch or tag instead of a dated copy of the folder.
+*.zip
+*_backup/
+*_old/
+* - Copy/
+*_v[0-9]*_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/
+
+# --- User art assets --------------------------------------------------------
+# Panel/lid/strip artwork is personal media, often 8 MB+ per .tif. The tools
+# generate placeholder assets at startup, so the sketches run without these.
+# See PaperPolyhedra/data/README.md.
+**/data/*.tif
+**/data/*.tiff
+**/data/*.psd
+**/data/*.jpg
+**/data/*.jpeg
+**/data/*.png
+**/data/*.webp
+**/data/*.pdf
+**/data/panels/
+**/data/lids/
+
+# Re-include the small files the sketches genuinely need to run.
+!**/data/*.txt
+!**/data/*.json
+!**/data/README.md
+!**/data/.gitkeep
+
+# --- Processing -------------------------------------------------------------
+applet/
+application.linux*/
+application.windows*/
+application.macosx*/
+*.class
+
+# --- OS / editor cruft ------------------------------------------------------
+.DS_Store
+._*
+__MACOSX/
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+*~
+
+# --- Local tooling ----------------------------------------------------------
+.vscode/
+.idea/
+.claude/

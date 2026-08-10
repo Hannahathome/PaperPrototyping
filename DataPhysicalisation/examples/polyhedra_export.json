@@ -1,0 +1,142 @@
+[
+  {
+    "depth": 4,
+    "color": "#B4E522",
+    "width": 4,
+    "label": "Dragonfly",
+    "height": 15.022483825683594
+  },
+  {
+    "depth": 4,
+    "color": "#B4E522",
+    "width": 4,
+    "label": "Hummingbird",
+    "height": 24.65561866760254
+  },
+  {
+    "depth": 4,
+    "color": "#B4E522",
+    "width": 4,
+    "label": "House Mouse",
+    "height": 3.306508779525757
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Peregrine Falcon",
+    "height": 101.19999694824219
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Arctic Fox",
+    "height": 12.939643859863281
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Golden Eagle",
+    "height": 62.4070930480957
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Emperor Penguin",
+    "height": 9.034318923950195
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Cheetah",
+    "height": 31.16449546813965
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Snow Leopard",
+    "height": 16.584613800048828
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Komodo Dragon",
+    "height": 5.128993988037109
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Ostrich",
+    "height": 18.146743774414062
+  },
+  {
+    "depth": 4,
+    "color": "#2253E5",
+    "width": 4,
+    "label": "Galapagos Tortoise",
+    "height": 2
+  },
+  {
+    "depth": 4,
+    "color": "#B4E522",
+    "width": 4,
+    "label": "Giant Squid",
+    "height": 7.732544422149658
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Siberian Tiger",
+    "height": 20.750293731689453
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Grizzly Bear",
+    "height": 14.501773834228516
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Saltwater Crocodile",
+    "height": 7.472189426422119
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "Hippopotamus",
+    "height": 7.732544422149658
+  },
+  {
+    "depth": 4,
+    "color": "#22E583",
+    "width": 4,
+    "label": "African Elephant",
+    "height": 6.430769443511963
+  },
+  {
+    "depth": 41.28900146484375,
+    "color": "#2253E5",
+    "width": 41.28900146484375,
+    "label": "Bowhead Whale",
+    "height": 5.128993988037109
+  },
+  {
+    "depth": 68.81500244140625,
+    "color": "#22E583",
+    "width": 68.81500244140625,
+    "label": "Blue Whale",
+    "height": 11.898224830627441
+  }
+]

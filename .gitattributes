@@ -1,0 +1,26 @@
+# Normalise line endings on commit.
+#
+# In the old repo the same sketch existed as four "different" copies that were
+# byte-for-byte identical apart from CRLF vs LF. That made real diffs
+# impossible to spot. Normalising here stops it happening again.
+
+* text=auto eol=lf
+
+# Processing / Java sources
+*.pde   text eol=lf
+*.java  text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.json  text eol=lf
+*.csv   text eol=lf
+*.svg   text eol=lf
+
+# Binary — never diff or convert these
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.tif   binary
+*.tiff  binary
+*.pdf   binary
+*.zip   binary
+*.webp  binary

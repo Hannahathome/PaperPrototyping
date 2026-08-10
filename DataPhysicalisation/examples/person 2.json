@@ -1,0 +1,37 @@
+[
+  {
+    "depth": 10,
+    "color": "#22A4E5",
+    "width": 10,
+    "label": "Monday",
+    "height": 32.36090087890625
+  },
+  {
+    "depth": 10,
+    "color": "#22A4E5",
+    "width": 10,
+    "label": "Tuesday",
+    "height": 64.32030487060547
+  },
+  {
+    "depth": 10,
+    "color": "#22A4E5",
+    "width": 10,
+    "label": "Wednesday",
+    "height": 16.381200790405273
+  },
+  {
+    "depth": 10,
+    "color": "#63E522",
+    "width": 10,
+    "label": "Thursday",
+    "height": 80.30000305175781
+  },
+  {
+    "depth": 10,
+    "color": "#22A4E5",
+    "width": 10,
+    "label": "Friday",
+    "height": 48.340599060058594
+  }
+]
