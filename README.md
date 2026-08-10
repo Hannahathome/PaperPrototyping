@@ -24,27 +24,6 @@ one of them can be opened and run on its own.
 Planned tools are scaffolded with a README describing scope and where the code is
 expected to come from. They contain no implementation yet.
 
-## How they fit together
-
-```
-   CSV / spreadsheet
-          │
-          ▼
-  DataPhysicalisation ──── shapes.json ────►  PaperPolyhedra  ──► PDF + SVG ──► printer + cutter
-                                                   │
-                                     WidgetGenerator ├── button templates
-                                     FrustrumSupport ┘   internal supports
-
-         PaperPhicons  ──────────────────────────────► PDF + SVG ──► printer + cutter
-```
-
-Every tool that produces physical output writes the same trio of files, so one
-calibration works everywhere:
-
-- `*.pdf` — print layer (artwork, fills, labels)
-- `*_fold_*.svg` — cut and fold lines for the vinyl/craft cutter
-- `*_calib_*.svg` — registration marks to align print against cut
-
 ## Getting started
 
 **Requirements**
