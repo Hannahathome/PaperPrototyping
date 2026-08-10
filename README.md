@@ -4,9 +4,10 @@ A toolbox of Processing tools for designing, generating and cutting **paper-base
 physical prototypes** — foldable polyhedra, voxel blocks, haptic widgets and the
 data that drives them.
 
-Each tool is a self-contained Processing sketch in its own top-level folder. They
+Each tool is a self-contained Processing sketch in its own top-level folder. Most
 share a common print-and-cut workflow and can hand files to one another, but any
-one of them can be opened and run on its own.
+one of them can be opened and run on its own. FrustumSupport is the exception —
+it exports OpenSCAD for the 3D-printed frame that goes *inside* a folded shell.
 
 ---
 
@@ -17,7 +18,7 @@ one of them can be opened and run on its own.
 | **[PaperPolyhedra](PaperPolyhedra/)** | Active | The main tool. Turns 3D polygon/prism specs into printable, foldable nets with tabs, flaps, lids, Kresling patterns and fiducial markers. |
 | **[PaperPhicons](PaperPhicons/)** | Active | The voxel cutter. Generates cut files for physical icon blocks (cuboids) with ArUco markers for tracking. |
 | **[DataPhysicalisation](DataPhysicalisation/)** | Active | Maps CSV columns onto physical dimensions (height, diameter, sides, colour), previews the result in 3D, and exports JSON that PaperPolyhedra imports. |
-| **[FrustrumSupport](FrustrumSupport/)** | Planned | Internal support-structure generator for frustum-shaped shells. |
+| **[FrustumSupport](FrustumSupport/)** | Active | Generates 3D-printable internal support skeletons that sit inside a frustum shell and carry electronics. Exports OpenSCAD rather than cut files. |
 | **[WidgetGenerator](WidgetGenerator/)** | Planned | Standalone generator for button/widget templates used inside PaperPolyhedra. |
 | **[PaperBlox](PaperBlox/)** | Planned | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
 
@@ -32,6 +33,8 @@ expected to come from. They contain no implementation yet.
 - Libraries via *Sketch → Import Library → Manage Libraries*:
   - **ControlP5** (all tools)
   - **PeasyCam** (DataPhysicalisation only)
+- [OpenSCAD](https://openscad.org/) — FrustumSupport only, to turn its exported
+  `.scad` into a printable mesh
 
 **Running a tool**
 
