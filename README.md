@@ -63,7 +63,7 @@ predecessor repository unusable:
 
 ## History
 
-This repository supersedes **PaperVoxels**, which is kept as a read-only archive.
+This repository supersedes [PaperVoxels](https://github.com/Hannahathome/PaperVoxels), which is kept as a read-only archive.
 
 ## Author
 
