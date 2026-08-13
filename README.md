@@ -17,9 +17,9 @@ one of them can be opened and run on its own.
 | **[PaperPolyhedra](PaperPolyhedra/)** | Active | The main tool. Turns 3D polygon/prism specs into printable, foldable nets with tabs, flaps, lids, Kresling patterns and fiducial markers. |
 | **[PaperPhicons](PaperPhicons/)** | Active | The voxel cutter. Generates cut files for physical icon blocks (cuboids) with ArUco markers for tracking. |
 | **[DataPhysicalisation](DataPhysicalisation/)** | Active | Maps CSV columns onto physical dimensions (height, diameter, sides, colour), previews the result in 3D, and exports JSON that PaperPolyhedra imports. |
-| **[FrustrumSupport](FrustrumSupport/)** | Planned | Internal support-structure generator for frustum-shaped shells. |
-| **[WidgetGenerator](WidgetGenerator/)** | Planned | Standalone generator for button/widget templates used inside PaperPolyhedra. |
-| **[PaperBlox](PaperBlox/)** | Planned | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
+| **[FrustrumSupport](FrustrumSupport/)** | To Be Uploaded | Internal support-structure generator for frustum-shaped shells. |
+| **[WidgetGenerator](WidgetGenerator/)** | To Be Uploaded  | Standalone generator for button/widget templates used inside PaperPolyhedra. |
+| **[PaperBlox](PaperBlox/)** | To Be Uploaded  | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
 
 Planned tools are scaffolded with a README describing scope and where the code is
 expected to come from. They contain no implementation yet.
