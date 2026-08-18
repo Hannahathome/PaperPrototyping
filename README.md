@@ -1,7 +1,7 @@
 # PaperPrototyping
 
 A toolbox of Processing tools for designing, generating and cutting **paper-based
-physical prototypes** — foldable polyhedra, voxel blocks, haptic widgets and the
+physical prototypes** --> foldable polyhedra, voxel blocks, haptic widgets and the
 data that drives them.
 
 Each tool is a self-contained Processing sketch in its own top-level folder. They
@@ -39,7 +39,7 @@ expected to come from. They contain no implementation yet.
 git clone https://github.com/Hannahathome/PaperPrototyping.git
 ```
 
-Open the `.pde` file that matches its folder name — e.g. `PaperPolyhedra/PaperPolyhedra.pde`
+Open the `.pde` file that matches its folder name, e.g. `PaperPolyhedra/PaperPolyhedra.pde`
 — and press Run. Processing requires the sketch folder and main file to share a
 name, which is why each tool is named this way.
 
