@@ -40,7 +40,7 @@ git clone https://github.com/Hannahathome/PaperPrototyping.git
 ```
 
 Open the `.pde` file that matches its folder name, e.g. `PaperPolyhedra/PaperPolyhedra.pde`
-— and press Run. Processing requires the sketch folder and main file to share a
+and press Run. Processing requires the sketch folder and main file to share a
 name, which is why each tool is named this way.
 
 On first run PaperPolyhedra generates its own placeholder textures, so it works
