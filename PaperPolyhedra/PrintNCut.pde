@@ -129,6 +129,7 @@ void drawFrontPDF() {
     ShapeSpec _ps = shapes.get(_psi);
     loadGlobalsFrom(_ps);
     setParams(false);
+    _drawingShapeIdx = _psi;   // tells drawConnectionSlits() whose lid it is drawing
     PVector bboxPDF = getTemplateBBox();
     for (int rep = 0; rep < _ps.nRep; rep++) {
       if (autoMarkerIDs) { Start_Index = _pdfAutoIdx; _pdfAutoIdx += max(1, markerGrid*markerGrid); }
@@ -143,6 +144,7 @@ void drawFrontPDF() {
       popMatrix();
     }
   }
+  _drawingShapeIdx = -1;
   // Restore selected shape globals
   loadGlobalsFrom(shapes.get(selectedShapeIdx));
   setParams(false);
@@ -198,6 +200,7 @@ void saveFrontFold() {
     ShapeSpec _fs = shapes.get(_fsi);
     loadGlobalsFrom(_fs);
     setParams(true);
+    _drawingShapeIdx = _fsi;   // tells drawConnectionSlits() whose lid it is drawing
     PVector bboxSVG = getTemplateBBox();
     for (int rep = 0; rep < _fs.nRep; rep++) {
       if (autoMarkerIDs) { Start_Index = _svgAutoIdx; _svgAutoIdx += max(1, markerGrid*markerGrid); }
@@ -212,6 +215,7 @@ void saveFrontFold() {
       popMatrix();
     }
   }
+  _drawingShapeIdx = -1;
   // Restore selected shape globals
   loadGlobalsFrom(shapes.get(selectedShapeIdx));
   setParams(true);

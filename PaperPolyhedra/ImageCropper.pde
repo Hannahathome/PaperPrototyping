@@ -712,7 +712,9 @@ class ImageCropper {
           break;
           
         case CROP_MODE_STRIP:
-          stripImg = croppedImg;
+          // The crop is taken from what the user sees, so it becomes the new unrotated
+          // source and the angle starts over — otherwise the rotation would be applied twice.
+          setStripSource(croppedImg, true);
           break;
           
         case CROP_MODE_LID:

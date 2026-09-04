@@ -96,7 +96,13 @@ void jsonFileSelected(File selection) {
 
   // --- Apply to shapes list ---
   if (choice == 0) {
-    // Replace
+    // Replace — every existing shape index is about to become meaningless, so drop the
+    // connections that reference them rather than leaving them pointing at new shapes.
+    if (connections != null && !connections.isEmpty()) {
+      println("[JSON Import] Cleared " + connections.size() + " connection(s) — shapes replaced.");
+      connections.clear();
+      selectedConnectionIdx = -1;
+    }
     shapes.clear();
     shapes.addAll(newShapes);
     selectedShapeIdx = 0;

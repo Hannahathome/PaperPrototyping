@@ -549,10 +549,14 @@ float bilerp(float BL, float BR, float TL, float TR, float u, float v) {
 //----------------------------------------------------------------------
 
 void draw3DView() {
+  // Drop last frame's pickable faces up front, so assembly mode (which returns early
+  // below) cannot leave a stale cache that would let clicks pick invisible faces.
+  faceHits.clear();
+
   view3DBuffer.beginDraw();
   view3DBuffer.background(200);
   view3DBuffer.lights();
-  
+
   view3DBuffer.pushMatrix();
   float centerX = view3DBuffer.width / 2;
   float centerY = view3DBuffer.height / 2;
@@ -584,53 +588,132 @@ void draw3DView() {
   }
   // ---------- END ASSEMBLY 3D ----------
 
-  if (view3DShowAll && shapes != null && shapes.size() > 1) {
-    // --- Show All: compute max dimension across all shapes for uniform scale ---
-    float maxDim = 0;
-    for (ShapeSpec _s : shapes) {
-      loadGlobalsFrom(_s);
-      setParams(false);
-      maxDim = max(maxDim, max(cylinderTP_px, cylinderBP_px, cylinderVertH_px)); // <-- height fix
+  // Connections turn the flat shape list into a set of trees: a root shape plus everything
+  // posed on its faces. "All" lays the roots out in a row; "Selected" shows the whole
+  // assembly the selected shape belongs to, so a child stays visible in context.
+  _captureFaces = true;
+
+  ArrayList<Integer> roots = new ArrayList<Integer>();
+  if (shapes != null && shapes.size() > 0) {
+    if (view3DShowAll) {
+      for (int si = 0; si < shapes.size(); si++) if (isRootShape(si)) roots.add(si);
+    } else {
+      roots.add(rootAncestorOf(selectedShapeIdx));
     }
-    float totalWidth = shapes.size() * maxDim * 1.4;  // estimated total row width
-    float viewSize = min(view3DBuffer.width, view3DBuffer.height);
-    float autoZoom = viewSize / (totalWidth * 0.9);
-    view3DBuffer.scale(autoZoom * zoom3D / 100.0);
-    view3DBuffer.rotateX(angleX);
-    view3DBuffer.rotateY(angleY);
-    view3DBuffer.rotateZ(angleZ);
-    
-    // Compute total row width in scene units for centering
-    float gap = maxDim * 1.4;
-    float rowW = (shapes.size() - 1) * gap;
-    float startX = -rowW / 2;
-    
-    for (int si = 0; si < shapes.size(); si++) {
-      loadGlobalsFrom(shapes.get(si));
-      setParams(false);
-      view3DBuffer.pushMatrix();
-      view3DBuffer.translate(startX + si * gap, 0, 0);
-      drawPrismWireframe(view3DBuffer);
-      view3DBuffer.popMatrix();
-    }
-    
-    // Restore globals to selected shape
+  }
+  if (roots.isEmpty()) roots.add(selectedShapeIdx);
+
+  // One scale for everything on screen, sized to the largest assembly.
+  float maxDim = 0;
+  for (int r : roots) maxDim = max(maxDim, treeSpanPx(r, 0));
+  if (maxDim <= 0) maxDim = 100;
+
+  float gap = maxDim * 1.4;
+  float viewSize = min(view3DBuffer.width, view3DBuffer.height);
+  // Single assembly keeps the original framing; a row of them packs to the row width.
+  float autoZoom = (roots.size() == 1)
+                 ? viewSize / (maxDim * 1.8)
+                 : viewSize / (roots.size() * gap * 0.9);
+  view3DBuffer.scale(autoZoom * zoom3D / 100.0);
+  view3DBuffer.rotateX(angleX);
+  view3DBuffer.rotateY(angleY);
+  view3DBuffer.rotateZ(angleZ);
+
+  float rowW = (roots.size() - 1) * gap;
+  float startX = -rowW / 2;
+  for (int i = 0; i < roots.size(); i++) {
+    view3DBuffer.pushMatrix();
+    view3DBuffer.translate(startX + i * gap, 0, 0);
+    drawShapeTree(view3DBuffer, roots.get(i), 0);
+    view3DBuffer.popMatrix();
+  }
+
+  _captureFaces = false;
+  // Restore globals to selected shape — drawShapeTree swaps them as it recurses
+  if (shapes != null && shapes.size() > 0) {
     loadGlobalsFrom(shapes.get(selectedShapeIdx));
     setParams(false);
-  } else {
-    // --- Show Selected (original behaviour) ---
-    float maxDimension = max(cylinderTP_px, cylinderBP_px, cylinderVertH_px); // <-- height fix
-    float viewSize = min(view3DBuffer.width, view3DBuffer.height);
-    float autoZoom = viewSize / (maxDimension * 1.8);
-    view3DBuffer.scale(autoZoom * zoom3D / 100.0);
-    view3DBuffer.rotateX(angleX);
-    view3DBuffer.rotateY(angleY);
-    view3DBuffer.rotateZ(angleZ);
-    drawPrismWireframe(view3DBuffer);
   }
-  
+
   view3DBuffer.popMatrix();
   view3DBuffer.endDraw();
+}
+
+// Draws a shape and, recursively, everything connected to it. Each child is posed on its
+// parent's face through the canonical lid frame (LidFrame.pde), which is the same frame
+// the cut slits use — so the preview and the pattern can never disagree about where a
+// connection sits.
+//
+// drawPrismWireframe() reads globals and the recursion swaps them via loadGlobalsFrom(),
+// so the parent's globals are restored before each sibling; the caller restores the
+// selected shape at the end.
+void drawShapeTree(PGraphics pg, int idx, int depth) {
+  if (shapes == null || idx < 0 || idx >= shapes.size()) return;
+  if (depth > CONNECTION_MAX_DEPTH) return;
+
+  loadGlobalsFrom(shapes.get(idx));
+  setParams(false);
+  drawPrismWireframe(pg);
+
+  // Record where this shape's faces landed on screen, while its transform is still applied.
+  if (_captureFaces) {
+    captureFaceHit(pg, idx, true);
+    captureFaceHit(pg, idx, false);
+  }
+
+  for (Connection c : childrenOf(idx)) {
+    if (c.childShapeIdx < 0 || c.childShapeIdx >= shapes.size()) continue;
+
+    // Attach point, computed while the PARENT's globals are still loaded.
+    PVector p = lidLocalTo3D(c.posLocal, c.parentFaceIsTop);
+    float childHalfH = (shapes.get(c.childShapeIdx).cylinder.z * MM_current) / 2.0;
+
+    pg.pushMatrix();
+    pg.translate(p.x, p.y, p.z);
+    pg.rotateY(radians(c.spinDeg));
+    // P3D is y-down: the top face is at -halfH and a child grows upward off it. Off the
+    // bottom face the child hangs downward instead — a half-turn about x. childFlipped
+    // means the child mates by its top lid, which is another half-turn; on a bottom face
+    // the two cancel and the child hangs the right way up.
+    if (!c.parentFaceIsTop) pg.rotateX(PI);
+    if (c.childFlipped)     pg.rotateX(PI);
+    // The child draws centred on its own origin, so drop it by half its height and its
+    // mating lid lands exactly on the parent's face.
+    pg.translate(0, -childHalfH, 0);
+    drawShapeTree(pg, c.childShapeIdx, depth + 1);
+    pg.popMatrix();
+
+    // Restore the parent's globals for the next sibling.
+    loadGlobalsFrom(shapes.get(idx));
+    setParams(false);
+  }
+}
+
+// Rough extent (px) of a connected assembly, for the 3D auto-zoom: the deepest stack of
+// heights against the widest cross-section anywhere in the tree. Perimeter stands in for
+// width, matching the proxy the single-shape auto-zoom already used.
+float treeSpanPx(int idx, int depth) {
+  if (shapes == null || idx < 0 || idx >= shapes.size() || depth > CONNECTION_MAX_DEPTH) return 0;
+  ShapeSpec s = shapes.get(idx);
+  float ownW = max(s.cylinder.x, s.cylinder.y) * MM_current;
+  float ownH = s.cylinder.z * MM_current;
+  float childW = 0;
+  float childH = 0;
+  for (Connection c : childrenOf(idx)) {
+    childW = max(childW, treeSpanPx(c.childShapeIdx, depth + 1));
+    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+  }
+  return max(max(ownW, childW), ownH + childH);
+}
+
+float treeStackHeightPx(int idx, int depth) {
+  if (shapes == null || idx < 0 || idx >= shapes.size() || depth > CONNECTION_MAX_DEPTH) return 0;
+  float h = shapes.get(idx).cylinder.z * MM_current;
+  float childH = 0;
+  for (Connection c : childrenOf(idx)) {
+    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+  }
+  return h + childH;
 }
 
 void drawMini3DView() {
@@ -654,12 +737,15 @@ void drawMini3DView() {
   mini3DBuffer.rotateX(angleX);
   mini3DBuffer.rotateY(angleY);
   mini3DBuffer.rotateZ(angleZ);
-  
-  drawPrismWireframe(mini3DBuffer);
-  
+
+  // Show the whole connected assembly, not just the one shape
+  drawShapeTree(mini3DBuffer, rootAncestorOf(selectedShapeIdx), 0);
+  loadGlobalsFrom(shapes.get(selectedShapeIdx));  // drawShapeTree swaps globals as it recurses
+  setParams(false);
+
   mini3DBuffer.popMatrix();
   mini3DBuffer.endDraw();
-  
+
   // Calculate position in top-right corner, aligned below toolbar
   float availableWidth = width - LEFT_SIDEBAR_WIDTH;
   float miniX = LEFT_SIDEBAR_WIDTH + availableWidth - MINI_3D_WIDTH - MINI_3D_MARGIN;
@@ -735,11 +821,14 @@ void drawMini3DViewInSidebar() {
   mini3DBuffer.rotateY(angleY);
   mini3DBuffer.rotateZ(angleZ);
   
-  drawPrismWireframe(mini3DBuffer);
-  
+  // Show the whole connected assembly, not just the one shape
+  drawShapeTree(mini3DBuffer, rootAncestorOf(selectedShapeIdx), 0);
+  loadGlobalsFrom(shapes.get(selectedShapeIdx));  // drawShapeTree swaps globals as it recurses
+  setParams(false);
+
   mini3DBuffer.popMatrix();
   mini3DBuffer.endDraw();
-  
+
   // Calculate position at bottom of sidebar
   float miniW = (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2) * 0.7;  // 70% of sidebar width
   float miniH = miniW;  // Keep it square

@@ -3,6 +3,11 @@
 ////--------------------------------------------------------------
 
 void mousePressed() {
+  // Face-selection toggle bookkeeping — reset on every press so a press that never reaches
+  // a face (a button, the sidebar) cannot leave a stale flag for mouseReleased to act on.
+  _facePressWasSelected = false;
+  _connDragMoved = false;
+
   // Check cropper first (highest priority when active)
   if (cropperActive && imageCropper != null) {
     imageCropper.handleMousePressed();
@@ -132,6 +137,24 @@ void mousePressed() {
         return;
       }
     }
+    // Connect toggle button
+    {
+      float[] r = getConnectBtnRect();
+      if (mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3]) {
+        connectMode = !connectMode;
+        if (!connectMode) clearFaceSelection();
+        println("[Connection] Connect mode: " + connectMode);
+        return;
+      }
+    }
+    // Disconnect button
+    {
+      float[] r = getDisconnectBtnRect();
+      if (mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3]) {
+        if (connectMode) disconnectSelected();
+        return;
+      }
+    }
     // Shape navigation arrows
     if (shapes != null && shapes.size() > 1) {
       for (int i = 0; i < 2; i++) {
@@ -147,8 +170,59 @@ void mousePressed() {
         }
       }
     }
+
+    // Connect mode: click a lid face to attach the SELECTED shape to it, or to grab a
+    // connection that is already there. faceHits was filled by draw3DView() while the 3D
+    // transform was applied, so this is a plain point-in-polygon test.
+    if (connectMode && shapes != null) {
+      float bx = mouseX - LEFT_SIDEBAR_WIDTH;
+      float by = mouseY - TOOLBAR_HEIGHT;
+      FaceHit f = pickFace(bx, by);
+      if (f != null) {
+        PVector local = faceScreenToLocal(f, bx, by);
+
+        // Precedence on a face click:
+        //   1. a connection under the pointer  -> grab it (drag / select for Del)
+        //   2. a face already picked on ANOTHER shape -> join them
+        //   3. otherwise -> make this the picked face
+        int hit = pickConnectionOnFace(f, local);
+
+        if (hit < 0 && selectedFaceShapeIdx >= 0 && selectedFaceShapeIdx != f.shapeIdx) {
+          // Two-click connect. The FIRST face picked is the child's mating lid, so picking
+          // the child's top face gives a top-to-top joint and the child is turned over —
+          // that is what childFlipped means to the 3D pose and to the slit ring.
+          int childIdx = selectedFaceShapeIdx;
+          boolean childUsesTop = selectedFaceIsTop;
+          hit = addConnection(f.shapeIdx, childIdx, f.isTop, new PVector(0, 0));
+          if (hit >= 0) {
+            connections.get(hit).childFlipped = childUsesTop;
+            println("[Connection] " + (childUsesTop ? "top" : "bottom") + " of shape " + childIdx +
+                    " -> " + (f.isTop ? "top" : "bottom") + " of shape " + f.shapeIdx);
+          }
+          _facePressWasSelected = false;
+          selectFace(f.shapeIdx, f.isTop);   // host face stays lit, ready for the next join
+        } else {
+          // Remember whether it was already picked; mouseReleased turns that into a
+          // deselect if the pointer never moved.
+          _facePressWasSelected = isFaceSelected(f.shapeIdx, f.isTop);
+          selectFace(f.shapeIdx, f.isTop);
+          // Clicking a face that hosts a child, but missing its footprint, still selects
+          // that child — otherwise it could not be disconnected.
+          if (hit < 0) hit = nearestConnectionOnFace(f, local);
+        }
+
+        selectedConnectionIdx = hit;   // -1 when the face holds nothing
+        if (hit >= 0) {
+          draggedConnectionIdx = hit;
+          draggedFace          = f;
+          Connection c = connections.get(hit);
+          connDragGrab.set(local.x - c.posLocal.x, local.y - c.posLocal.y);
+        }
+        return;
+      }
+    }
   }
-  
+
   // Template edit mode - handle thumbnail clicks
   if (platonicEditMode) {
     handleTemplateEditModeClick();
@@ -288,6 +362,27 @@ void keyPressed() {
     return; // Block other controls when in edit mode
   }
   
+  // Connect mode: DELETE removes the selected connection, , / . spin the child on its face
+  if (connectMode && connections != null &&
+      selectedConnectionIdx >= 0 && selectedConnectionIdx < connections.size()) {
+    if (key == DELETE || key == BACKSPACE) {
+      disconnectSelected();
+      return;
+    }
+    if (key == 'f' || key == 'F') {
+      flipSelectedConnection();   // swap which lid of the child mates with the host face
+      return;
+    }
+    if (key == ',' || key == '<') {
+      connections.get(selectedConnectionIdx).spinDeg -= 5;
+      return;
+    }
+    if (key == '.' || key == '>') {
+      connections.get(selectedConnectionIdx).spinDeg += 5;
+      return;
+    }
+  }
+
   // Delete selected cutout with DELETE or BACKSPACE
   if ((key == DELETE || key == BACKSPACE) && selectedCutoutIndex >= 0) {
     removeSelectedCutout();
@@ -351,6 +446,15 @@ void keyReleased() {
 }
 
 void mouseReleased() {
+  // Connect mode: a click that did not drag, on a face that was ALREADY selected, clears
+  // the selection. Resolving this on release (not press) is what lets you still press a
+  // selected face and drag its connection.
+  if (connectMode && _facePressWasSelected && !_connDragMoved) {
+    clearFaceSelection();
+  }
+  _facePressWasSelected = false;
+  _connDragMoved = false;
+
   // Reset assembly piece drag
   asmDragPiece = -1;
   // Reset free placement drag
@@ -364,7 +468,10 @@ void mouseReleased() {
   draggedBase = false;
   // Reset base slit drag
   draggedSlitIdx = -1;
-  
+  // Reset connection drag
+  draggedConnectionIdx = -1;
+  draggedFace = null;
+
   // Check cropper first
   if (cropperActive && imageCropper != null) {
     imageCropper.handleMouseReleased();
@@ -502,6 +609,20 @@ void mouseDragged() {
     return;
   }
   
+  // Connection drag across a 3D face. MUST come before the camera-orbit handler below,
+  // or dragging a connection would spin the view instead of moving it.
+  if (connectMode && draggedConnectionIdx >= 0 && draggedFace != null &&
+      connections != null && draggedConnectionIdx < connections.size()) {
+    float bx = mouseX - LEFT_SIDEBAR_WIDTH;
+    float by = mouseY - TOOLBAR_HEIGHT;
+    PVector local = faceScreenToLocal(draggedFace, bx, by);
+    Connection c = connections.get(draggedConnectionIdx);
+    c.posLocal.set(local.x - connDragGrab.x, local.y - connDragGrab.y);
+    snapConnectionToCentre(c);   // magnetic pull back to the middle of the face
+    _connDragMoved = true;       // a real drag, so the release must not toggle the selection
+    return;
+  }
+
   // Handle 3D rotation (only in canvas area, not in sidebar or bottom bar)
   boolean in3DRotateArea = (view3DMode || (assemblyMode && !assemblyShowTemplate))
                            && mouseY > TOOLBAR_HEIGHT

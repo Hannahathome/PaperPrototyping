@@ -19,6 +19,7 @@ texture path has something to load — see [data/README.md](data/README.md).
 - Frustums — independent top and bottom perimeters
 - Kresling fold patterns, including haptic button variants
 - Base plates, cutouts and internal bar assemblies
+- Connected shapes — mount one form on another's lid, with the mounting slits cut automatically
 - Automatic tab and flap generation for assembly
 - Texture mapping: per-panel, or one strip bent across the whole perimeter
 - ArUco fiducial markers for tracked prototypes
@@ -66,6 +67,9 @@ Print the calibration SVG first to verify alignment before committing material.
 | `ShapeSpec.pde` | Shape definition passed between UI and geometry |
 | `KreslingPattern.pde`, `KreslingHaptics.pde` | Kresling folds and haptic buttons |
 | `BasePlate.pde`, `Cutout.pde`, `BarAssembly.pde` | Base plates, cutouts, assemblies |
+| `LidFrame.pde` | Canonical lid coordinate frame shared by the pattern and the 3D view |
+| `Connection.pde` | Connected shapes — model, mounting slits, 3D face picking |
+| `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
@@ -100,6 +104,57 @@ by binary search such that `Σ 2·arcsin(s[i]/(2R)) = 2π`, guaranteeing closure
 **Tessellation.** Panels subdivide into a `density × density` grid; world
 positions come from bilinear interpolation of the corners, UVs map linearly.
 Raise the density to 16 if texture seams appear.
+
+**Connections.** A connection mounts one shape on a lid of another. In the 3D preview the
+child is posed on the host face; in the flat pattern a ring of tab-through slits is cut into
+the host's lid, so the child's bottom-lid tabs push through and lock — the same joint the
+base plate uses. Both come from one shared coordinate frame (`LidFrame.pde`), so the preview
+and the cut file cannot disagree about where a connection sits.
+
+## Connecting two shapes
+
+1. Press `G` for the 3D view, then click **Connect**.
+2. Click a face on the shape you want to attach. It lights up blue — this is the child's
+   **mating lid**.
+3. Click a face on another shape. The two are joined, and the child lands centred.
+
+Because step 2 picks the child's own face, picking its **top** face gives a top-to-top
+joint: the child is turned over, and the slit ring is sized to its top lid rather than its
+bottom. `F` flips an existing connection between the two.
+
+| Action | Result |
+|---|---|
+| Click a face | Pick it (or join it to an already-picked face) |
+| Click the same face again | Deselect it |
+| Drag on a face | Move the child; snaps to centre near the middle |
+| `,` / `.` | Spin the child on its face |
+| `F` | Flip which lid of the child mates |
+| `Del` or **Disconnect** | Detach the child — it becomes free-standing again |
+
+Dragging never deselects: the toggle only fires on a click that does not move.
+
+The 3D view shows **all** shapes by default; **Selected** narrows it to the assembly the
+selected shape belongs to.
+
+A red slit ring, and a warning next to the buttons, mean the child's footprint runs off the
+edge of the host lid; move it inward before cutting.
+
+Scope: uniform regular polygons, matching the base plate's own scope. Per-edge, cuboid and
+hollow lids are refused rather than mis-placed. A shape can host many children and chains
+nest up to 8 deep, but a shape can only hang off one parent.
+
+Connections live for the session only, like cutouts and marker placements — the sketch has
+no shape-export format to persist them into.
+
+## Strip texture rotation
+
+With the side texture in **strip** mode, *Strip Texture Rotation* in the View tab turns the
+artwork on the strip. It rotates the source bitmap rather than the texture coordinates, so
+the strip re-fits to the new aspect automatically and quarter turns stay pixel-exact —
+useful when artwork is the wrong way round for a long, short strip. Angles that are not
+multiples of 90 leave transparent corners, which show as gaps on the strip.
+
+Cropping a strip texture resets its rotation, since the crop is taken from what you see.
 
 ## Troubleshooting
 

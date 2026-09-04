@@ -71,6 +71,32 @@ All global variables are now centralized in `Param.pde`. This guide shows what l
 - `float[] mm` - Edge lengths in mm
 - `float mmToPx` - Conversion factor
 
+### Connection.pde
+**Connected shapes**:
+- `ArrayList<Connection> connections` - all parent/child attachments (a relation, so NOT stored per-ShapeSpec)
+- `int selectedConnectionIdx` - selected connection, -1 = none
+- `boolean connectMode` - 3D view: clicks attach/drag instead of orbiting
+- `int _drawingShapeIdx` - which shape `drawPlan()` is rendering, so slits know whose lid it is
+- `ArrayList<FaceHit> faceHits` - per-frame screen projections of pickable lid faces
+- `boolean _captureFaces` - only the main 3D view records pickable faces
+- `int draggedConnectionIdx`, `FaceHit draggedFace`, `PVector connDragGrab` - drag state
+- `int selectedFaceShapeIdx`, `boolean selectedFaceIsTop` - the highlighted face, -1 = none
+- `boolean _facePressWasSelected`, `_connDragMoved` - click-vs-drag, for the deselect toggle
+
+### StripRotation.pde
+**Bent-strip texture rotation** (per shape, mirrored via ShapeSpec):
+- `float uiStripRotation` - degrees applied to the strip texture
+- `PImage stripImgSrc` - the unrotated original; `stripImg` holds the rotated result so the
+  ~36 existing `stripImg` read sites need no change
+- `updateStripRotation()` - rebuilds it; MUST be called from the top of `draw()`, never
+  inside a render (it may `createGraphics()`, unsafe nested in `beginDraw`/`beginRecord`)
+- `setStripSource(img, resetRotation)` - call after assigning a new strip image
+
+### Param.pde (UI text)
+- `HashMap<Integer,PFont> _uiFonts` + `uiFont(int)` / `uiText(int)` - cached exact-size fonts
+  for raw `text()` calls. Use `uiText(n)` instead of `textSize(n)` for screen-space text;
+  the default P2D font is a fixed-size bitmap and any mismatched `textSize()` resamples it.
+
 ### texturesnew.pde
 **Texture system**:
 - `int sideTextureMode` - TEX_NONE/TEX_PER_PANEL/TEX_STRIP_BENT
