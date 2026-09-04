@@ -1,7 +1,7 @@
 # PaperPrototyping
 
 A toolbox of Processing tools for designing, generating and cutting **paper-based
-physical prototypes** — foldable polyhedra, voxel blocks, haptic widgets and the
+physical prototypes** --> foldable polyhedra, voxel blocks, haptic widgets and the
 data that drives them.
 
 Each tool is a self-contained Processing sketch in its own top-level folder. Most
@@ -18,9 +18,9 @@ it exports OpenSCAD for the 3D-printed frame that goes *inside* a folded shell.
 | **[PaperPolyhedra](PaperPolyhedra/)** | Active | The main tool. Turns 3D polygon/prism specs into printable, foldable nets with tabs, flaps, lids, Kresling patterns and fiducial markers. |
 | **[PaperPhicons](PaperPhicons/)** | Active | The voxel cutter. Generates cut files for physical icon blocks (cuboids) with ArUco markers for tracking. |
 | **[DataPhysicalisation](DataPhysicalisation/)** | Active | Maps CSV columns onto physical dimensions (height, diameter, sides, colour), previews the result in 3D, and exports JSON that PaperPolyhedra imports. |
-| **[FrustumSupport](FrustumSupport/)** | Active | Generates 3D-printable internal support skeletons that sit inside a frustum shell and carry electronics. Exports OpenSCAD rather than cut files. |
-| **[WidgetGenerator](WidgetGenerator/)** | Planned | Standalone generator for button/widget templates used inside PaperPolyhedra. |
-| **[PaperBlox](PaperBlox/)** | Planned | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
+| **[FrustrumSupport](FrustrumSupport/)** | To Be Uploaded | Internal support-structure generator for frustum-shaped shells. |
+| **[WidgetGenerator](WidgetGenerator/)** | To Be Uploaded  | Standalone generator for button/widget templates used inside PaperPolyhedra. |
+| **[PaperBlox](PaperBlox/)** | To Be Uploaded  | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
 
 Planned tools are scaffolded with a README describing scope and where the code is
 expected to come from. They contain no implementation yet.
@@ -42,8 +42,8 @@ expected to come from. They contain no implementation yet.
 git clone https://github.com/Hannahathome/PaperPrototyping.git
 ```
 
-Open the `.pde` file that matches its folder name — e.g. `PaperPolyhedra/PaperPolyhedra.pde`
-— and press Run. Processing requires the sketch folder and main file to share a
+Open the `.pde` file that matches its folder name, e.g. `PaperPolyhedra/PaperPolyhedra.pde`
+and press Run. Processing requires the sketch folder and main file to share a
 name, which is why each tool is named this way.
 
 On first run PaperPolyhedra generates its own placeholder textures, so it works
