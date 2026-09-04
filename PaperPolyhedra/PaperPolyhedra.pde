@@ -95,6 +95,7 @@ void setup() {
   //--RH-- Markers: Lazy loaded when user enables toggle (not in setup to avoid PDF issues)
   //--RH--
 
+  if (AUDIT_MODE) auditInit();  // TEMP: layout measurement harness, see LayoutAudit.pde
 }
 
 void draw() {

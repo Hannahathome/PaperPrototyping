@@ -1,0 +1,240 @@
+============================================================================================
+1.  MEASURED CONTENT EXTENT PER ZONE (visible chrome, panel backgrounds excluded)
+============================================================================================
+
+config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x widgets
+--------------------------------------------------------------------------------------------
+1280x720|2D|tab0               698       408      1280       630      1280      29
+1280x720|2D|tab1               680       408      1280       630      1280      13
+1280x720|2D|tab2               618       408      1280       620      1280      30
+1280x720|3D|tab0               603       408      1280       630      1280      29
+1280x720|3D|tab1               680       408      1280       630      1280      13
+1280x720|3D|tab2               618       408      1280       620      1280      30
+1280x720|ASSEMBLY|tab3         418       408      1280       630      1280      13
+1280x720|WORKSHOP|tab0         698       408      1280       630      1280      27
+1366x768|2D|tab0               746       408      1366       678      1366      29
+1366x768|2D|tab1               680       408      1366       678      1366      13
+1366x768|2D|tab2               642       408      1366       678      1366      30
+1366x768|3D|tab0               603       408      1366       678      1366      29
+1366x768|3D|tab1               680       408      1366       678      1366      13
+1366x768|3D|tab2               642       408      1366       678      1366      30
+1366x768|ASSEMBLY|tab3         418       408      1366       678      1366      13
+1366x768|WORKSHOP|tab0         746       408      1366       678      1366      27
+1500x800|2D|tab0               778       408      1500       710      1500      29
+1500x800|2D|tab1               680       408      1500       710      1500      13
+1500x800|2D|tab2               642       408      1500       710      1500      30
+1500x800|3D|tab0               603       408      1500       710      1500      29
+1500x800|3D|tab1               680       408      1500       710      1500      13
+1500x800|3D|tab2               642       408      1500       710      1500      30
+1500x800|ASSEMBLY|tab3         418       408      1500       710      1500      13
+1500x800|WORKSHOP|tab0         778       408      1500       710      1500      27
+1920x1080|2D|tab0             1058       408      1920       990      1920      29
+1920x1080|2D|tab1              680       408      1920       990      1920      13
+1920x1080|2D|tab2              642       408      1920       990      1920      30
+1920x1080|3D|tab0              603       408      1920       990      1920      29
+1920x1080|3D|tab1              680       408      1920       990      1920      13
+1920x1080|3D|tab2              642       408      1920       990      1920      30
+1920x1080|ASSEMBLY|tab3        418       408      1920       990      1920      13
+1920x1080|WORKSHOP|tab0       1058       408      1920       990      1920      27
+2560x1440|2D|tab0             1418       408      2560      1350      2560      29
+2560x1440|2D|tab1              680       408      2560      1350      2560      13
+2560x1440|2D|tab2              642       408      2560      1350      2560      30
+2560x1440|3D|tab0              603       408      2560      1350      2560      29
+2560x1440|3D|tab1              680       408      2560      1350      2560      13
+2560x1440|3D|tab2              642       408      2560      1350      2560      30
+2560x1440|ASSEMBLY|tab3        418       408      2560      1350      2560      13
+2560x1440|WORKSHOP|tab0       1418       408      2560      1350      2560      27
+
+============================================================================================
+2.  SIDEBAR VERTICAL BUDGET  (content bottom vs window height)
+============================================================================================
+
+config                     win_h  content_bot   overflow  verdict
+--------------------------------------------------------------------------------------------
+1280x720|2D|tab0             720          698        -22  fits (22 px spare)
+1280x720|2D|tab1             720          680        -40  fits (40 px spare)
+1280x720|2D|tab2             720          618       -102  fits (102 px spare)
+1280x720|3D|tab0             720          603       -117  fits (117 px spare)
+1280x720|3D|tab1             720          680        -40  fits (40 px spare)
+1280x720|3D|tab2             720          618       -102  fits (102 px spare)
+1280x720|ASSEMBLY|tab3       720          418       -302  fits (302 px spare)
+1280x720|WORKSHOP|tab0       720          698        -22  fits (22 px spare)
+1366x768|2D|tab0             768          746        -22  fits (22 px spare)
+1366x768|2D|tab1             768          680        -88  fits (88 px spare)
+1366x768|2D|tab2             768          642       -126  fits (126 px spare)
+1366x768|3D|tab0             768          603       -165  fits (165 px spare)
+1366x768|3D|tab1             768          680        -88  fits (88 px spare)
+1366x768|3D|tab2             768          642       -126  fits (126 px spare)
+1366x768|ASSEMBLY|tab3       768          418       -350  fits (350 px spare)
+1366x768|WORKSHOP|tab0       768          746        -22  fits (22 px spare)
+1500x800|2D|tab0             800          778        -22  fits (22 px spare)
+1500x800|2D|tab1             800          680       -120  fits (120 px spare)
+1500x800|2D|tab2             800          642       -158  fits (158 px spare)
+1500x800|3D|tab0             800          603       -197  fits (197 px spare)
+1500x800|3D|tab1             800          680       -120  fits (120 px spare)
+1500x800|3D|tab2             800          642       -158  fits (158 px spare)
+1500x800|ASSEMBLY|tab3       800          418       -382  fits (382 px spare)
+1500x800|WORKSHOP|tab0       800          778        -22  fits (22 px spare)
+1920x1080|2D|tab0           1080         1058        -22  fits (22 px spare)
+1920x1080|2D|tab1           1080          680       -400  fits (400 px spare)
+1920x1080|2D|tab2           1080          642       -438  fits (438 px spare)
+1920x1080|3D|tab0           1080          603       -477  fits (477 px spare)
+1920x1080|3D|tab1           1080          680       -400  fits (400 px spare)
+1920x1080|3D|tab2           1080          642       -438  fits (438 px spare)
+1920x1080|ASSEMBLY|tab3     1080          418       -662  fits (662 px spare)
+1920x1080|WORKSHOP|tab0     1080         1058        -22  fits (22 px spare)
+2560x1440|2D|tab0           1440         1418        -22  fits (22 px spare)
+2560x1440|2D|tab1           1440          680       -760  fits (760 px spare)
+2560x1440|2D|tab2           1440          642       -798  fits (798 px spare)
+2560x1440|3D|tab0           1440          603       -837  fits (837 px spare)
+2560x1440|3D|tab1           1440          680       -760  fits (760 px spare)
+2560x1440|3D|tab2           1440          642       -798  fits (798 px spare)
+2560x1440|ASSEMBLY|tab3     1440          418      -1022  fits (1022 px spare)
+2560x1440|WORKSHOP|tab0     1440         1418        -22  fits (22 px spare)
+
+Worst case: 2560x1440|WORKSHOP|tab0 overflows by -22 px
+
+============================================================================================
+3.  VISIBLE ELEMENTS DRAWN OUTSIDE THE WINDOW
+============================================================================================
+
+  none
+
+============================================================================================
+4.  WIDGET-ON-WIDGET OVERLAPS  (visible ControlP5 controls)
+============================================================================================
+
+  export_filename              x toggle_distances              16 cfgs  overlap 60x30 px (e.g. 1280x720|2D|tab0)
+  adv_lidOffsetX               x adv_lidOffsetY                10 cfgs  overlap 116x20 px (e.g. 1280x720|2D|tab2)
+  adv_lidOffsetX               x ui_show_tessellation_mesh     10 cfgs  overlap 80x12 px (e.g. 1280x720|2D|tab2)
+  btn_export_main              x toggle_distances               8 cfgs  overlap 10x30 px (e.g. 1280x720|2D|tab0)
+  export_filename              x marker_free_place_toggle       8 cfgs  overlap 22x22 px (e.g. 1280x720|2D|tab0)
+  export_filename              x marker_grid                    8 cfgs  overlap 35x22 px (e.g. 1280x720|2D|tab0)
+  adv_lidOffsetY               x export_filename                2 cfgs  overlap 16x8 px (e.g. 1280x720|2D|tab2)
+
+============================================================================================
+5.  SIDEBAR CONTENT CROSSING INTO THE CANVAS (x2 > 420)
+============================================================================================
+
+  none
+
+============================================================================================
+6.  BOTTOM EXPORT BAR: content vs available width
+============================================================================================
+
+Export bar spans x=420..win_w, y=win_h-90..win_h
+
+config                      win_w   left_group  right_group  gap
+--------------------------------------------------------------------------------------------
+1280x720|2D|tab0             1280          877          945  68 px clear
+1280x720|2D|tab1             1280          877          945  68 px clear
+1280x720|2D|tab2             1280          976          945  OVERLAP 31 px
+1280x720|3D|tab0             1280          877          945  68 px clear
+1280x720|3D|tab1             1280          877          945  68 px clear
+1280x720|3D|tab2             1280          976          945  OVERLAP 31 px
+1280x720|ASSEMBLY|tab3       1280          877          945  68 px clear
+1280x720|WORKSHOP|tab0       1280          877          945  68 px clear
+1366x768|2D|tab0             1366         1027         1046  19 px clear
+1366x768|2D|tab1             1366         1027         1046  19 px clear
+1366x768|2D|tab2             1366         1027         1046  19 px clear
+1366x768|3D|tab0             1366         1027         1046  19 px clear
+1366x768|3D|tab1             1366         1027         1046  19 px clear
+1366x768|3D|tab2             1366         1027         1046  19 px clear
+1366x768|ASSEMBLY|tab3       1366         1027         1046  19 px clear
+1366x768|WORKSHOP|tab0       1366         1027         1046  19 px clear
+1500x800|2D|tab0             1500         1160         1180  20 px clear
+1500x800|2D|tab1             1500         1160         1180  20 px clear
+1500x800|2D|tab2             1500         1160         1180  20 px clear
+1500x800|3D|tab0             1500         1160         1180  20 px clear
+1500x800|3D|tab1             1500         1160         1180  20 px clear
+1500x800|3D|tab2             1500         1160         1180  20 px clear
+1500x800|ASSEMBLY|tab3       1500         1160         1180  20 px clear
+1500x800|WORKSHOP|tab0       1500         1160         1180  20 px clear
+1920x1080|2D|tab0            1920         1160         1600  440 px clear
+1920x1080|2D|tab1            1920         1160         1600  440 px clear
+1920x1080|2D|tab2            1920         1160         1600  440 px clear
+1920x1080|3D|tab0            1920         1160         1600  440 px clear
+1920x1080|3D|tab1            1920         1160         1600  440 px clear
+1920x1080|3D|tab2            1920         1160         1600  440 px clear
+1920x1080|ASSEMBLY|tab3      1920         1160         1600  440 px clear
+1920x1080|WORKSHOP|tab0      1920         1160         1600  440 px clear
+2560x1440|2D|tab0            2560         1160         2240  1080 px clear
+2560x1440|2D|tab1            2560         1160         2240  1080 px clear
+2560x1440|2D|tab2            2560         1160         2240  1080 px clear
+2560x1440|3D|tab0            2560         1160         2240  1080 px clear
+2560x1440|3D|tab1            2560         1160         2240  1080 px clear
+2560x1440|3D|tab2            2560         1160         2240  1080 px clear
+2560x1440|ASSEMBLY|tab3      2560         1160         2240  1080 px clear
+2560x1440|WORKSHOP|tab0      2560         1160         2240  1080 px clear
+
+============================================================================================
+7.  RESPONSIVENESS: which widgets follow the window edges
+============================================================================================
+
+1500x800 -> 2560x1440: right-anchored widgets should move +1060 x, bottom-anchored +640 y.
+
+  2D           tab0 : 13 follow the window, 16 pinned to fixed coordinates
+        follow : auto_marker_ids_toggle(+0,+640), btn_export_main(+1060,+640), enable_markers_toggle(+0,+640), export_filename(+1060,+640), marker_free_place_toggle(+0,+640), marker_grid(+0,+640)
+        pinned : btn_sides_minus, btn_sides_plus, tf_bot_size, tf_height, tf_top_size, ui_bottom_size, ui_cuboid_mode, ui_hide_panel_folds, ui_hollow_mode, ui_kresling ...
+  2D           tab1 : 13 follow the window,  0 pinned to fixed coordinates
+        follow : auto_marker_ids_toggle(+0,+640), btn_export_main(+1060,+640), enable_markers_toggle(+0,+640), export_filename(+1060,+640), marker_free_place_toggle(+0,+640), marker_grid(+0,+640)
+  2D           tab2 : 15 follow the window, 15 pinned to fixed coordinates
+        follow : adv_lidOffsetX(+0,+640), adv_lidOffsetY(+0,+640), auto_marker_ids_toggle(+0,+640), btn_export_main(+1060,+640), enable_markers_toggle(+0,+640), export_filename(+1060,+640)
+        pinned : adv_patRotation, adv_patX, adv_patY, btn_bot_lid_down, btn_bot_lid_left, btn_bot_lid_right, btn_bot_lid_rotate, btn_bot_lid_up, btn_top_lid_down, btn_top_lid_left ...
+  3D           tab0 : 13 follow the window, 16 pinned to fixed coordinates
+        follow : auto_marker_ids_toggle(+0,+640), btn_export_main(+1060,+640), enable_markers_toggle(+0,+640), export_filename(+1060,+640), marker_free_place_toggle(+0,+640), marker_grid(+0,+640)
+        pinned : btn_sides_minus, btn_sides_plus, tf_bot_size, tf_height, tf_top_size, ui_bottom_size, ui_cuboid_mode, ui_hide_panel_folds, ui_hollow_mode, ui_kresling ...
+  ASSEMBLY     tab3 : 13 follow the window,  0 pinned to fixed coordinates
+        follow : auto_marker_ids_toggle(+0,+640), btn_export_main(+1060,+640), enable_markers_toggle(+0,+640), export_filename(+1060,+640), marker_free_place_toggle(+0,+640), marker_grid(+0,+640)
+
+============================================================================================
+8.  CANVAS USE: how much of the free area the page actually fills
+============================================================================================
+
+config                       canvas WxH         page WxH     fill % SCREEN_SCALE
+--------------------------------------------------------------------------------------------
+
+============================================================================================
+9.  OFFSCREEN 3D BUFFER vs AVAILABLE AREA
+============================================================================================
+
+config                             buffer         expected  status
+--------------------------------------------------------------------------------------------
+
+============================================================================================
+10. LOWEST SIDEBAR ITEMS AT THE SMALLEST WINDOW (1280x720) - what gets cut first
+============================================================================================
+
+  tab0:
+      y=  420.8..  698.0  [rect] PaperPolyhedra.drawMini3DViewInSidebar 
+      y=  443.8..  690.0  [rect] PaperPolyhedra.drawMini3DViewInSidebar 
+      y=  443.8..  690.0  [image] PaperPolyhedra.drawMini3DViewInSidebar 
+      y=  581.0..  603.0  [cp5] Toggle                             ui_kresling
+      y=  540.0..  562.0  [cp5] Toggle                             ui_hollow_mode
+      y=  540.0..  562.0  [cp5] Toggle                             ui_split_strip
+      y=  499.0..  521.0  [cp5] Toggle                             ui_hide_panel_folds
+      y=  499.0..  521.0  [cp5] Toggle                             ui_light_gray_cut_lines
+      y=  421.8..  435.8  [text] PaperPolyhedra.drawMini3DViewInSidebar 3D PREVIEW
+      y=  398.0..  420.0  [cp5] Toggle                             ui_cuboid_mode
+  tab1:
+      y=  228.0..  680.0  [rect] SidebarPanel.drawTextureUploadArea 
+      y=  401.0..  425.0  [rect] SidebarPanel.drawPerPanelUploadButtons 
+      y=  401.0..  425.0  [rect] SidebarPanel.drawPerPanelUploadButtons 
+      y=  406.0..  420.0  [text] SidebarPanel.drawPerPanelUploadButtons Panel 4:
+      y=  406.5..  419.5  [text] SidebarPanel.drawPerPanelUploadButtons OFF
+      y=  406.5..  419.5  [text] SidebarPanel.drawPerPanelUploadButtons Upload
+      y=  366.0..  390.0  [rect] SidebarPanel.drawPerPanelUploadButtons 
+      y=  366.0..  390.0  [rect] SidebarPanel.drawPerPanelUploadButtons 
+      y=  371.0..  385.0  [text] SidebarPanel.drawPerPanelUploadButtons Panel 3:
+      y=  371.5..  384.5  [text] SidebarPanel.drawPerPanelUploadButtons OFF
+  tab2:
+      y=  602.0..  618.0  [text] SidebarPanel.drawPlacementContent  REPEATS
+      y=  564.5..  590.5  [cp5] Button                             btn_bot_lid_down
+      y=  564.5..  590.5  [cp5] Button                             btn_top_lid_down
+      y=  534.5..  560.5  [cp5] Button                             btn_bot_lid_left
+      y=  534.5..  560.5  [cp5] Button                             btn_bot_lid_right
+      y=  534.5..  560.5  [cp5] Button                             btn_bot_lid_rotate
+      y=  534.5..  560.5  [cp5] Button                             btn_top_lid_left
+      y=  534.5..  560.5  [cp5] Button                             btn_top_lid_right
+      y=  534.5..  560.5  [cp5] Button                             btn_top_lid_rotate
+      y=  504.5..  530.5  [cp5] Button                             btn_bot_lid_up
