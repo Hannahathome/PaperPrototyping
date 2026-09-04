@@ -47,6 +47,7 @@ Slider sDash;
 Slider sPatX;
 Slider sPatY;
 Slider sPatRotation;
+Slider sStripRotation;
 Slider sTessDensity;
 
 // Hollow mode controls
@@ -1367,6 +1368,21 @@ void initShapeUI() {
     .setPaddingY(6);
   advY += row + 10;
 
+  // Rotates the bent-strip texture. Rotates the source bitmap rather than the UVs, so the
+  // strip re-fits to the new aspect — see StripRotation.pde.
+  sStripRotation = cp5__prism.addSlider("adv_stripRotation")
+    .setPosition(advX, advY).setSize(w, h)
+    .setLabel("STRIP TEXTURE ROTATION (°)")  .setColorLabel(0)
+    .setRange(0, 360)
+    .setValue(uiStripRotation)
+    .setDecimalPrecision(0);
+  sStripRotation.getCaptionLabel()
+    .setFont(createFont("Arial", 15))
+    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
+    .setPaddingX(0)
+    .setPaddingY(6);
+  advY += row + 10;
+
   //------------------------------------------------------------------------------------
   //-----------------------------EXTRA INFO LABELS (HIDDEN)-----------------------------
   // Hidden but code preserved
@@ -1792,6 +1808,21 @@ void updateSidebarControlsVisibility() {
         .setPaddingY(6);
     } else {
       sPatY.setPosition(-1000, -1000);
+    }
+  }
+  if (sStripRotation != null) {
+    boolean stripVis = viewVisible && sideTextureMode == TEX_STRIP_BENT;
+    sStripRotation.setVisible(stripVis);
+    if (stripVis) {
+      sStripRotation.setPosition(SIDEBAR_PADDING, startY + 0.5*row + 3*(row + 20));
+      sStripRotation.setSize(viewControlWidth, 20);
+      sStripRotation.getCaptionLabel()
+        .setFont(createFont("Arial", 15))
+        .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
+        .setPaddingX(0)
+        .setPaddingY(6);
+    } else {
+      sStripRotation.setPosition(-1000, -1000);
     }
   }
   if (sPatRotation != null) {
@@ -2585,6 +2616,15 @@ void controlEvent(ControlEvent e) {
   if (e.isFrom(sTessDensity)) {
     uiTessDensity = round(sTessDensity.getValue());
     setParams(false);  // update global tessellationDensity
+    redraw();
+    return;
+  }
+  if (e.isFrom(sStripRotation)) {
+    uiStripRotation = sStripRotation.getValue();
+    // updateStripRotation() rebuilds the bitmap at the top of the next draw()
+    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+      shapes.get(selectedShapeIdx).stripRotation = uiStripRotation;
+    }
     redraw();
     return;
   }

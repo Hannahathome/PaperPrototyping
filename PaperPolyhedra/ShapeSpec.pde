@@ -50,6 +50,8 @@ class ShapeSpec {
   int sideTextureMode;
   PImage[] panelTextures;
   PImage stripImg;
+  PImage stripImgSrc;       // unrotated original behind stripImg
+  float  stripRotation;     // degrees applied to stripImgSrc to make stripImg
   PImage lidImgTop, lidImgBot;
   boolean lidKeepAspect;
   int activeTextureTab; // sidebar texture sub-tab state
@@ -126,6 +128,8 @@ class ShapeSpec {
     sideTextureMode  = 0; // TEX_NONE
     panelTextures    = null;
     stripImg         = null;
+    stripImgSrc      = null;
+    stripRotation    = 0;
     lidImgTop        = null;
     lidImgBot        = null;
     lidKeepAspect    = true;
@@ -226,6 +230,8 @@ void saveGlobalsTo(ShapeSpec s) {
   s.sideTextureMode  = sideTextureMode;
   s.panelTextures    = panelTextures;
   s.stripImg         = stripImg;
+  s.stripImgSrc      = stripImgSrc;
+  s.stripRotation    = uiStripRotation;
   s.lidImgTop        = lidImgTop;
   s.lidImgBot        = lidImgBot;
   s.lidKeepAspect    = lidKeepAspect;
@@ -323,6 +329,8 @@ void loadGlobalsFrom(ShapeSpec s) {
   sideTextureMode  = s.sideTextureMode;
   panelTextures    = s.panelTextures;
   stripImg         = s.stripImg;
+  stripImgSrc      = s.stripImgSrc;
+  uiStripRotation  = s.stripRotation;
   lidImgTop        = s.lidImgTop;
   lidImgBot        = s.lidImgBot;
   lidKeepAspect    = s.lidKeepAspect;
@@ -441,7 +449,11 @@ void addShape() {
 void removeShape() {
   if (shapes == null || shapes.size() <= 1) return;
 
+  int removedIdx = selectedShapeIdx;
   shapes.remove(selectedShapeIdx);
+  // Connections address shapes by index, and every index above the removed one just
+  // shifted down — without this they would silently retarget to the wrong shape.
+  reindexConnectionsAfterRemoval(removedIdx);
   selectedShapeIdx = constrain(selectedShapeIdx, 0, shapes.size() - 1);
 
   loadGlobalsFrom(shapes.get(selectedShapeIdx));

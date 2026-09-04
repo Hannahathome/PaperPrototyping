@@ -1932,7 +1932,7 @@ class SidebarPanel {
   
   // Restore strip texture to default (clear)
   void restoreStripTextureToDefault() {
-    stripImg = null;
+    setStripSource(null, true);
     println("[Sidebar] Strip texture restored to default");
   }
   
@@ -2074,7 +2074,7 @@ void stripTextureSelected(File selection) {
     println("[Sidebar] Strip texture selection cancelled");
   } else {
     println("[Sidebar] Strip texture: " + selection.getAbsolutePath());
-    stripImg = loadImage(selection.getAbsolutePath());
+    setStripSource(loadImage(selection.getAbsolutePath()), true);
     if (stripImg != null) {
       println("[Sidebar] Strip texture loaded: " + stripImg.width + "x" + stripImg.height);
       // Switch to strip mode and persist everything

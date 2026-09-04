@@ -4,9 +4,10 @@ A toolbox of Processing tools for designing, generating and cutting **paper-base
 physical prototypes** --> foldable polyhedra, voxel blocks, haptic widgets and the
 data that drives them.
 
-Each tool is a self-contained Processing sketch in its own top-level folder. They
+Each tool is a self-contained Processing sketch in its own top-level folder. Most
 share a common print-and-cut workflow and can hand files to one another, but any
-one of them can be opened and run on its own.
+one of them can be opened and run on its own. FrustumSupport is the exception —
+it exports OpenSCAD for the 3D-printed frame that goes *inside* a folded shell.
 
 ---
 
@@ -32,6 +33,8 @@ expected to come from. They contain no implementation yet.
 - Libraries via *Sketch → Import Library → Manage Libraries*:
   - **ControlP5** (all tools)
   - **PeasyCam** (DataPhysicalisation only)
+- [OpenSCAD](https://openscad.org/) — FrustumSupport only, to turn its exported
+  `.scad` into a printable mesh
 
 **Running a tool**
 

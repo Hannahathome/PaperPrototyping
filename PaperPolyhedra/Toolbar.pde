@@ -59,7 +59,7 @@ class ToolbarButton {
     // Draw label
     fill(enabled ? 255 : 150);
     textAlign(CENTER, CENTER);
-    textSize(12);
+    uiText(12);
     text(label, x + w/2, y + h/2);
     
     popStyle();
@@ -274,20 +274,20 @@ class Toolbar {
     // Draw text
     fill(0);
     textAlign(LEFT, TOP);
-    textFont(createFont("Arial", 9));
+    uiText(9);
     
     float ty = dropdownY + padding;
     float tx = dropdownX + padding;
     
     // Header
-    textSize(10);
+    uiText(10);
     fill(40, 70, 120);  // Dark blue
     text("DIMENSIONS", tx, ty);
     ty += lineHeight * 1.3;
     
     // Content - full details
     fill(0);
-    textSize(9);
+    uiText(9);
     
     // Top Perimeter
     text("Top Perimeter: " + nf(cylinder.x, 1, 2) + " mm", tx, ty);
@@ -326,7 +326,7 @@ class Toolbar {
   void drawStatusText() {
     fill(200, 200, 210);
     textAlign(RIGHT, CENTER);
-    textSize(11);
+    uiText(11);
     
     String status = "";
     if (cuboidMode) {

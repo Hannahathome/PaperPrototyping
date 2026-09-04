@@ -133,6 +133,30 @@ final int DEFAULT_SIDES = 4;                     // Default starting sides
 final float STEP_FINE = 0.5;                     // Fine adjustment step (mm)
 final float STEP_COARSE = 5.0;                   // Coarse adjustment step (mm)
 
+// ==================== UI TEXT ====================
+// Raw text() calls otherwise fall back to Processing's default font, which under P2D is a
+// bitmap texture built at one fixed size — any textSize() that disagrees with it resamples
+// the glyphs, which is what makes on-canvas labels look soft next to the crisp ControlP5
+// widgets (those all pass createFont()). Building the font at the exact pixel size means no
+// resampling at all. Cached, because createFont() inside draw() rebuilds it every frame.
+HashMap<Integer, PFont> _uiFonts = new HashMap<Integer, PFont>();
+
+PFont uiFont(int size) {
+  PFont f = _uiFonts.get(size);
+  if (f == null) {
+    f = createFont("Arial", size, true);
+    _uiFonts.put(size, f);
+  }
+  return f;
+}
+
+// Use instead of textSize() for text drawn straight onto the canvas in screen space.
+// (Text inside the scale(SCREEN_SCALE) page matrix should keep using textSize(), since it
+// is meant to scale with the page.)
+void uiText(int size) {
+  textFont(uiFont(size), size);
+}
+
 // ==================== TOOLBAR UI ====================
 final int TOOLBAR_HEIGHT = 50;                   // Height of top toolbar strip
 final int TOOLBAR_PADDING = 8;                   // Internal padding
@@ -179,7 +203,7 @@ boolean enableInnerShape = false;              // Enable different inner shape (
 
 // ==================== 3D VIEW PARAMETERS ====================
 boolean view3DMode = false;                    // false=2D pattern, true=3D preview
-boolean view3DShowAll = false;                 // false=selected shape only, true=all shapes side by side
+boolean view3DShowAll = true;                  // false=selected shape only, true=all shapes side by side
 boolean wireframeMode = false;                 // false=solid faces, true=wireframe only (see-through)
 float angleX = radians(60);                    // Camera rotation X
 float angleY = radians(0);                     // Camera rotation Y  
@@ -234,8 +258,8 @@ void setParams(boolean cut) {
   if (lidImgBot == null) lidImgBot = loadImage("bottom.jpg");   // in data/lids/bottom.png
   
   // Load strip image if not already loaded
-  if (stripImg == null) {
-    stripImg = loadImage("strip.jpg"); // place in data/
+  if (stripImg == null && stripImgSrc == null) {
+    setStripSource(loadImage("strip.jpg"), false); // place in data/
     if (stripImg != null) {
       println("[setParams] Strip image loaded: " + stripImg.width + "x" + stripImg.height);
     } else {

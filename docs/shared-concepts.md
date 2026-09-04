@@ -30,6 +30,18 @@ final float PAGE_H_MM = 210.0;
 The vinyl cutting area is smaller than the printable page (roughly 280 × 200 mm),
 because the cutter needs margin to grip the sheet.
 
+**Radii vs perimeters.** Everything is millimetres, but not everything is the
+same measurement. PaperPolyhedra is driven by *perimeters and per-edge widths*,
+because that is what you cut. FrustumSupport is driven by *circumradii*, because
+that is what OpenSCAD builds from. A frame that "matches" on paper but was
+specified in the wrong quantity will not seat inside its shell. Convert
+deliberately:
+
+```
+perimeter = 2 · n · R · sin(π/n)        // n-sided polygon, circumradius R
+R         = perimeter / (2 · n · sin(π/n))
+```
+
 ## The print-and-cut workflow
 
 Print and cut are separate machines, so every export ships three files:

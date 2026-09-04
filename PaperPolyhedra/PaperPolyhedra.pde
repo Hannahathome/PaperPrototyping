@@ -94,9 +94,14 @@ void setup() {
   
   //--RH-- Markers: Lazy loaded when user enables toggle (not in setup to avoid PDF issues)
   //--RH--
+
 }
 
 void draw() {
+  // Rebuild the rotated strip texture if it changed. Must happen here, before any
+  // rendering starts — see updateStripRotation().
+  updateStripRotation();
+
   // Update continuous lid movement if button is held
   updateHeldLidButton();
   
@@ -151,7 +156,10 @@ void draw() {
       draw3DView();
       // Position 3D view to the right of sidebar
       image(view3DBuffer, LEFT_SIDEBAR_WIDTH, TOOLBAR_HEIGHT);
-      
+
+      // --- Connect mode: highlight the face under the cursor + the snap zone ---
+      drawFaceHighlights();
+
       // --- Show Selected / Show All overlay buttons ---
       draw3DViewModeButtons();
       
@@ -194,6 +202,7 @@ void draw() {
       ShapeSpec _s = shapes.get(si);
       loadGlobalsFrom(_s);
       setParams(false);
+      _drawingShapeIdx = si;   // tells drawConnectionSlits() whose lid it is drawing
       _s.cachedBBox    = getTemplateBBox();
       _s.cachedBBoxTop = _bboxTopTemp;
       PVector bbox = _s.cachedBBox;
@@ -258,6 +267,7 @@ void draw() {
         popMatrix();
       }
     }
+    _drawingShapeIdx = -1;
     // Restore globals to selected shape so the sidebar reflects correct values
     loadGlobalsFrom(shapes.get(selectedShapeIdx));
     setParams(false);
@@ -626,6 +636,8 @@ void drawPlan(boolean img) {
     if (fillColorEnabled && !bExportingCutFile) {
       drawSolidColorLid(nSides, cellBaseL_px, shapeColor);
     }
+    // Mounting slits for any shape connected to this face — cut before the lid outline.
+    drawConnectionSlits(false);
     drawPolygonLidHollow(nSides, cellBaseL_px, neckDepth_px2, tabInset_bot_px, arrowheadFlare_bot_px, false);
     popMatrix();
     
@@ -639,6 +651,8 @@ void drawPlan(boolean img) {
     if (fillColorEnabled && !bExportingCutFile) {
       drawSolidColorLid(nSides, cellTopL_px, shapeColor);
     }
+    // Mounting slits for any shape connected to this face — cut before the lid outline.
+    drawConnectionSlits(true);
     drawPolygonLidHollow(nSides, cellTopL_px, neckDepth_px2, tabInset_top_px, arrowheadFlare_top_px, true);
     popMatrix();
 
@@ -837,12 +851,12 @@ void drawBottomExportButton() {
   
   // Draw label for text field
   fill(80);
-  textSize(10);
+  uiText(10);
   float bottomControlX = LEFT_SIDEBAR_WIDTH + 20;
   float exportBarY = height - BOTTOM_EXPORT_HEIGHT + 10;
   float bottomControlY = exportBarY + 8;
   textAlign(LEFT, CENTER);
-  textSize(15);  // Increased to match sidebar header text
+  uiText(15);  // Increased to match sidebar header text
   float exportBarX = width - 320;
   text("File name input field", exportBarX - 140, exportBarY + 23);
 
@@ -852,7 +866,7 @@ void drawBottomExportButton() {
     float fadeAlpha = min(255, exportNotifyTimer * 3.5);
     fill(30, 160, 60, fadeAlpha);
     textAlign(RIGHT, BOTTOM);
-    textSize(12);
+    uiText(12);
     String notifyLabel = "Saved: " + exportNotifyPath;
     text(notifyLabel, exportBarX + 310, exportBarY + 4);
   }
@@ -925,7 +939,7 @@ boolean bottomExportClicked = false;
 // btn 0 = "Selected", btn 1 = "All"
 float[] get3DViewBtnRect(int btnIdx) {
   float btnW = 90, btnH = 28, gap = 6;
-  float bx = width - (3 * btnW + 2 * gap + 10);  // 3 buttons total (Selected, All, Wireframe)
+  float bx = width - (5 * btnW + 4 * gap + 10);  // Selected, All, Wireframe, Connect, Disconnect
   float by = TOOLBAR_HEIGHT + 10;
   return new float[]{ bx + btnIdx * (btnW + gap), by, btnW, btnH };
 }
@@ -935,6 +949,20 @@ float[] getWireframeBtnRect() {
   float[] allBtn = get3DViewBtnRect(1);  // "All" button
   float btnW = 90, btnH = 28, gap = 6;
   return new float[]{ allBtn[0] + allBtn[2] + gap, allBtn[1], btnW, btnH };
+}
+
+// Returns the screen rect [x, y, w, h] of the Connect toggle button.
+float[] getConnectBtnRect() {
+  float[] wf = getWireframeBtnRect();
+  float gap = 6;
+  return new float[]{ wf[0] + wf[2] + gap, wf[1], wf[2], wf[3] };
+}
+
+// Returns the screen rect [x, y, w, h] of the Disconnect button.
+float[] getDisconnectBtnRect() {
+  float[] cb = getConnectBtnRect();
+  float gap = 6;
+  return new float[]{ cb[0] + cb[2] + gap, cb[1], cb[2], cb[3] };
 }
 
 // Returns the screen rect [x, y, w, h] of the shape navigation arrow buttons.
@@ -953,7 +981,7 @@ void draw3DViewModeButtons() {
   if (shapes == null) return;
   pushStyle();
   textAlign(CENTER, CENTER);
-  textSize(12);
+  uiText(12);
   
   // --- Selected / All toggle buttons ---
   String[] labels = { "Selected", "All" };
@@ -981,7 +1009,81 @@ void draw3DViewModeButtons() {
     fill(255);
     text("Wireframe", r[0] + r[2]/2, r[1] + r[3]/2);
   }
-  
+
+  // --- Connect toggle button ---
+  {
+    float[] r = getConnectBtnRect();
+    boolean hov = mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3];
+    color bg = connectMode ? color(230, 140, 40) : (hov ? color(60, 70, 100) : color(40, 50, 80));
+    fill(bg);
+    noStroke();
+    rect(r[0], r[1], r[2], r[3], 5);
+    fill(255);
+    text("Connect", r[0] + r[2]/2, r[1] + r[3]/2);
+  }
+
+  // --- Disconnect button (only meaningful while connecting) ---
+  {
+    float[] r = getDisconnectBtnRect();
+    boolean armed = connectMode && connections != null &&
+                    selectedConnectionIdx >= 0 && selectedConnectionIdx < connections.size();
+    boolean hov = mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3];
+    color bg = !armed ? color(34, 40, 62) : (hov ? color(190, 70, 60) : color(150, 55, 50));
+    fill(bg);
+    noStroke();
+    rect(r[0], r[1], r[2], r[3], 5);
+    fill(armed ? 255 : color(105));
+    text("Disconnect", r[0] + r[2]/2, r[1] + r[3]/2);
+  }
+
+  // --- Connect mode hint + fit warning ---
+  if (connectMode) {
+    float[] r = getConnectBtnRect();
+    textAlign(RIGHT, TOP);
+    uiText(11);
+    fill(230, 140, 40);
+    float hintY = r[1] + r[3] + 6;
+
+    if (selectedFaceShapeIdx < 0 || selectedFaceShapeIdx >= shapes.size()) {
+      text("Click the face of the shape you want to attach", r[0] + r[2], hintY);
+    } else {
+      ShapeSpec src = shapes.get(selectedFaceShapeIdx);
+      String srcName = (src.label != null && !src.label.isEmpty())
+                     ? src.label : ("Shape " + (selectedFaceShapeIdx + 1));
+      String srcFace = srcName + " · " + (selectedFaceIsTop ? "top" : "bottom");
+      text("Now click a face on another shape to join " + srcFace + " to it · click the same face again to deselect",
+           r[0] + r[2], hintY);
+    }
+    hintY += 16;
+
+    // What the keys and the Disconnect button will act on.
+    if (connections != null && selectedConnectionIdx >= 0 && selectedConnectionIdx < connections.size()) {
+      Connection c = connections.get(selectedConnectionIdx);
+      if (c.childShapeIdx < shapes.size() && c.parentShapeIdx < shapes.size()) {
+        ShapeSpec ch = shapes.get(c.childShapeIdx);
+        String chName = (ch.label != null && !ch.label.isEmpty())
+                      ? ch.label : ("Shape " + (c.childShapeIdx + 1));
+        fill(150, 200, 255);
+        text("Selected: " + chName + " mating by its " + (c.childFlipped ? "TOP" : "BOTTOM") +
+             " lid · F flips · drag to move · , . spin · Del / Disconnect detaches",
+             r[0] + r[2], hintY);
+        hintY += 16;
+
+        // Warn when the footprint runs off the edge of its host lid — a slit ring crossing
+        // the lid outline destroys the piece.
+        loadGlobalsFrom(shapes.get(c.parentShapeIdx));
+        setParams(false);
+        boolean fits = connectionFits(c);
+        loadGlobalsFrom(shapes.get(selectedShapeIdx));
+        setParams(false);
+        if (!fits) {
+          fill(230, 60, 60);
+          text("Footprint overhangs the host lid — move it inward", r[0] + r[2], hintY);
+        }
+      }
+    }
+  }
+
   // --- Shape navigation arrows + name label (only when multiple shapes exist) ---
   if (shapes.size() > 1) {
     // Arrow buttons
@@ -1011,7 +1113,7 @@ void draw3DViewModeButtons() {
     rect(lx, ly, labelW, labelH, 5);
     fill(220);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     // Clip text to fit — Processing has no built-in clip, so truncate manually
     String display = shapeName;
     while (textWidth(display) > labelW - 8 && display.length() > 1) {

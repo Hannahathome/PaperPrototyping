@@ -11,6 +11,12 @@
 output/
 **/output/
 
+# FrustumSupport writes .scad next to the sketch rather than into output/, and
+# those get rendered to .stl for printing. Both are generated, never source.
+# The OpenSCAD module libraries it reads are data/template_*.txt, not .scad.
+*.scad
+*.stl
+
 # --- Version snapshots ------------------------------------------------------
 # Use a git branch or tag instead of a dated copy of the folder.
 *.zip
