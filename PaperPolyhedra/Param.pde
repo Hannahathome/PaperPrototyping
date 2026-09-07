@@ -174,6 +174,12 @@ int BOTTOM_EXPORT_HEIGHT = EXPORT_H_1ROW;
 // Smallest window the layout is designed to hold. windowResized() clamps to these.
 final int MIN_WIN_W = 1000;
 final int MIN_WIN_H = 700;
+// Texture sub-tabs. Tracking is not a texture mode - it groups the ArUco settings, the way
+// the Print tab groups Placement / Cutouts / Base.
+final int TEX_TAB_PER_PANEL = 0;
+final int TEX_TAB_STRIP     = 1;
+final int TEX_TAB_TRACKING  = 2;
+
 final int SIDEBAR_PADDING = 12;                  // Internal sidebar padding
 final float SIDEBAR_TOP_SECTION_RATIO = 0.25;    // Top 1/3 for shape controls
 

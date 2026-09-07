@@ -204,6 +204,25 @@ Toggle tMarkerFreePlace;   // Drag markers freely on the lid
 Numberbox m_idNumbox;
 Numberbox m_sizeNumbox;
 Numberbox m_gridNumbox;   // NxN marker grid count
+
+// Texture > Tracking sub-tab: mirrors of the three marker settings people change most.
+// They write the same globals as the bottom-bar controls above.
+Numberbox sbMarkerID;
+Numberbox sbMarkerSize;
+Toggle    sbAutoMarkerIDs;
+
+// setValue() fires controlEvent(), so pushing a value into a mirror would call straight back
+// into this. The guard makes the second hop a no-op.
+boolean _syncingTracking = false;
+
+void syncTrackingTabControls() {
+  if (_syncingTracking) return;
+  _syncingTracking = true;
+  if (sbMarkerID      != null && int(sbMarkerID.getValue())   != Start_Index) sbMarkerID.setValue(Start_Index);
+  if (sbMarkerSize    != null && int(sbMarkerSize.getValue()) != Marker_Size) sbMarkerSize.setValue(Marker_Size);
+  if (sbAutoMarkerIDs != null && sbAutoMarkerIDs.getState()   != autoMarkerIDs) sbAutoMarkerIDs.setValue(autoMarkerIDs ? 1 : 0);
+  _syncingTracking = false;
+}
 Numberbox nRepNumbox;   // Repeat count numberbox
 Textfield tfNRep;       // Typable field for repeat count
 Toggle tFreePlacement;      // Free placement drag toggle
@@ -1431,6 +1450,46 @@ void initShapeUI() {
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
   
+  // --- Texture > Tracking sub-tab: a simplified shortcut for the three settings people
+  // change most. The full marker controls stay in the bottom bar; these mirror the same
+  // globals and are kept in step by syncTrackingTabControls().
+  sbMarkerID = cp5__prism.addNumberbox("tr_marker_id")
+    .setPosition(-1000, -1000)
+    .setSize(120, 24)
+    .setColorLabel(color(0))
+    .setRange(0, 255)
+    .setValue(Start_Index)
+    .setDecimalPrecision(0)
+    .setLabel("MARKER ID");
+  sbMarkerID.getCaptionLabel()
+    .setFont(createFont("Arial", 11))
+    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
+    .setPaddingY(4);
+
+  sbMarkerSize = cp5__prism.addNumberbox("tr_marker_size")
+    .setPosition(-1000, -1000)
+    .setSize(120, 24)
+    .setColorLabel(color(0))
+    .setRange(5, 50)
+    .setValue(Marker_Size)
+    .setDecimalPrecision(0)
+    .setLabel("MARKER SIZE (MM)");
+  sbMarkerSize.getCaptionLabel()
+    .setFont(createFont("Arial", 11))
+    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
+    .setPaddingY(4);
+
+  sbAutoMarkerIDs = cp5__prism.addToggle("tr_auto_marker_ids")
+    .setPosition(-1000, -1000)
+    .setSize(22, 22)
+    .setColorLabel(color(0))
+    .setValue(autoMarkerIDs ? 1 : 0)
+    .setLabel("AUTO IDs");
+  sbAutoMarkerIDs.getCaptionLabel()
+    .setFont(createFont("Arial", 12))
+    .align(ControlP5.LEFT, ControlP5.CENTER)
+    .setPaddingX(31);
+
   m_idNumbox = cp5__prism.addNumberbox("marker_id_start")
     .setPosition(markerControlX, markerControlY)
     .setSize(70, 22)
@@ -2067,6 +2126,31 @@ void updateSidebarControlsVisibility() {
       sCutoutY.setPosition(-1000, -1000);
     }
   }
+
+  // --- Texture > Tracking sub-tab ---
+  boolean trackVisible = (activeTab == 1 && sidebar != null && sidebar.activeTextureTab == TEX_TAB_TRACKING);
+  {
+    float tx = SIDEBAR_PADDING;
+    // Below the swatch-free header: sub-tab row + section heading + note.
+    float ty = (sidebar != null ? sidebar.contentY : TOOLBAR_HEIGHT) + SIDEBAR_PADDING + 44 + 31 + SIDEBAR_PADDING + 66;
+    if (sbMarkerID != null) {
+      sbMarkerID.setVisible(trackVisible);
+      sbMarkerID.setPosition(trackVisible ? tx : -1000, trackVisible ? ty : -1000);
+    }
+    if (sbMarkerSize != null) {
+      sbMarkerSize.setVisible(trackVisible);
+      sbMarkerSize.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 52 : -1000);
+    }
+    if (sbAutoMarkerIDs != null) {
+      sbAutoMarkerIDs.setVisible(trackVisible);
+      sbAutoMarkerIDs.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 104 : -1000);
+    }
+    if (trackVisible) syncTrackingTabControls();
+  }
+
+  // The advanced group's slider stack depends on the visibility flags set above, so lay it
+  // out last and record where the column ends.
+  layoutSecondaryToggles();
 }
 // Guard flag: when true, controlEvent handlers must not fire (set during syncUIToSelectedShape)
 boolean _syncingUI = false;
@@ -2839,14 +2923,23 @@ void controlEvent(ControlEvent e) {
   }
   if (e.isFrom(tAutoMarkerIDs)) {
     autoMarkerIDs = tAutoMarkerIDs.getState();
+    syncTrackingTabControls();
+    redraw();
+    return;
+  }
+
+  if (e.isFrom(sbAutoMarkerIDs)) {
+    autoMarkerIDs = sbAutoMarkerIDs.getState();
+    if (tAutoMarkerIDs != null) tAutoMarkerIDs.setValue(autoMarkerIDs ? 1 : 0);
     redraw();
     return;
   }
   
   if (e.isController()) {
     String name = e.getController().getName();
-    if (name.equals("marker_size")) {
+    if (name.equals("marker_size") || name.equals("tr_marker_size")) {
       Marker_Size = int(e.getValue());
+      syncTrackingTabControls();
       redraw();
       return;
     }
@@ -2855,8 +2948,9 @@ void controlEvent(ControlEvent e) {
       redraw();
       return;
     }
-    if (name.equals("marker_id_start")) {
+    if (name.equals("marker_id_start") || name.equals("tr_marker_id")) {
       Start_Index = int(e.getValue());
+      syncTrackingTabControls();
       if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size())
         shapes.get(selectedShapeIdx).markerStartIndex = Start_Index;
       if (tfMarkerID != null) {
@@ -3040,9 +3134,6 @@ void syncUIToSelectedShape() {
   }
   // Visibility refresh
   updateSidebarControlsVisibility();
-  // The advanced group's slider stack depends on the visibility flags set above, so lay it
-  // out last and record where the column ends.
-  layoutSecondaryToggles();
 }
 
 void setAdvancedVisible(boolean visible) {
@@ -3100,10 +3191,16 @@ float exportCtrlWidth(controlP5.Controller<?> c) {
   if (t == null || t.length() == 0) return wBox;
   // Numberbox captions are centred BELOW the box, so they never push the row along.
   if (c instanceof controlP5.Numberbox) return wBox;
-  // Toggle captions sit to the right, offset by the paddingX set where they are built.
-  if (c instanceof controlP5.Toggle) return max(wBox, TOGGLE_CAPTION_PAD + t.length() * TOGGLE_CAPTION_CHAR_W);
+  // Only the small square toggles carry their caption outside, to the right; the wide ones
+  // (VIEW IN 3D, MESH, DISTANCES) centre it inside the box, where it costs no extra width.
+  if (c instanceof controlP5.Toggle && wBox < 30) {
+    return max(wBox, TOGGLE_CAPTION_PAD + t.length() * TOGGLE_CAPTION_CHAR_W);
+  }
   return wBox;
 }
+final float ADV_CAPTION_PAD    = 31;    // paddingX used on the advanced toggles
+final float ADV_CAPTION_CHAR_W = 7.2;  // 15px Arial caps, measured off a render
+
 final float TOGGLE_CAPTION_PAD    = 30;   // paddingX used on the bottom-bar toggles
 final float TOGGLE_CAPTION_CHAR_W = 7.5;  // ControlP5's default bitmap font, measured
 
@@ -3128,12 +3225,37 @@ float exportPlaceRun(controlP5.Controller<?>[] cs, int[] gaps, float cx, float c
   return cx;
 }
 
-// Narrowest window this bar can lay out without overlapping. windowResized() clamps to it.
+// Lays a run out from startX, wrapping to a new row whenever the next control would pass
+// maxX, and returns the number of rows used. With apply = false it only counts, so the bar
+// can size itself before anything is placed.
+int exportPlaceRunWrapped(controlP5.Controller<?>[] cs, int[] gaps,
+                          float startX, float cy, float maxX, boolean apply) {
+  float cx = startX;
+  int rows = 1;
+  for (int i = 0; i < cs.length; i++) {
+    if (cs[i] == null) continue;
+    float cw = exportCtrlWidth(cs[i]);
+    if (cx > startX && cx + cw > maxX) {
+      cx = startX;
+      cy += EXPORT_ROW_H + 6;
+      rows++;
+    }
+    if (apply) cs[i].setPosition(cx, cy);
+    cx += cw + (i < cs.length - 1 ? gaps[i] : 0);
+  }
+  return rows;
+}
+
+int exportBarHeightFor(int rows) {
+  return max(EXPORT_H_1ROW, 18 + rows * EXPORT_ROW_H + (rows - 1) * 6 + 18);
+}
+
+// Narrowest window this bar can lay out without losing a control off the right edge. Only the
+// first row has to fit beside the filename group; the rest wraps.
 float exportBarMinWidth() {
   float leftStart = LEFT_SIDEBAR_WIDTH + 20;
   float w1 = exportRunWidth(exportRow1(), exportRow1Gaps());
-  float w2 = exportRunWidth(exportRow2(), exportRow2Gaps());
-  return max(leftStart + w1 + EXPORT_GAP_GROUP + EXPORT_RIGHT_W, leftStart + w2 + 10);
+  return leftStart + w1 + EXPORT_GAP_GROUP + EXPORT_RIGHT_W;
 }
 
 void updateExportControlPositions() {
@@ -3148,8 +3270,12 @@ void updateExportControlPositions() {
   float w1 = exportRunWidth(r1, g1);
   float w2 = exportRunWidth(r2, g2);
 
-  boolean twoRow = (leftStart + w1 + EXPORT_GAP_GROUP + w2 > rightX);
-  BOTTOM_EXPORT_HEIGHT = twoRow ? EXPORT_H_2ROW : EXPORT_H_1ROW;
+  // The marker run shares row 1 when there is room beside the filename group; otherwise it
+  // gets rows of its own, wrapping as many times as the window width demands.
+  boolean sameRow = (leftStart + w1 + EXPORT_GAP_GROUP + w2 <= rightX);
+  int rows = sameRow ? 1
+                     : 1 + exportPlaceRunWrapped(r2, g2, leftStart, 0, width - 10, false);
+  BOTTOM_EXPORT_HEIGHT = exportBarHeightFor(rows);
 
   float rowY = height - BOTTOM_EXPORT_HEIGHT + 18;
 
@@ -3157,8 +3283,8 @@ void updateExportControlPositions() {
   btnExportMain.setPosition(rightX + 190, rowY);
 
   float cx = exportPlaceRun(r1, g1, leftStart, rowY);
-  if (twoRow) exportPlaceRun(r2, g2, leftStart, rowY + EXPORT_ROW_H + 6);
-  else        exportPlaceRun(r2, g2, cx + EXPORT_GAP_GROUP, rowY);
+  if (sameRow) exportPlaceRun(r2, g2, cx + EXPORT_GAP_GROUP, rowY);
+  else         exportPlaceRunWrapped(r2, g2, leftStart, rowY + EXPORT_ROW_H + 6, width - 10, true);
 }
 
 // Update lid positions when buttons are held down
@@ -3582,18 +3708,34 @@ void layoutSecondaryToggles() {
     return;
   }
 
-  //  [ Cuboid mode        ]  [ Hide panel folds    ]
-  //  [ Light gray cutlines ]  [ Split strip in half ]
-  //  [ Hollow / double wall]  [ Kresling pattern    ]
-  if (tCuboidMode        != null) tCuboidMode.setPosition(col1X, startY);
-  if (tHidePanelFolds    != null) tHidePanelFolds.setPosition(col2X, startY);
-  if (tLightGrayCutLines != null) tLightGrayCutLines.setPosition(col1X, startY + gridRowH);
-  if (tSplitStrip        != null) tSplitStrip.setPosition(col2X, startY + gridRowH);
-  if (tHollowMode        != null) tHollowMode.setPosition(col1X, startY + 2 * gridRowH);
-  if (tKresling          != null) tKresling.setPosition(col2X, startY + 2 * gridRowH);
+  // Two-column grid, filled in order by whichever toggles are actually showing. Fixed slots
+  // left a hole whenever one was hidden - Cuboid mode only applies to 4-sided shapes, and
+  // Light gray cutlines and Hollow are both hidden in workshop mode.
+  //
+  // A toggle whose caption is too wide for half the column takes a full row instead of running
+  // into its neighbour. ControlP5's getWidth() is just the 22px box, so the caption has to be
+  // measured from its text.
+  controlP5.Toggle[] advToggles = {
+    tCuboidMode, tHidePanelFolds, tLightGrayCutLines, tSplitStrip, tHollowMode, tKresling };
+  float colW = (LEFT_SIDEBAR_WIDTH - 2 * SIDEBAR_PADDING) / 2.0;
+  int gridRow = 0, gridCol = 0;
+  for (int i = 0; i < advToggles.length; i++) {
+    controlP5.Toggle t = advToggles[i];
+    if (t == null || !t.isVisible()) continue;
+    String cap = t.getCaptionLabel().getText();
+    float estW = ADV_CAPTION_PAD + (cap == null ? 0 : cap.length() * ADV_CAPTION_CHAR_W);
+    boolean fullRow = estW > colW - 8;
+
+    if (fullRow && gridCol != 0) { gridRow++; gridCol = 0; }
+    t.setPosition(gridCol == 0 ? col1X : col2X, startY + gridRow * gridRowH);
+    if (fullRow) { gridRow++; gridCol = 0; }
+    else if (gridCol == 0) { gridCol = 1; }
+    else { gridCol = 0; gridRow++; }
+  }
+  int gridRows = gridRow + (gridCol > 0 ? 1 : 0);
 
   // Sub-controls stacked in a single column below the grid, only when their parent is on.
-  float y = startY + 3 * gridRowH + 8;
+  float y = startY + gridRows * gridRowH + 8;
   if (sKreslingUnits    != null && sKreslingUnits.isVisible())    { sKreslingUnits.setPosition(col1X, y);    y += row; }
   if (sKreslingSegments != null && sKreslingSegments.isVisible()) { sKreslingSegments.setPosition(col1X, y); y += row; }
   if (sWallThickness    != null && sWallThickness.isVisible())    { sWallThickness.setPosition(col1X, y);    y += row; }

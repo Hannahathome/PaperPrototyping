@@ -107,7 +107,7 @@ class SidebarPanel {
   int activeMainTab = 0;
   
   // texture sub-tab state (when in texture tab)
-  int activeTextureTab = 0; // 0=Per-Panel, 1=Strip
+  int activeTextureTab = 0; // 0=Per-Panel, 1=Strip, 2=Tracking
   
   // print sub-tab state (when in print tab)
   int activePrintTab = 0; // 0=Placement, 1=Cutouts
@@ -459,14 +459,16 @@ class SidebarPanel {
     float swLabelY = contentY + SIDEBAR_PADDING;
     float swRowY   = swLabelY + 16;
 
-    fill(60);
-    noStroke();
-    textAlign(LEFT, TOP);
-    textSize(11);
-    text("SOLID FILL", sx, swLabelY);
+    if (activeTextureTab != TEX_TAB_TRACKING) {
+      fill(60);
+      noStroke();
+      textAlign(LEFT, TOP);
+      textSize(11);
+      text("SOLID FILL", sx, swLabelY);
+    }
 
     ShapeSpec _swSel = (shapes != null && shapes.size() > 0) ? shapes.get(selectedShapeIdx) : null;
-    for (int _i = 0; _i < 9; _i++) {
+    for (int _i = 0; _i < 9 && activeTextureTab != TEX_TAB_TRACKING; _i++) {
       float swX = sx + _i * (SW_SIZE + SW_GAP);
       if (_i < 8) {
         stroke(160); strokeWeight(1);
@@ -501,13 +503,14 @@ class SidebarPanel {
     
     // Draw texture sub-tabs (shifted down by SW_SECTION_H)
     float sy = contentY + SIDEBAR_PADDING + SW_SECTION_H;
-    float tabWidth = (w - 3 * SIDEBAR_PADDING) / 2;
+    float tabWidth = (w - 4 * SIDEBAR_PADDING) / 3;
     float tabHeight = 31;
-    
-    // Clear and recreate texture sub-tabs
+
+    // Clear and recreate texture sub-tabs. Tracking sits alongside the two texture modes,
+    // the same way the Print tab groups Placement / Cutouts / Base.
     buttons.clear();
-    String[] tabLabels = {"Per Panel", "Strip"};
-    for (int i = 0; i < 2; i++) {
+    String[] tabLabels = {"Per Panel", "Strip", "Tracking"};
+    for (int i = 0; i < 3; i++) {
       SidebarButton tabBtn = new SidebarButton(
         "texture_tab_" + i,
         sx + i * (tabWidth + SIDEBAR_PADDING/2),
@@ -525,15 +528,38 @@ class SidebarPanel {
       btn.draw();
     }
     
+    if (activeTextureTab == TEX_TAB_TRACKING) {
+      drawTrackingContent(sx, sy + tabHeight + SIDEBAR_PADDING);
+      popStyle();
+      return;
+    }
+
     // Draw texture upload area based on active sub-tab
     drawTextureUploadArea();
-    
+
     // Draw texture bleed toggle
     drawTextureBleedToggle();
-    
+
     // Draw lid texture controls at bottom
     drawLidTextureControls();
-    
+
+    popStyle();
+  }
+
+  // Texture > Tracking. A shortcut for the three marker settings that get changed most; the
+  // full set (enable, grid, free placement) stays in the bottom bar.
+  void drawTrackingContent(float sx, float sy) {
+    pushStyle();
+    fill(60);
+    textAlign(LEFT, TOP);
+    textSize(11);
+    text("ARUCO MARKERS", sx, sy);
+
+    fill(120);
+    textSize(10);
+    text("Placement, enable/disable and the marker grid stay in the bottom bar.",
+         sx, sy + 16);
+
     popStyle();
   }
   
@@ -1050,54 +1076,84 @@ class SidebarPanel {
 
   // texture upload area functions
   
-  void drawTextureUploadArea() {
+  // --- Per-panel texture list: one source of geometry for drawing, hit-testing and scrolling.
+  float panelScrollY = 0;                 // pixels scrolled, 0 = top
+  static final float PANEL_ROW_H   = 35;
+  static final float PANEL_ACTION_H = 28;
+
+  // The bordered upload area, as {x, y, w, h}.
+  float[] textureAreaRect() {
     float sx = x + SIDEBAR_PADDING;
-    float sy = contentY + SIDEBAR_PADDING + 116; // Below solid-fill row (44px) + texture sub-tabs (72px)
-    float areaWidth = w - 2 * SIDEBAR_PADDING;
-    float areaHeight = contentHeight - 200; // Space for upload area - leaves room for lid controls
-    
-    // Make sure area doesn't overlap with lid controls (which start at contentY + contentHeight - 110)
-    float maxAreaHeight = (contentY + contentHeight - 110) - sy - 10; // 10px gap
-    areaHeight = min(areaHeight, maxAreaHeight);
-    
+    float sy = contentY + SIDEBAR_PADDING + 116;   // below solid-fill row (44) + sub-tabs (72)
+    float areaW = w - 2 * SIDEBAR_PADDING;
+    // Stop above the texture-bleed toggle (contentY + contentHeight - 145), which the old
+    // bound of -110 ran underneath.
+    float areaH = min(contentHeight - 200, (contentY + contentHeight - 153) - sy - 10);
+    return new float[] { sx, sy, areaW, areaH };
+  }
+
+  // The Restore / Apply row, as {x, y, w, h} for button i (0 = Restore All, 1 = Apply to All).
+  float[] panelActionRect(int i) {
+    float[] a = textureAreaRect();
+    float gap = 6;
+    float bw = (a[2] - 10 - gap) / 2;
+    return new float[] { a[0] + 5 + i * (bw + gap), a[1] + 30, bw, PANEL_ACTION_H };
+  }
+
+  // The clipped viewport the panel rows scroll inside, as {x, y, w, h}.
+  float[] panelListViewport() {
+    float[] a = textureAreaRect();
+    float top = a[1] + 30 + PANEL_ACTION_H + 10;
+    return new float[] { a[0], top, a[2], max(0, (a[1] + a[3] - 10) - top) };
+  }
+
+  float panelListContentH() { return max(3, nSides) * PANEL_ROW_H; }
+
+  float panelScrollMax() {
+    float[] v = panelListViewport();
+    return max(0, panelListContentH() - v[3]);
+  }
+
+  // Row i's rectangle in screen space, with the scroll offset applied.
+  float[] panelRowRect(int i) {
+    float[] v = panelListViewport();
+    return new float[] { v[0], v[1] + i * PANEL_ROW_H - panelScrollY, v[2], 24 };
+  }
+
+  void drawTextureUploadArea() {
+    float[] a = textureAreaRect();
+    float sx = a[0], sy = a[1], areaWidth = a[2], areaHeight = a[3];
+
     pushStyle();
-    
+
     fill(245);
     stroke(200);
     strokeWeight(1);
     rect(sx, sy, areaWidth, areaHeight, 4);
-    
+
     fill(100);
     textAlign(CENTER, TOP);
     textSize(11);
-    
-    if (activeTextureTab == 0) {
-      // Per-panel texture
+
+    if (activeTextureTab == TEX_TAB_PER_PANEL) {
       text("Upload texture for each panel", sx + areaWidth/2, sy + 10);
       drawPerPanelUploadButtons(sx, sy + 30, areaWidth, areaHeight - 40);
-    } else if (activeTextureTab == 1) {
-      // Strip texture
+    } else if (activeTextureTab == TEX_TAB_STRIP) {
       text("Upload continuous strip texture", sx + areaWidth/2, sy + 10);
       drawStripUploadButton(sx, sy + 30, areaWidth, areaHeight - 40);
     }
-    
+
     popStyle();
   }
-  
-  void drawPerPanelUploadButtons(float sx, float sy, float areaWidth, float areaHeight) {
-    // Draw individual toggle+upload for each panel
+
+  void drawPerPanelUploadButtons(float sxIgnored, float syIgnored, float awIgnored, float ahIgnored) {
     pushStyle();
-    
+
     int numPanels = max(3, nSides);
-    
+
     // Ensure arrays are sized correctly
     if (perPanelEnabled == null || perPanelEnabled.length != numPanels) {
       boolean[] newEnabled = new boolean[numPanels];
-      // Initialize all to false (OFF by default)
-      for (int i = 0; i < numPanels; i++) {
-        newEnabled[i] = false;
-      }
-      // Copy existing states if available
       if (perPanelEnabled != null) {
         for (int i = 0; i < min(perPanelEnabled.length, numPanels); i++) {
           newEnabled[i] = perPanelEnabled[i];
@@ -1105,83 +1161,87 @@ class SidebarPanel {
       }
       perPanelEnabled = newEnabled;
     }
-    
-    // Draw Restore to Default button at the top
-    float restoreBtnWidth = areaWidth - 10;
-    float restoreBtnHeight = 28;
-    float restoreBtnX = sx + 5;
-    float restoreBtnY = sy;
-    boolean restoreHover = mouseX >= restoreBtnX && mouseX <= restoreBtnX + restoreBtnWidth &&
-                           mouseY >= restoreBtnY && mouseY <= restoreBtnY + restoreBtnHeight;
-    
-    fill(restoreHover ? color(180, 70, 70) : color(160, 60, 60));
-    noStroke();
-    rect(restoreBtnX, restoreBtnY, restoreBtnWidth, restoreBtnHeight, 4);
-    
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Restore All to Default", restoreBtnX + restoreBtnWidth/2, restoreBtnY + restoreBtnHeight/2);
-    
-    // Adjust starting Y position for panel rows
-    sy += restoreBtnHeight + 10;
-    
-    float rowHeight = 35;
-    float labelWidth = 72;
-    float toggleW = 50;
-    float toggleH = 24;
-    float spacing = 7;
-    
+
+    // --- Restore All / Apply to All ---
+    String[] actLabels = { "Restore All to Default", "Apply to All" };
+    color[]  actBase   = { color(160, 60, 60), color(45, 120, 75) };
+    color[]  actHover  = { color(180, 70, 70), color(55, 145, 90) };
+    boolean canApply = (panelTextureSourceIndex() >= 0);
+    for (int i = 0; i < 2; i++) {
+      float[] r = panelActionRect(i);
+      boolean enabled = (i == 0) || canApply;
+      boolean hov = enabled && mouseX >= r[0] && mouseX <= r[0] + r[2] &&
+                    mouseY >= r[1] && mouseY <= r[1] + r[3];
+      fill(enabled ? (hov ? actHover[i] : actBase[i]) : color(150, 150, 155));
+      noStroke();
+      rect(r[0], r[1], r[2], r[3], 4);
+      fill(enabled ? color(255) : color(205));
+      textAlign(CENTER, CENTER);
+      textSize(10);
+      text(actLabels[i], r[0] + r[2]/2, r[1] + r[3]/2);
+    }
+
+    // --- Scrollable panel rows ---
+    float[] v = panelListViewport();
+    panelScrollY = constrain(panelScrollY, 0, panelScrollMax());
+    boolean scrollable = panelScrollMax() > 0;
+    float listW = v[2] - (scrollable ? 8 : 0);   // leave a lane for the scrollbar
+
+    clip(v[0], v[1], v[2], v[3]);
+
+    float labelWidth = 72, toggleW = 50, toggleH = 24, spacing = 7;
     for (int i = 0; i < numPanels; i++) {
-      float controlY = sy + i * rowHeight;
-      
-      // Panel label
+      float[] r = panelRowRect(i);
+      if (r[1] + toggleH < v[1] || r[1] > v[1] + v[3]) continue;   // fully scrolled out
+
       fill(80);
       textAlign(LEFT, CENTER);
       textSize(11);
-      text("Panel " + (i + 1) + ":", sx, controlY + toggleH/2);
-      
-      // Toggle button
-      float toggleX = sx + labelWidth;
+      text("Panel " + (i + 1) + ":", r[0], r[1] + toggleH/2);
+
+      float toggleX = r[0] + labelWidth;
       boolean toggleHover = mouseX >= toggleX && mouseX <= toggleX + toggleW &&
-                            mouseY >= controlY && mouseY <= controlY + toggleH;
-      
+                            mouseY >= r[1] && mouseY <= r[1] + toggleH;
       fill(perPanelEnabled[i] ? color(50, 150, 50) : color(150, 150, 150));
       if (toggleHover && !perPanelEnabled[i]) fill(color(170, 170, 170));
       noStroke();
-      rect(toggleX, controlY, toggleW, toggleH, 4);
-      
+      rect(toggleX, r[1], toggleW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
       textSize(10);
-      text(perPanelEnabled[i] ? "ON" : "OFF", toggleX + toggleW/2, controlY + toggleH/2);
-      
-      // Check if texture is loaded
+      text(perPanelEnabled[i] ? "ON" : "OFF", toggleX + toggleW/2, r[1] + toggleH/2);
+
       boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
-      
-      // Combined Upload/Edit button
       float uploadX = toggleX + toggleW + spacing;
-      float buttonW = areaWidth - (uploadX - sx);  // Full width for single button
-      float uploadH = toggleH;
+      float buttonW = listW - (uploadX - r[0]);
       boolean uploadHover = mouseX >= uploadX && mouseX <= uploadX + buttonW &&
-                            mouseY >= controlY && mouseY <= controlY + uploadH;
-      
-      if (hasTexture) {
-        fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
-      } else {
-        fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
-      }
-      rect(uploadX, controlY, buttonW, uploadH, 4);
-      
+                            mouseY >= r[1] && mouseY <= r[1] + toggleH;
+      fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
+      rect(uploadX, r[1], buttonW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
       textSize(10);
-      text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, controlY + uploadH/2);
+      text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, r[1] + toggleH/2);
     }
-    
+
+    noClip();
+
+    // Scrollbar: only when the list is taller than its viewport, which is roughly 8+ sides.
+    if (scrollable) {
+      float trackX = v[0] + v[2] - 6;
+      fill(225);
+      noStroke();
+      rect(trackX, v[1], 5, v[3], 2);
+      float frac  = v[3] / panelListContentH();
+      float thumbH = max(24, v[3] * frac);
+      float thumbY = v[1] + (v[3] - thumbH) * (panelScrollY / panelScrollMax());
+      fill(150);
+      rect(trackX, thumbY, 5, thumbH, 2);
+    }
+
     popStyle();
   }
-  
+
   void drawStripUploadButton(float sx, float sy, float areaWidth, float areaHeight) {
     float btnWidth = (areaWidth - 2 * SIDEBAR_PADDING - 7) / 2;  // Split into two buttons
     float btnHeight = 44;
@@ -1706,59 +1766,61 @@ class SidebarPanel {
       }
     }
     
+    // Tracking has only ControlP5 widgets, which handle their own clicks.
+    if (activeTextureTab == TEX_TAB_TRACKING) return true;
+
     // Check texture upload area buttons (per-panel and strip)
     float sx = x + SIDEBAR_PADDING;
     float sy = contentY + SIDEBAR_PADDING + 116; // Must match drawTextureUploadArea()
     float areaWidth = w - 2 * SIDEBAR_PADDING;
     
-    // Check per-panel toggle and upload buttons for each panel
-    if (activeTextureTab == 0) {
-      // Check Restore to Default button
-      float restoreBtnWidth = areaWidth - 10;
-      float restoreBtnHeight = 28;
-      float restoreBtnX = sx + 5;
-      float restoreBtnY = sy + 30;
-      if (mouseX >= restoreBtnX && mouseX <= restoreBtnX + restoreBtnWidth &&
-          mouseY >= restoreBtnY && mouseY <= restoreBtnY + restoreBtnHeight) {
+    // Check per-panel actions and rows. All geometry comes from the shared helpers, so this
+    // cannot drift away from what drawPerPanelUploadButtons() painted.
+    if (activeTextureTab == TEX_TAB_PER_PANEL) {
+      float[] restoreR = panelActionRect(0);
+      if (mouseX >= restoreR[0] && mouseX <= restoreR[0] + restoreR[2] &&
+          mouseY >= restoreR[1] && mouseY <= restoreR[1] + restoreR[3]) {
         restorePerPanelTexturesToDefault();
         return true;
       }
-      
-      int numPanels = max(3, nSides);
-      float rowHeight = 35;
-      float labelWidth = 72;
-      float toggleW = 50;
-      float toggleH = 24;
-      float spacing = 7;
-      
-      for (int i = 0; i < numPanels; i++) {
-        float controlY = sy + 30 + restoreBtnHeight + 10 + i * rowHeight; // Offset for restore button
-        float toggleX = sx + labelWidth;
-        
-        // Check toggle for this panel
-        if (mouseX >= toggleX && mouseX <= toggleX + toggleW &&
-            mouseY >= controlY && mouseY <= controlY + toggleH) {
-          perPanelEnabled[i] = !perPanelEnabled[i];
-          saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
-          return true;
-        }
-        
-        // Check combined upload/edit button for this panel
-        float uploadX = toggleX + toggleW + spacing;
-        float buttonW = areaWidth - (uploadX - sx);
-        if (mouseX >= uploadX && mouseX <= uploadX + buttonW &&
-            mouseY >= controlY && mouseY <= controlY + toggleH) {
-          boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
-          if (hasTexture) {
-            editPanelTexture(i);
-          } else {
-            selectPanelTexture(i);
+      float[] applyR = panelActionRect(1);
+      if (mouseX >= applyR[0] && mouseX <= applyR[0] + applyR[2] &&
+          mouseY >= applyR[1] && mouseY <= applyR[1] + applyR[3]) {
+        applyPanelTextureToAll();
+        return true;
+      }
+
+      float[] v = panelListViewport();
+      boolean inList = mouseY >= v[1] && mouseY <= v[1] + v[3];
+      if (inList) {
+        int numPanels = max(3, nSides);
+        boolean scrollable = panelScrollMax() > 0;
+        float listW = v[2] - (scrollable ? 8 : 0);
+        float labelWidth = 72, toggleW = 50, toggleH = 24, spacing = 7;
+
+        for (int i = 0; i < numPanels; i++) {
+          float[] r = panelRowRect(i);
+          if (mouseY < r[1] || mouseY > r[1] + toggleH) continue;
+
+          float toggleX = r[0] + labelWidth;
+          if (mouseX >= toggleX && mouseX <= toggleX + toggleW) {
+            perPanelEnabled[i] = !perPanelEnabled[i];
+            saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+            return true;
           }
-          return true;
+          float uploadX = toggleX + toggleW + spacing;
+          float buttonW = listW - (uploadX - r[0]);
+          if (mouseX >= uploadX && mouseX <= uploadX + buttonW) {
+            boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
+            if (hasTexture) editPanelTexture(i);
+            else            selectPanelTexture(i);
+            return true;
+          }
         }
+        return true;   // swallow clicks inside the list so they don't fall through
       }
     }
-    
+
     // Check strip upload and edit buttons
     if (activeTextureTab == 1) {
       float bx = sx + SIDEBAR_PADDING;
@@ -1922,7 +1984,15 @@ class SidebarPanel {
         sideTextureMode = TEX_STRIP_BENT;
         uiTextureMode = 2;
       }
-      
+      // Tab 2 = Tracking, which is not a texture mode and leaves sideTextureMode alone.
+      // The selection is per-shape state, so it has to be written back: loadGlobalsFrom()
+      // restores activeTextureTab from the ShapeSpec while drawing, and would otherwise undo
+      // this on the next frame. Tabs 0 and 1 got away with it because update() re-derives
+      // them from sideTextureMode, which was already being saved. Tracking has no such
+      // backing value.
+      if (shapes != null && shapes.size() > 0) saveGlobalsTo(shapes.get(selectedShapeIdx));
+      updateSidebarControlsVisibility();
+
       // Update tab button states
       for (SidebarButton btn : buttons) {
         if (btn.id.startsWith("texture_tab_")) {
@@ -1945,6 +2015,79 @@ class SidebarPanel {
   }
   
   // Restore per-panel textures to default (clear all)
+  // Scrolls the per-panel list when the pointer is inside it. Returns true when the event was
+  // consumed, so the caller knows not to also zoom the 3D view.
+  boolean handleMouseWheel(float count) {
+    if (activeMainTab != 1 || activeTextureTab != TEX_TAB_PER_PANEL) return false;
+    if (mouseX < x || mouseX > x + w) return false;
+    float[] v = panelListViewport();
+    if (mouseY < v[1] || mouseY > v[1] + v[3]) return false;
+    if (panelScrollMax() <= 0) return false;
+    panelScrollY = constrain(panelScrollY + count * PANEL_ROW_H * 0.6, 0, panelScrollMax());
+    return true;
+  }
+
+  // Which panel "Apply to All" copies from: the one most recently uploaded or edited, falling
+  // back to the first panel that has a texture. Returns -1 when no panel has one yet, which is
+  // when the button is disabled.
+  int panelTextureSourceIndex() {
+    int numPanels = max(3, nSides);
+    if (panelTextures == null) return -1;
+    if (currentPanelUploadIndex >= 0 && currentPanelUploadIndex < min(numPanels, panelTextures.length)
+        && panelTextures[currentPanelUploadIndex] != null) {
+      return currentPanelUploadIndex;
+    }
+    for (int i = 0; i < min(numPanels, panelTextures.length); i++) {
+      if (panelTextures[i] != null) return i;
+    }
+    return -1;
+  }
+
+  // Copies the source panel's texture and on/off state onto every panel, so a single setup can
+  // be spread across the whole object without configuring each face by hand.
+  void applyPanelTextureToAll() {
+    int src = panelTextureSourceIndex();
+    if (src < 0) {
+      println("[Sidebar] Apply to All: no panel has a texture yet");
+      return;
+    }
+    int numPanels = max(3, nSides);
+
+    if (panelTextures == null || panelTextures.length != numPanels) {
+      PImage[] resized = new PImage[numPanels];
+      if (panelTextures != null) {
+        for (int i = 0; i < min(panelTextures.length, numPanels); i++) resized[i] = panelTextures[i];
+      }
+      panelTextures = resized;
+      src = min(src, numPanels - 1);
+    }
+    if (perPanelEnabled == null || perPanelEnabled.length != numPanels) {
+      boolean[] re = new boolean[numPanels];
+      if (perPanelEnabled != null) {
+        for (int i = 0; i < min(perPanelEnabled.length, numPanels); i++) re[i] = perPanelEnabled[i];
+      }
+      perPanelEnabled = re;
+    }
+
+    PImage srcImg = panelTextures[src];
+    boolean srcOn = perPanelEnabled[src];
+    for (int i = 0; i < numPanels; i++) {
+      panelTextures[i]   = srcImg;
+      perPanelEnabled[i] = srcOn;
+    }
+
+    // Per-panel textures only render in per-panel mode; match what an upload does.
+    sideTextureMode = TEX_PER_PANEL;
+    uiTextureMode   = TEX_PER_PANEL;
+    if (sTextureMode != null) sTextureMode.setValue(TEX_PER_PANEL);
+    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+      shapes.get(selectedShapeIdx).panelTextures = panelTextures;
+    }
+    saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+    redraw();
+    println("[Sidebar] Applied panel " + (src + 1) + " texture to all " + numPanels + " panels");
+  }
+
   void restorePerPanelTexturesToDefault() {
     int numPanels = max(3, nSides);
     
@@ -1977,10 +2120,13 @@ class SidebarPanel {
     // Map texture mode constant to tab index
     // TEX_PER_PANEL (1) -> Tab 0
     // TEX_STRIP_BENT (2) -> Tab 1
-    if (sideTextureMode == TEX_PER_PANEL) {
-      activeTextureTab = 0;
-    } else if (sideTextureMode == TEX_STRIP_BENT) {
-      activeTextureTab = 1;
+    // Tracking is not a texture mode, so leave the selection alone while it is showing.
+    if (activeTextureTab != TEX_TAB_TRACKING) {
+      if (sideTextureMode == TEX_PER_PANEL) {
+        activeTextureTab = 0;
+      } else if (sideTextureMode == TEX_STRIP_BENT) {
+        activeTextureTab = 1;
+      }
     }
     
     // Don't override local lid enabled states - they control independently

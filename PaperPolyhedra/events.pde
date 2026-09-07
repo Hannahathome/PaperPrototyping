@@ -489,6 +489,10 @@ void mouseWheel(MouseEvent event) {
     return;
   }
   
+  // Scroll the per-panel texture list when the pointer is over it. Needed once a shape has
+  // more sides than the list can show at once (roughly eight).
+  if (sidebar != null && sidebar.handleMouseWheel(event.getCount())) return;
+
   // Handle 3D zoom (only in canvas area, not in bottom bar)
   boolean in3DView = view3DMode || (assemblyMode && !assemblyShowTemplate);
   if (in3DView && mouseY < height - BOTTOM_EXPORT_HEIGHT) {

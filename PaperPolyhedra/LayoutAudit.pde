@@ -14,10 +14,10 @@
 // (window size x mode x sidebar tab) configurations, writes one CSV row per box, and exits.
 //----------------------------------------------------------------------
 
-final boolean AUDIT_MODE = true;   // flip to true to re-run the sweep
+final boolean AUDIT_MODE = false;  // flip to true to re-run the sweep
 String AUDIT_OUT = "docs/layout_boxes.csv";  // relative to the sketch folder
 // Also save a PNG of each configuration, for eyeballing what the numbers describe.
-final boolean AUDIT_SHOTS = true;
+final boolean AUDIT_SHOTS = false;
 String AUDIT_SHOT_DIR = "docs/shots/";
 
 // '|' is not a legal filename character on Windows.
@@ -30,10 +30,16 @@ ArrayList<String> auditRows = new ArrayList<String>();
 // ---- sweep plan -------------------------------------------------------
 class AuditCfg {
   int w, h; String mode; int tab; boolean d3, asm, workshop;
+  // Optional scenario overrides: -1 / false means "leave alone".
+  int sides = -1, texTab = -1; boolean advOpen = false; String tag = "";
   AuditCfg(int _w, int _h, String _mode, int _tab, boolean _d3, boolean _asm, boolean _ws) {
     w=_w; h=_h; mode=_mode; tab=_tab; d3=_d3; asm=_asm; workshop=_ws;
   }
-  String id() { return w + "x" + h + "|" + mode + "|tab" + tab; }
+  AuditCfg sides(int n)      { sides = n;  return this; }
+  AuditCfg texTab(int t)     { texTab = t; return this; }
+  AuditCfg adv(boolean o)    { advOpen = o; return this; }
+  AuditCfg tag(String t)     { tag = t;    return this; }
+  String id() { return w + "x" + h + "|" + mode + "|tab" + tab + (tag.length() > 0 ? "|" + tag : ""); }
 }
 ArrayList<AuditCfg> auditPlan = new ArrayList<AuditCfg>();
 int auditCfgIdx = 0;
@@ -51,13 +57,17 @@ public void handleDraw() {
 void auditInit() {
   surface.setResizable(true);
   // The current fixed size, two common laptop sizes, and 1080p / 1440p full screen.
-  int[][] sizes = { {1000,700}, {1500,800}, {1920,1080} };
+  int[][] sizes = { {1000,700}, {1100,720}, {1280,720}, {1366,768}, {1500,800}, {1920,1080}, {2560,1440} };
   for (int si = 0; si < sizes.length; si++) {
     int sw = sizes[si][0], sh = sizes[si][1];
     for (int t = 0; t < 3; t++) auditPlan.add(new AuditCfg(sw, sh, "2D", t, false, false, false));
     for (int t = 0; t < 3; t++) auditPlan.add(new AuditCfg(sw, sh, "3D", t, true,  false, false));
     auditPlan.add(new AuditCfg(sw, sh, "ASSEMBLY", 3, true,  true,  false));
     auditPlan.add(new AuditCfg(sw, sh, "WORKSHOP", 0, false, false, true));
+    // Scenarios the plain size sweep does not reach.
+    auditPlan.add(new AuditCfg(sw, sh, "2D", 0, false, false, false).adv(true).tag("advopen"));
+    auditPlan.add(new AuditCfg(sw, sh, "2D", 1, false, false, false).sides(14).texTab(0).tag("panels14"));
+    auditPlan.add(new AuditCfg(sw, sh, "2D", 1, false, false, false).texTab(2).tag("tracking"));
   }
   auditWriter = createWriter(AUDIT_OUT);
   auditWriter.println("config,win_w,win_h,mode,tab,kind,source,label,x,y,w,h,visible");
@@ -75,6 +85,11 @@ void auditApplyCfg(AuditCfg c) {
     sidebar.mainTabs.clear();
     sidebar.setupMainTabs();
   }
+  if (c.sides > 0 && sNSides != null) sNSides.setValue(c.sides);
+  // Go through the click handler, not the field: the selection is per-shape state that has to
+  // be written back to the ShapeSpec or loadGlobalsFrom() undoes it.
+  if (c.texTab >= 0 && sidebar != null) sidebar.handleTextureTabClick("texture_tab_" + c.texTab);
+  advancedOpen = c.advOpen;
   relayout();   // the sketch's own single layout entry point
 }
 
