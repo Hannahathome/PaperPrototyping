@@ -557,8 +557,7 @@ class SidebarPanel {
 
     fill(120);
     textSize(10);
-    text("Placement, enable/disable and the marker grid stay in the bottom bar.",
-         sx, sy + 16);
+    text("Placement and the marker grid stay in the bottom bar.", sx, sy + 16);
 
     popStyle();
   }

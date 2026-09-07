@@ -59,13 +59,19 @@ boolean bExportingCutFile = false;  // True while writing SVG cut file — suppr
 //--RH--
 //----------------------------------------------------------------------------------
 
+// The window size must be chosen here, not in setup(). Calling surface.setSize() after the
+// renderer exists recreates the drawable, and on Windows that can leave the sketch's
+// width/height out of step with the native window the mouse events come from -- which shows
+// up as clicks landing next to the buttons rather than on them.
+//
+// Opening maximised rather than fullScreen(): a borderless full screen fixes the size again,
+// and makes the export / image-import file dialogs awkward to reach.
+void settings() {
+  size(max(MIN_WIN_W, displayWidth - 80), max(MIN_WIN_H, displayHeight - 120), P2D);
+}
+
 void setup() {
-  size(1500, 800, P2D);
-  // Open maximised on the current display and let the user resize from there. A borderless
-  // fullScreen() would fix the size again, and makes the export / image-import file dialogs
-  // awkward to reach.
   surface.setResizable(true);
-  surface.setSize(max(MIN_WIN_W, displayWidth - 80), max(MIN_WIN_H, displayHeight - 120));
   surface.setLocation(40, 40);
   ensurePlaceholderAssets();  // data/ artwork is gitignored; generate it if absent
   setParams(false);
@@ -157,6 +163,7 @@ void draw() {
       toolbar.drawDropdown();
       sidebar.draw();
       drawBottomExportButton();
+      drawDebugCursor();
       return;
     }
 
@@ -176,6 +183,7 @@ void draw() {
       toolbar.drawDropdown();  // Draw dropdown menu if active
       sidebar.draw();
       drawBottomExportButton();
+      drawDebugCursor();
       
       // Draw cropper overlay last (if active)
       if (cropperActive && imageCropper != null) {
@@ -296,6 +304,7 @@ void draw() {
     toolbar.drawDropdown();  // Draw dropdown menu if active
     sidebar.draw();
     drawBottomExportButton();
+      drawDebugCursor();
     
     // Draw cropper overlay last (if active)
     if (cropperActive && imageCropper != null) {
@@ -1164,6 +1173,39 @@ void relayout() {
 // The 3D view is blitted at (LEFT_SIDEBAR_WIDTH, TOOLBAR_HEIGHT) into the area above the
 // export bar. Sizing the buffer to the window minus the toolbar rendered 90 px that the
 // export bar then painted over, and pushed the scene 45 px below the visible centre.
+// Diagnostic overlay, toggled with F9. Draws a crosshair at the mouse position Processing
+// reports, so a mismatch between that and the real cursor is visible at a glance.
+boolean debugCursor = false;
+
+void drawDebugCursor() {
+  if (!debugCursor) return;
+  pushStyle();
+  stroke(255, 0, 0);
+  strokeWeight(1);
+  line(mouseX - 40, mouseY, mouseX + 40, mouseY);
+  line(mouseX, mouseY - 40, mouseX, mouseY + 40);
+  noFill();
+  ellipse(mouseX, mouseY, 16, 16);
+  fill(255, 0, 0);
+  noStroke();
+  textAlign(LEFT, TOP);
+  uiText(12);
+  text("mouse " + mouseX + "," + mouseY
+     + "   win " + width + "x" + height
+     + "   pixel " + pixelWidth + "x" + pixelHeight
+     + "   density " + pixelDensity + "/" + displayDensity(),
+     12, height - 18);
+  popStyle();
+}
+
+// True when the pointer is over the drawing area rather than the surrounding chrome. Any
+// pick that works in page coordinates must be gated on this.
+boolean mouseInCanvasArea() {
+  return mouseX >= LEFT_SIDEBAR_WIDTH &&
+         mouseY >= TOOLBAR_HEIGHT &&
+         mouseY <= height - BOTTOM_EXPORT_HEIGHT;
+}
+
 int view3DBufW() { return max(1, width  - LEFT_SIDEBAR_WIDTH); }
 int view3DBufH() { return max(1, height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT); }
 

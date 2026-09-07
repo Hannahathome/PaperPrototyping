@@ -4,11 +4,11 @@
 
 config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x widgets
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0               685       408      1000       550      1000      23
+1000x700|2D|tab0               671       408       994       533       994      23
 1000x700|2D|tab0|advopen       549       408      1000       550      1000      29
 1000x700|2D|tab1               579       408      1000       550      1000      13
 1000x700|2D|tab1|panels14       579       408      1000       550      1000      13
-1000x700|2D|tab1|tracking       391       396      1000       550      1000      16
+1000x700|2D|tab1|tracking       407       396      1000       550      1000      17
 1000x700|2D|tab2               590       408      1000       550      1000      30
 1000x700|3D|tab0               398       408      1000       550      1000      23
 1000x700|3D|tab1               579       408      1000       550      1000      13
@@ -17,67 +17,67 @@ config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x
 1000x700|WORKSHOP|tab0         685       408      1000       550      1000      23
 1100x720|2D|tab0               685       408      1100       570      1100      23
 1100x720|2D|tab0|advopen       708       408      1100       568      1100      28
-1100x720|2D|tab1               391       396      1100       570      1100      16
+1100x720|2D|tab1               407       396      1100       570      1100      17
 1100x720|2D|tab1|panels14       599       408      1100       570      1100      13
-1100x720|2D|tab1|tracking       391       396      1100       570      1100      16
+1100x720|2D|tab1|tracking       407       396      1100       570      1100      17
 1100x720|2D|tab2               618       408      1100       570      1100      30
 1100x720|3D|tab0               398       408      1100       570      1100      23
-1100x720|3D|tab1               391       396      1100       570      1100      16
+1100x720|3D|tab1               407       396      1100       570      1100      17
 1100x720|3D|tab2               618       408      1100       570      1100      30
 1100x720|ASSEMBLY|tab3         418       408      1100       570      1100      13
 1100x720|WORKSHOP|tab0         685       408      1100       570      1100      23
 1280x720|2D|tab0               685       408      1280       610      1280      23
 1280x720|2D|tab0|advopen       708       408      1280       568      1280      28
-1280x720|2D|tab1               391       396      1280       610      1280      16
+1280x720|2D|tab1               407       396      1280       610      1280      17
 1280x720|2D|tab1|panels14       599       408      1280       610      1280      13
-1280x720|2D|tab1|tracking       391       396      1280       610      1280      16
+1280x720|2D|tab1|tracking       407       396      1280       610      1280      17
 1280x720|2D|tab2               618       408      1280       610      1280      30
 1280x720|3D|tab0               398       408      1280       610      1280      23
-1280x720|3D|tab1               391       396      1280       610      1280      16
+1280x720|3D|tab1               407       396      1280       610      1280      17
 1280x720|3D|tab2               618       408      1280       610      1280      30
 1280x720|ASSEMBLY|tab3         418       408      1280       610      1280      13
 1280x720|WORKSHOP|tab0         685       408      1280       610      1280      23
 1366x768|2D|tab0               685       408      1366       658      1366      23
 1366x768|2D|tab0|advopen       756       408      1366       658      1366      28
-1366x768|2D|tab1               391       396      1366       658      1366      16
+1366x768|2D|tab1               407       396      1366       658      1366      17
 1366x768|2D|tab1|panels14       647       408      1366       658      1366      13
-1366x768|2D|tab1|tracking       391       396      1366       658      1366      16
+1366x768|2D|tab1|tracking       407       396      1366       658      1366      17
 1366x768|2D|tab2               642       408      1366       658      1366      30
 1366x768|3D|tab0               398       408      1366       658      1366      23
-1366x768|3D|tab1               391       396      1366       658      1366      16
+1366x768|3D|tab1               407       396      1366       658      1366      17
 1366x768|3D|tab2               642       408      1366       658      1366      30
 1366x768|ASSEMBLY|tab3         418       408      1366       658      1366      13
 1366x768|WORKSHOP|tab0         685       408      1366       658      1366      23
 1500x800|2D|tab0               685       408      1500       690      1500      23
 1500x800|2D|tab0|advopen       788       408      1500       690      1500      28
-1500x800|2D|tab1               391       396      1500       690      1500      16
+1500x800|2D|tab1               407       396      1500       690      1500      17
 1500x800|2D|tab1|panels14       679       408      1500       690      1500      13
-1500x800|2D|tab1|tracking       391       396      1500       690      1500      16
+1500x800|2D|tab1|tracking       407       396      1500       690      1500      17
 1500x800|2D|tab2               642       408      1500       690      1500      30
 1500x800|3D|tab0               398       408      1500       690      1500      23
-1500x800|3D|tab1               391       396      1500       690      1500      16
+1500x800|3D|tab1               407       396      1500       690      1500      17
 1500x800|3D|tab2               642       408      1500       690      1500      30
 1500x800|ASSEMBLY|tab3         418       408      1500       690      1500      13
 1500x800|WORKSHOP|tab0         685       408      1500       690      1500      23
-1920x1080|2D|tab0              685       408      1920       990      1920      23
 1920x1080|2D|tab0|advopen       822       408      1920       990      1920      28
-1920x1080|2D|tab1              391       396      1920       990      1920      16
+1920x1080|2D|tab1              407       396      1920       990      1920      17
 1920x1080|2D|tab1|panels14       959       408      1920       990      1920      13
-1920x1080|2D|tab1|tracking       391       396      1920       990      1920      16
+1920x1080|2D|tab1|tracking       407       396      1920       990      1920      17
 1920x1080|2D|tab2              642       408      1920       990      1920      30
 1920x1080|3D|tab0              398       408      1920       990      1920      23
-1920x1080|3D|tab1              391       396      1920       990      1920      16
+1920x1080|3D|tab1              407       396      1920       990      1920      17
 1920x1080|3D|tab2              642       408      1920       990      1920      30
 1920x1080|ASSEMBLY|tab3        418       408      1920       990      1920      13
 1920x1080|WORKSHOP|tab0        685       408      1920       990      1920      23
+1920x1080|2D|tab0              685       408      1926      1007      1926      23
 2560x1440|2D|tab0              685       408      2560      1350      2560      23
 2560x1440|2D|tab0|advopen       822       408      2560      1350      2560      28
-2560x1440|2D|tab1              391       396      2560      1350      2560      16
+2560x1440|2D|tab1              407       396      2560      1350      2560      17
 2560x1440|2D|tab1|panels14      1319       408      2560      1350      2560      13
-2560x1440|2D|tab1|tracking       391       396      2560      1350      2560      16
+2560x1440|2D|tab1|tracking       407       396      2560      1350      2560      17
 2560x1440|2D|tab2              642       408      2560      1350      2560      30
 2560x1440|3D|tab0              398       408      2560      1350      2560      23
-2560x1440|3D|tab1              391       396      2560      1350      2560      16
+2560x1440|3D|tab1              407       396      2560      1350      2560      17
 2560x1440|3D|tab2              642       408      2560      1350      2560      30
 2560x1440|ASSEMBLY|tab3        418       408      2560      1350      2560      13
 2560x1440|WORKSHOP|tab0        685       408      2560      1350      2560      23
@@ -88,11 +88,11 @@ config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x
 
 config                     win_h  content_bot   overflow  verdict
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0             700          685        -15  fits (15 px spare)
+1000x700|2D|tab0             683          671        -12  fits (12 px spare)
 1000x700|2D|tab0|advopen     700          549       -151  fits (151 px spare)
 1000x700|2D|tab1             700          579       -121  fits (121 px spare)
 1000x700|2D|tab1|panels14     700          579       -121  fits (121 px spare)
-1000x700|2D|tab1|tracking     700          391       -309  fits (309 px spare)
+1000x700|2D|tab1|tracking     700          407       -293  fits (293 px spare)
 1000x700|2D|tab2             700          590       -110  fits (110 px spare)
 1000x700|3D|tab0             700          398       -302  fits (302 px spare)
 1000x700|3D|tab1             700          579       -121  fits (121 px spare)
@@ -101,67 +101,67 @@ config                     win_h  content_bot   overflow  verdict
 1000x700|WORKSHOP|tab0       700          685        -15  fits (15 px spare)
 1100x720|2D|tab0             720          685        -35  fits (35 px spare)
 1100x720|2D|tab0|advopen     720          708        -12  fits (12 px spare)
-1100x720|2D|tab1             720          391       -329  fits (329 px spare)
+1100x720|2D|tab1             720          407       -313  fits (313 px spare)
 1100x720|2D|tab1|panels14     720          599       -121  fits (121 px spare)
-1100x720|2D|tab1|tracking     720          391       -329  fits (329 px spare)
+1100x720|2D|tab1|tracking     720          407       -313  fits (313 px spare)
 1100x720|2D|tab2             720          618       -102  fits (102 px spare)
 1100x720|3D|tab0             720          398       -322  fits (322 px spare)
-1100x720|3D|tab1             720          391       -329  fits (329 px spare)
+1100x720|3D|tab1             720          407       -313  fits (313 px spare)
 1100x720|3D|tab2             720          618       -102  fits (102 px spare)
 1100x720|ASSEMBLY|tab3       720          418       -302  fits (302 px spare)
 1100x720|WORKSHOP|tab0       720          685        -35  fits (35 px spare)
 1280x720|2D|tab0             720          685        -35  fits (35 px spare)
 1280x720|2D|tab0|advopen     720          708        -12  fits (12 px spare)
-1280x720|2D|tab1             720          391       -329  fits (329 px spare)
+1280x720|2D|tab1             720          407       -313  fits (313 px spare)
 1280x720|2D|tab1|panels14     720          599       -121  fits (121 px spare)
-1280x720|2D|tab1|tracking     720          391       -329  fits (329 px spare)
+1280x720|2D|tab1|tracking     720          407       -313  fits (313 px spare)
 1280x720|2D|tab2             720          618       -102  fits (102 px spare)
 1280x720|3D|tab0             720          398       -322  fits (322 px spare)
-1280x720|3D|tab1             720          391       -329  fits (329 px spare)
+1280x720|3D|tab1             720          407       -313  fits (313 px spare)
 1280x720|3D|tab2             720          618       -102  fits (102 px spare)
 1280x720|ASSEMBLY|tab3       720          418       -302  fits (302 px spare)
 1280x720|WORKSHOP|tab0       720          685        -35  fits (35 px spare)
 1366x768|2D|tab0             768          685        -83  fits (83 px spare)
 1366x768|2D|tab0|advopen     768          756        -12  fits (12 px spare)
-1366x768|2D|tab1             768          391       -377  fits (377 px spare)
+1366x768|2D|tab1             768          407       -361  fits (361 px spare)
 1366x768|2D|tab1|panels14     768          647       -121  fits (121 px spare)
-1366x768|2D|tab1|tracking     768          391       -377  fits (377 px spare)
+1366x768|2D|tab1|tracking     768          407       -361  fits (361 px spare)
 1366x768|2D|tab2             768          642       -126  fits (126 px spare)
 1366x768|3D|tab0             768          398       -370  fits (370 px spare)
-1366x768|3D|tab1             768          391       -377  fits (377 px spare)
+1366x768|3D|tab1             768          407       -361  fits (361 px spare)
 1366x768|3D|tab2             768          642       -126  fits (126 px spare)
 1366x768|ASSEMBLY|tab3       768          418       -350  fits (350 px spare)
 1366x768|WORKSHOP|tab0       768          685        -83  fits (83 px spare)
 1500x800|2D|tab0             800          685       -115  fits (115 px spare)
 1500x800|2D|tab0|advopen     800          788        -12  fits (12 px spare)
-1500x800|2D|tab1             800          391       -409  fits (409 px spare)
+1500x800|2D|tab1             800          407       -393  fits (393 px spare)
 1500x800|2D|tab1|panels14     800          679       -121  fits (121 px spare)
-1500x800|2D|tab1|tracking     800          391       -409  fits (409 px spare)
+1500x800|2D|tab1|tracking     800          407       -393  fits (393 px spare)
 1500x800|2D|tab2             800          642       -158  fits (158 px spare)
 1500x800|3D|tab0             800          398       -402  fits (402 px spare)
-1500x800|3D|tab1             800          391       -409  fits (409 px spare)
+1500x800|3D|tab1             800          407       -393  fits (393 px spare)
 1500x800|3D|tab2             800          642       -158  fits (158 px spare)
 1500x800|ASSEMBLY|tab3       800          418       -382  fits (382 px spare)
 1500x800|WORKSHOP|tab0       800          685       -115  fits (115 px spare)
-1920x1080|2D|tab0           1080          685       -395  fits (395 px spare)
 1920x1080|2D|tab0|advopen    1080          822       -258  fits (258 px spare)
-1920x1080|2D|tab1           1080          391       -689  fits (689 px spare)
+1920x1080|2D|tab1           1080          407       -673  fits (673 px spare)
 1920x1080|2D|tab1|panels14    1080          959       -121  fits (121 px spare)
-1920x1080|2D|tab1|tracking    1080          391       -689  fits (689 px spare)
+1920x1080|2D|tab1|tracking    1080          407       -673  fits (673 px spare)
 1920x1080|2D|tab2           1080          642       -438  fits (438 px spare)
 1920x1080|3D|tab0           1080          398       -682  fits (682 px spare)
-1920x1080|3D|tab1           1080          391       -689  fits (689 px spare)
+1920x1080|3D|tab1           1080          407       -673  fits (673 px spare)
 1920x1080|3D|tab2           1080          642       -438  fits (438 px spare)
 1920x1080|ASSEMBLY|tab3     1080          418       -662  fits (662 px spare)
 1920x1080|WORKSHOP|tab0     1080          685       -395  fits (395 px spare)
+1920x1080|2D|tab0           1097          685       -412  fits (412 px spare)
 2560x1440|2D|tab0           1440          685       -755  fits (755 px spare)
 2560x1440|2D|tab0|advopen    1440          822       -618  fits (618 px spare)
-2560x1440|2D|tab1           1440          391      -1049  fits (1049 px spare)
+2560x1440|2D|tab1           1440          407      -1033  fits (1033 px spare)
 2560x1440|2D|tab1|panels14    1440         1319       -121  fits (121 px spare)
-2560x1440|2D|tab1|tracking    1440          391      -1049  fits (1049 px spare)
+2560x1440|2D|tab1|tracking    1440          407      -1033  fits (1033 px spare)
 2560x1440|2D|tab2           1440          642       -798  fits (798 px spare)
 2560x1440|3D|tab0           1440          398      -1042  fits (1042 px spare)
-2560x1440|3D|tab1           1440          391      -1049  fits (1049 px spare)
+2560x1440|3D|tab1           1440          407      -1033  fits (1033 px spare)
 2560x1440|3D|tab2           1440          642       -798  fits (798 px spare)
 2560x1440|ASSEMBLY|tab3     1440          418      -1022  fits (1022 px spare)
 2560x1440|WORKSHOP|tab0     1440          685       -755  fits (755 px spare)
@@ -194,7 +194,7 @@ Export bar spans x=420..win_w, y=win_h-90..win_h
 
 config                      win_w   left_group  right_group  gap
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0             1000          678          688  10 px clear
+1000x700|2D|tab0              994          655          658  3 px clear
 1000x700|2D|tab0|advopen     1000          678          688  10 px clear
 1000x700|2D|tab1             1000          678          688  10 px clear
 1000x700|2D|tab1|panels14     1000          678          688  10 px clear
@@ -249,7 +249,6 @@ config                      win_w   left_group  right_group  gap
 1500x800|3D|tab2             1500         1115         1180  65 px clear
 1500x800|ASSEMBLY|tab3       1500         1115         1180  65 px clear
 1500x800|WORKSHOP|tab0       1500         1115         1180  65 px clear
-1920x1080|2D|tab0            1920         1319         1600  281 px clear
 1920x1080|2D|tab0|advopen     1920         1319         1600  281 px clear
 1920x1080|2D|tab1            1920         1319         1600  281 px clear
 1920x1080|2D|tab1|panels14     1920         1319         1600  281 px clear
@@ -260,6 +259,7 @@ config                      win_w   left_group  right_group  gap
 1920x1080|3D|tab2            1920         1319         1600  281 px clear
 1920x1080|ASSEMBLY|tab3      1920         1319         1600  281 px clear
 1920x1080|WORKSHOP|tab0      1920         1319         1600  281 px clear
+1920x1080|2D|tab0            1926         1319         1600  281 px clear
 2560x1440|2D|tab0            2560         1319         2240  921 px clear
 2560x1440|2D|tab0|advopen     2560         1319         2240  921 px clear
 2560x1440|2D|tab1            2560         1319         2240  921 px clear
@@ -281,9 +281,9 @@ config                      win_w   left_group  right_group  gap
   2D           tab0 : 13 follow the window, 10 pinned to fixed coordinates
         follow : auto_marker_ids_toggle(+204,+620), btn_export_main(+1060,+660), enable_markers_toggle(+204,+620), export_filename(+1060,+660), marker_free_place_toggle(+204,+620), marker_grid(+204,+620)
         pinned : btn_sides_minus, btn_sides_plus, tf_bot_size, tf_height, tf_top_size, ui_bottom_size, ui_lock_equal, ui_n_sides, ui_side_length, ui_top_size
-  2D           tab1 : 13 follow the window,  3 pinned to fixed coordinates
+  2D           tab1 : 13 follow the window,  4 pinned to fixed coordinates
         follow : auto_marker_ids_toggle(+204,+620), btn_export_main(+1060,+660), enable_markers_toggle(+204,+620), export_filename(+1060,+660), marker_free_place_toggle(+204,+620), marker_grid(+204,+620)
-        pinned : tr_auto_marker_ids, tr_marker_id, tr_marker_size
+        pinned : tr_auto_marker_ids, tr_enable_markers, tr_marker_id, tr_marker_size
   2D           tab2 : 13 follow the window, 17 pinned to fixed coordinates
         follow : auto_marker_ids_toggle(+204,+620), btn_export_main(+1060,+660), enable_markers_toggle(+204,+620), export_filename(+1060,+660), marker_free_place_toggle(+204,+620), marker_grid(+204,+620)
         pinned : adv_lidOffsetX, adv_lidOffsetY, adv_patRotation, adv_patX, adv_patY, btn_bot_lid_down, btn_bot_lid_left, btn_bot_lid_right, btn_bot_lid_rotate, btn_bot_lid_up ...
@@ -323,16 +323,16 @@ config                             buffer         expected  status
       y=  286.0..  306.0  [cp5] Textfield                          tf_top_size
       y=  286.0..  306.0  [cp5] Slider                             ui_bottom_size
   tab1:
-      y=  369.0..  391.0  [cp5] Toggle                             tr_auto_marker_ids
-      y=  317.0..  341.0  [cp5] Numberbox                          tr_marker_size
-      y=  265.0..  289.0  [cp5] Numberbox                          tr_marker_id
-      y=  215.0..  228.0  [text] SidebarPanel.drawTrackingContent   Placement; enable/disable and the marker grid stay in the bottom bar.
+      y=  385.0..  407.0  [cp5] Toggle                             tr_auto_marker_ids
+      y=  333.0..  357.0  [cp5] Numberbox                          tr_marker_size
+      y=  281.0..  305.0  [cp5] Numberbox                          tr_marker_id
+      y=  229.0..  251.0  [cp5] Toggle                             tr_enable_markers
+      y=  215.0..  228.0  [text] SidebarPanel.drawTrackingContent   Placement and the marker grid stay in the bottom bar.
       y=  199.0..  213.0  [text] SidebarPanel.drawTrackingContent   ARUCO MARKERS
       y=  156.0..  187.0  [rect] SidebarButton.draw                 
       y=  156.0..  187.0  [rect] SidebarButton.draw                 
       y=  156.0..  187.0  [rect] SidebarButton.draw                 
       y=  163.5..  179.5  [text] SidebarButton.draw                 Per Panel
-      y=  163.5..  179.5  [text] SidebarButton.draw                 Strip
   tab2:
       y=  602.0..  618.0  [text] SidebarPanel.drawPlacementContent  REPEATS
       y=  564.5..  590.5  [cp5] Button                             btn_bot_lid_down

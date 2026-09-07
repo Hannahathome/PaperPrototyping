@@ -44,7 +44,7 @@ class AuditCfg {
 ArrayList<AuditCfg> auditPlan = new ArrayList<AuditCfg>();
 int auditCfgIdx = 0;
 int auditSettle = 0;
-final int AUDIT_SETTLE_FRAMES = 5;
+final int AUDIT_SETTLE_FRAMES = 12;  // a resize can take several frames to land
 
 // Wrapping handleDraw() rather than registerMethod(): Processing inner classes are not
 // public, so reflection-based hooks cannot reach them.
@@ -52,6 +52,85 @@ public void handleDraw() {
   if (AUDIT_MODE) auditPre();
   super.handleDraw();
   if (AUDIT_MODE) auditPost();
+  if (AUDIT_CLICK_TEST && frameCount > 0) clickTestTick();
+}
+
+// --- Click-routing test ------------------------------------------------------------
+// The bounding-box sweep proves where things are DRAWN. It cannot prove a click reaches
+// them: mousePressed() runs canvas-space picks before the UI checks, and one of those
+// swallowing the click looks identical in the geometry data. That is exactly how the
+// "buttons stop working after a resize" bug hid from the sweep. This drives the real
+// dispatcher at the centre of known targets and checks the expected thing happened.
+final boolean AUDIT_CLICK_TEST = false;  // flip to true to run it
+int clickTestSize = 0, clickTestFrame = 0, clickFails = 0, clickChecks = 0;
+int[][] CLICK_SIZES = { {1500,800}, {1180,980}, {1000,700}, {1920,1080}, {2560,1440} };
+
+void clickAt(float mx, float my) {
+  mouseX = int(mx);
+  mouseY = int(my);
+  mousePressed();          // the sketch's own dispatcher, not the boolean field
+}
+
+void clickExpect(String what, boolean ok) {
+  clickChecks++;
+  if (!ok) { clickFails++; println("      FAIL  " + what); }
+}
+
+void clickTestTick() {
+  if (clickTestSize >= CLICK_SIZES.length) return;
+  clickTestFrame++;
+  if (clickTestFrame == 5) {
+    surface.setSize(CLICK_SIZES[clickTestSize][0], CLICK_SIZES[clickTestSize][1]);
+    return;
+  }
+  if (clickTestFrame < 25) return;
+
+  println("[CLICK] " + width + "x" + height);
+
+  int restoreTab = sidebar.activeMainTab;
+
+  // Sidebar main tabs: click each one and check the selection followed.
+  for (int i = 0; i < sidebar.mainTabs.size(); i++) {
+    SidebarButton t = sidebar.mainTabs.get(i);
+    clickAt(t.x + t.w / 2, t.y + t.h / 2);
+    clickExpect("main tab " + i + " at (" + mouseX + "," + mouseY + ")", sidebar.activeMainTab == i);
+  }
+
+  // Toolbar: the Info button toggles its dropdown.
+  if (toolbar != null && toolbar.dimensionsBtn != null) {
+    boolean before = toolbar.dropdownOpen;
+    ToolbarButton d = toolbar.dimensionsBtn;
+    clickAt(d.x + d.w / 2, d.y + d.h / 2);
+    clickExpect("toolbar Info button", toolbar.dropdownOpen != before);
+    toolbar.dropdownOpen = before;
+  }
+
+  // Shape tab: the Advanced options disclosure and the Reset action.
+  sidebar.activeMainTab = 0;
+  updateSidebarControlsVisibility();
+
+  boolean advBefore = advancedOpen;
+  float[] ar = sidebar.advancedHeaderRect();
+  clickAt(ar[0] + ar[2] / 2, ar[1] + ar[3] / 2);
+  clickExpect("advanced options disclosure", advancedOpen != advBefore);
+  advancedOpen = advBefore;
+  updateSidebarControlsVisibility();
+
+  uiTopW = 55;
+  float[] rr = sidebar.shapeActionBtnRect(0);
+  clickAt(rr[0] + rr[2] / 2, rr[1] + rr[3] / 2);
+  clickExpect("Reset to default button", abs(uiTopW - 30) < 0.01);
+
+  sidebar.activeMainTab = restoreTab;
+  updateSidebarControlsVisibility();
+
+  clickTestSize++;
+  clickTestFrame = 0;
+  if (clickTestSize >= CLICK_SIZES.length) {
+    println("[CLICK] " + (clickChecks - clickFails) + "/" + clickChecks + " checks passed"
+      + (clickFails == 0 ? "" : "  <-- " + clickFails + " FAILED"));
+    exit();
+  }
 }
 
 void auditInit() {
@@ -99,16 +178,34 @@ void auditPre() {
   if (auditSettle == 0) auditApplyCfg(c);
   auditSettle++;
   auditRecording = (auditSettle > AUDIT_SETTLE_FRAMES);
-  if (auditRecording) auditRows.clear();
+  if (auditRecording) {
+    auditRows.clear();
+    auditFrameW = width;    // remember what the frame is being DRAWN at
+    auditFrameH = height;
+  }
 }
+
+// The size the recorded frame was drawn at. A resize can land between pre and post, which
+// would pair boxes drawn at the old size with regions measured at the new one and report
+// full-bleed backgrounds as hanging off the window.
+int auditFrameW = 0, auditFrameH = 0;
 
 void auditPost() {
   if (auditCfgIdx >= auditPlan.size()) return;
   if (!auditRecording) return;
+  if (width != auditFrameW || height != auditFrameH) {
+    // The window changed size mid-frame; this capture would be internally inconsistent.
+    auditRecording = false;
+    auditSettle = AUDIT_SETTLE_FRAMES;   // re-record on the next frame
+    return;
+  }
   AuditCfg c = auditPlan.get(auditCfgIdx);
   auditRecordControlP5();
   auditRecordRegions();
-  String prefix = c.id() + "," + c.w + "," + c.h + "," + c.mode + "," + c.tab + ",";
+  // Record the size the window ACTUALLY ended up at, not the size that was asked for --
+  // the OS does not always grant the request exactly, and comparing boxes against the
+  // request makes correctly-drawn full-bleed panels look like they hang off the window.
+  String prefix = c.id() + "," + auditFrameW + "," + auditFrameH + "," + c.mode + "," + c.tab + ",";
   for (int i = 0; i < auditRows.size(); i++) auditWriter.println(prefix + auditRows.get(i));
   auditWriter.flush();
   println("[AUDIT] " + c.id() + " -> " + auditRows.size() + " boxes");

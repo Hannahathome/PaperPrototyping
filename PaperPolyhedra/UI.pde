@@ -207,6 +207,7 @@ Numberbox m_gridNumbox;   // NxN marker grid count
 
 // Texture > Tracking sub-tab: mirrors of the three marker settings people change most.
 // They write the same globals as the bottom-bar controls above.
+Toggle    sbEnableMarkers;
 Numberbox sbMarkerID;
 Numberbox sbMarkerSize;
 Toggle    sbAutoMarkerIDs;
@@ -221,6 +222,7 @@ void syncTrackingTabControls() {
   if (sbMarkerID      != null && int(sbMarkerID.getValue())   != Start_Index) sbMarkerID.setValue(Start_Index);
   if (sbMarkerSize    != null && int(sbMarkerSize.getValue()) != Marker_Size) sbMarkerSize.setValue(Marker_Size);
   if (sbAutoMarkerIDs != null && sbAutoMarkerIDs.getState()   != autoMarkerIDs) sbAutoMarkerIDs.setValue(autoMarkerIDs ? 1 : 0);
+  if (sbEnableMarkers != null && sbEnableMarkers.getState()   != markersEnabled) sbEnableMarkers.setValue(markersEnabled ? 1 : 0);
   _syncingTracking = false;
 }
 Numberbox nRepNumbox;   // Repeat count numberbox
@@ -1453,6 +1455,17 @@ void initShapeUI() {
   // --- Texture > Tracking sub-tab: a simplified shortcut for the three settings people
   // change most. The full marker controls stay in the bottom bar; these mirror the same
   // globals and are kept in step by syncTrackingTabControls().
+  sbEnableMarkers = cp5__prism.addToggle("tr_enable_markers")
+    .setPosition(-1000, -1000)
+    .setSize(22, 22)
+    .setColorLabel(color(0))
+    .setValue(markersEnabled ? 1 : 0)
+    .setLabel("ENABLE MARKERS");
+  sbEnableMarkers.getCaptionLabel()
+    .setFont(createFont("Arial", 12))
+    .align(ControlP5.LEFT, ControlP5.CENTER)
+    .setPaddingX(31);
+
   sbMarkerID = cp5__prism.addNumberbox("tr_marker_id")
     .setPosition(-1000, -1000)
     .setSize(120, 24)
@@ -2133,17 +2146,21 @@ void updateSidebarControlsVisibility() {
     float tx = SIDEBAR_PADDING;
     // Below the swatch-free header: sub-tab row + section heading + note.
     float ty = (sidebar != null ? sidebar.contentY : TOOLBAR_HEIGHT) + SIDEBAR_PADDING + 44 + 31 + SIDEBAR_PADDING + 66;
+    if (sbEnableMarkers != null) {
+      sbEnableMarkers.setVisible(trackVisible);
+      sbEnableMarkers.setPosition(trackVisible ? tx : -1000, trackVisible ? ty - 36 : -1000);
+    }
     if (sbMarkerID != null) {
       sbMarkerID.setVisible(trackVisible);
-      sbMarkerID.setPosition(trackVisible ? tx : -1000, trackVisible ? ty : -1000);
+      sbMarkerID.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 16 : -1000);
     }
     if (sbMarkerSize != null) {
       sbMarkerSize.setVisible(trackVisible);
-      sbMarkerSize.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 52 : -1000);
+      sbMarkerSize.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 68 : -1000);
     }
     if (sbAutoMarkerIDs != null) {
       sbAutoMarkerIDs.setVisible(trackVisible);
-      sbAutoMarkerIDs.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 104 : -1000);
+      sbAutoMarkerIDs.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 120 : -1000);
     }
     if (trackVisible) syncTrackingTabControls();
   }
@@ -2908,6 +2925,7 @@ void controlEvent(ControlEvent e) {
       // Lazy load markers when first enabled
       initMarkers("aruco1024_px.png");
     }
+    syncTrackingTabControls();
     redraw();
     return;
   }
@@ -2924,6 +2942,16 @@ void controlEvent(ControlEvent e) {
   if (e.isFrom(tAutoMarkerIDs)) {
     autoMarkerIDs = tAutoMarkerIDs.getState();
     syncTrackingTabControls();
+    redraw();
+    return;
+  }
+
+  if (e.isFrom(sbEnableMarkers)) {
+    markersEnabled = sbEnableMarkers.getState();
+    if (markersEnabled && m == null) {
+      initMarkers("aruco1024_px.png");   // lazy load, same as the bottom-bar toggle
+    }
+    if (tEnableMarkers != null) tEnableMarkers.setValue(markersEnabled ? 1 : 0);
     redraw();
     return;
   }
