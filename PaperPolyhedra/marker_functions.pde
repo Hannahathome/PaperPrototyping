@@ -79,7 +79,7 @@ void drawMarker(int marker_id, int marker_size, int marker_pos) {
   if (marker_id >= 0) {
     fill(0);
     textAlign(CENTER, CENTER);
-    textSize(ceil(gridSize*1.4));
+    pageText(ceil(gridSize*1.4));
     text(str(marker_id), mkr_actualsize/2, -gridSize*0.5);
   }
   

@@ -324,7 +324,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 180))      // Same as toolbar hover
     .setColorActive(color(100, 100, 255))        // Same as toolbar active
     .setValue(uiShowTessellationMesh ? 1 : 0);
-  tShowTessellationMesh.getCaptionLabel().setFont(createFont("Arial", 12))
+  tShowTessellationMesh.getCaptionLabel().setFont(uiFont(12))
     .alignX(CENTER)
     .alignY(CENTER);
 
@@ -347,7 +347,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setValue(uiSides);
   sNSides.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(-UI_BTN_SIZE - UI_GAP)
     .setPaddingY(6);
@@ -370,7 +370,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiHeight);
   sSideLen.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -437,7 +437,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiTopW);
   sTopSize.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -464,7 +464,7 @@ void initShapeUI() {
     .setColorLabel(0)
     .setValue(uiLock ? 1 : 0);
   tLock.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.CENTER, ControlP5.TOP_OUTSIDE)
     .setPaddingY(6);
   
@@ -477,7 +477,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiBotW);
   sBotSize.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -507,7 +507,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(cuboidMode ? 1 : 0);
   tCuboidMode.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
   tCuboidMode.setVisible(false);
@@ -525,7 +525,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiCubTopLen);
   sCubTopLen.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -552,7 +552,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiCubTopWid);
   sCubTopWid.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -586,7 +586,7 @@ void initShapeUI() {
     .setColorActive(color(50, 150, 50))
     .setValue(uiCubRatioLock ? 1 : 0);
   tCubRatioLock.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER);
 
   tCubAspectLock = cp5__prism.addToggle("ui_cub_aspect_lock")
@@ -599,7 +599,7 @@ void initShapeUI() {
     .setColorActive(color(50, 150, 50))
     .setValue(uiCubAspectLock ? 1 : 0);
   tCubAspectLock.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER);
   y += row + 20;
 
@@ -612,7 +612,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiCubBotLen);
   sCubBotLen.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -639,7 +639,7 @@ void initShapeUI() {
     .setRange(1, 120)
     .setValue(uiCubBotWid);
   sCubBotWid.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -674,7 +674,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(uiHidePanelFolds ? 1 : 0);
   tHidePanelFolds.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -686,7 +686,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(uiLightGrayCutLines ? 1 : 0);
   tLightGrayCutLines.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -698,7 +698,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(splitStrip ? 1 : 0);
   tSplitStrip.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -711,7 +711,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(hollowMode ? 1 : 0);
   tHollowMode.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -723,7 +723,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(kreslingMode ? 1 : 0);
   tKresling.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
   y += row;
@@ -738,7 +738,7 @@ void initShapeUI() {
     .setValue(kreslingFoldHeight)
     .setDecimalPrecision(1);
   sKreslingUnits.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sKreslingUnits.setVisible(kreslingMode);
@@ -755,7 +755,7 @@ void initShapeUI() {
     .setValue(kreslingSegments)
     .setDecimalPrecision(0);
   sKreslingSegments.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sKreslingSegments.setVisible(kreslingMode);
@@ -773,7 +773,7 @@ void initShapeUI() {
     .setValue(wallThickness)
     .setDecimalPrecision(1);
   sWallThickness.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sWallThickness.setVisible(hollowMode);
@@ -788,7 +788,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(enableInnerShape ? 1 : 0);
   tEnableInnerShape.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
   tEnableInnerShape.setVisible(hollowMode);
@@ -804,7 +804,7 @@ void initShapeUI() {
     .setValue(nSidesInner)
     .setDecimalPrecision(0);
   sInnerSides.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sInnerSides.setVisible(hollowMode && enableInnerShape);
@@ -820,7 +820,7 @@ void initShapeUI() {
     .setValue(innerShapeScale)
     .setDecimalPrecision(2);
   sInnerScale.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sInnerScale.setVisible(hollowMode && enableInnerShape);
@@ -836,7 +836,7 @@ void initShapeUI() {
     .setValue(innerShapeRotation)
     .setDecimalPrecision(0);
   sInnerRotation.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingX(0);
   sInnerRotation.setVisible(hollowMode && enableInnerShape);
@@ -882,7 +882,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 180))      // Same as toolbar hover
     .setColorActive(color(100, 100, 255))        // Same as toolbar active
     .setValue(view3DMode ? 1 : 0);
-  tView3D.getCaptionLabel().setFont(createFont("Arial", 12))
+  tView3D.getCaptionLabel().setFont(uiFont(12))
     .alignX(CENTER)
     .alignY(CENTER);
 
@@ -895,7 +895,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 180))
     .setColorActive(color(100, 100, 255))
     .setValue(showDistances ? 1 : 0);
-  tShowDistances.getCaptionLabel().setFont(createFont("Arial", 12)).alignX(CENTER).alignY(CENTER);
+  tShowDistances.getCaptionLabel().setFont(uiFont(12)).alignX(CENTER).alignY(CENTER);
   
   /* View preset buttons (commented out for now - future reference)
   // View preset buttons (right after 3D toggle)
@@ -911,7 +911,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 110))
     .setColorActive(color(90, 120, 255))
     .setColorLabel(color(255));
-  btnViewTop.getCaptionLabel().setFont(createFont("Arial", 11))
+  btnViewTop.getCaptionLabel().setFont(uiFont(11))
     .alignX(CENTER).alignY(CENTER);
   
   presetX += presetBtnW + 5;
@@ -923,7 +923,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 110))
     .setColorActive(color(90, 120, 255))
     .setColorLabel(color(255));
-  btnViewFront.getCaptionLabel().setFont(createFont("Arial", 11))
+  btnViewFront.getCaptionLabel().setFont(uiFont(11))
     .alignX(CENTER).alignY(CENTER);
   
   presetX += presetBtnW + 5;
@@ -935,7 +935,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 110))
     .setColorActive(color(90, 120, 255))
     .setColorLabel(color(255));
-  btnViewRight.getCaptionLabel().setFont(createFont("Arial", 11))
+  btnViewRight.getCaptionLabel().setFont(uiFont(11))
     .alignX(CENTER).alignY(CENTER);
   
   presetX += presetBtnW + 5;
@@ -947,7 +947,7 @@ void initShapeUI() {
     .setColorForeground(color(90, 90, 110))
     .setColorActive(color(90, 120, 255))
     .setColorLabel(color(255));
-  btnViewIso.getCaptionLabel().setFont(createFont("Arial", 11))
+  btnViewIso.getCaptionLabel().setFont(uiFont(11))
     .alignX(CENTER).alignY(CENTER);
   
   // Update initial visibility
@@ -969,7 +969,7 @@ void initShapeUI() {
     .setRange(-200, 200)
     .setValue(uiLidOffsetX);
   sLidOffsetX.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -982,7 +982,7 @@ void initShapeUI() {
     .setRange(-200, 200)
     .setValue(uiLidOffsetY);
   sLidOffsetY.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -995,7 +995,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseEnabled ? 1 : 0);
   tBaseEnabled.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
@@ -1006,7 +1006,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseTwoPlates ? 1 : 0);
   tBaseTwoPlates.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
@@ -1017,7 +1017,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseFoldLine ? 1 : 0);
   tBaseFoldLine.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
@@ -1028,14 +1028,14 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseBoxMode ? 1 : 0);
   tBaseBoxMode.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
   sBaseWallHeight = cp5__prism.addSlider("ui_base_wall_height")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("WALL HEIGHT (MM)").setColorLabel(0).setRange(5, 100).setValue(baseWallHeightMM);
-  sBaseWallHeight.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseWallHeight.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   tBaseOnly = cp5__prism.addToggle("ui_base_only")
     .setPosition(-1000, -1000)
@@ -1044,7 +1044,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseOnly ? 1 : 0);
   tBaseOnly.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
@@ -1055,34 +1055,34 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(baseSlitFreePlace ? 1 : 0);
   tBaseSlitFree.getCaptionLabel()
-    .setFont(createFont("Arial", 13))
+    .setFont(uiFont(13))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(30);
 
   sBaseWidth = cp5__prism.addSlider("ui_base_width")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("BASE WIDTH (MM)").setColorLabel(0).setRange(10, 200).setValue(baseWidthMM);
-  sBaseWidth.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseWidth.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   sBaseLength = cp5__prism.addSlider("ui_base_length")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("BASE LENGTH (MM)").setColorLabel(0).setRange(10, 200).setValue(baseLengthMM);
-  sBaseLength.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseLength.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   sBaseOffsetX = cp5__prism.addSlider("ui_base_offset_x")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("BASE OFFSET X (MM)").setColorLabel(0).setRange(-200, 200).setValue(baseOffsetX);
-  sBaseOffsetX.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseOffsetX.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   sBaseOffsetY = cp5__prism.addSlider("ui_base_offset_y")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("BASE OFFSET Y (MM)").setColorLabel(0).setRange(-200, 200).setValue(baseOffsetY);
-  sBaseOffsetY.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseOffsetY.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   sBaseCorner = cp5__prism.addSlider("ui_base_corner")
     .setPosition(-1000, -1000).setSize(200, 20)
     .setLabel("BASE CORNER RADIUS (MM)").setColorLabel(0).setRange(0, 50).setValue(baseCornerRadiusMM);
-  sBaseCorner.getCaptionLabel().setFont(createFont("Arial", 13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
+  sBaseCorner.getCaptionLabel().setFont(uiFont(13)).align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE).setPaddingX(0).setPaddingY(6);
 
   // Independent lid movement buttons (positioned off-screen initially, moved by updateSidebarControlPositions)
   int btnSize = 26;
@@ -1320,7 +1320,7 @@ void initShapeUI() {
     .setRange(0, 50)
     .setValue(max(0, tabDepth));
   sTabDepth.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(2);
   advY += row + 10;
@@ -1331,7 +1331,7 @@ void initShapeUI() {
     .setRange(0, 50)
     .setValue(max(0, flapDepth));
   sFlapDepth.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(2);
   advY += row + 10;
@@ -1342,7 +1342,7 @@ void initShapeUI() {
     .setRange(0, 50)
     .setValue(max(0, flapTaper));
   sFlapTaper.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(2);
   advY += row + 10;
@@ -1353,7 +1353,7 @@ void initShapeUI() {
     .setRange(0.2f, 1.5f)
     .setValue(constrain(tab_neck_ratio, 0.2, 1.5));
   sTabNeckRatio.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(2);
   advY += row + 10;
@@ -1364,7 +1364,7 @@ void initShapeUI() {
     .setRange(0.5f, 50f)
     .setValue(max(0.5f, dash));
   sDash.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(2);
   advY += row + 10;
@@ -1375,7 +1375,7 @@ void initShapeUI() {
     .setRange(-200, 200)
     .setValue(patX);
   sPatX.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -1387,7 +1387,7 @@ void initShapeUI() {
     .setRange(-200, 200)
     .setValue(patY);
   sPatY.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -1399,7 +1399,7 @@ void initShapeUI() {
     .setRange(-180, 180)
     .setValue(patRotation);
   sPatRotation.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -1414,7 +1414,7 @@ void initShapeUI() {
     .setValue(uiStripRotation)
     .setDecimalPrecision(0);
   sStripRotation.getCaptionLabel()
-    .setFont(createFont("Arial", 15))
+    .setFont(uiFont(15))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingX(0)
     .setPaddingY(6);
@@ -1448,7 +1448,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(false);
   tEnableMarkers.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
   
@@ -1462,7 +1462,7 @@ void initShapeUI() {
     .setValue(markersEnabled ? 1 : 0)
     .setLabel("ENABLE MARKERS");
   sbEnableMarkers.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
 
@@ -1475,7 +1475,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("MARKER ID");
   sbMarkerID.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
 
@@ -1488,7 +1488,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("MARKER SIZE (MM)");
   sbMarkerSize.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
 
@@ -1499,7 +1499,7 @@ void initShapeUI() {
     .setValue(autoMarkerIDs ? 1 : 0)
     .setLabel("AUTO IDs");
   sbAutoMarkerIDs.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
 
@@ -1512,7 +1512,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("ID");
   m_idNumbox.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingY(2);
   
@@ -1525,7 +1525,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("Size");
   m_sizeNumbox.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingY(2);
   
@@ -1567,7 +1567,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(false);
   tAutoMarkerIDs.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -1581,7 +1581,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("Grid");
   m_gridNumbox.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
     .setPaddingY(2);
 
@@ -1592,7 +1592,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setValue(markerFreePlace ? 1 : 0);
   tMarkerFreePlace.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
 
@@ -1605,7 +1605,7 @@ void initShapeUI() {
     .setDecimalPrecision(0)
     .setLabel("Repeats");
   nRepNumbox.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER)
     .setPaddingY(0);
   
@@ -1634,7 +1634,7 @@ void initShapeUI() {
     .setValue(false)
     .setVisible(false);
   tFreePlacement.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER)
     .setPaddingY(0);
   
@@ -1648,7 +1648,7 @@ void initShapeUI() {
     .setColorActive(color(200, 120, 60))
     .setVisible(false);
   btnResetPlacement.getCaptionLabel()
-    .setFont(createFont("Arial", 11))
+    .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER)
     .setPaddingY(0);
   //--RH--
@@ -1670,7 +1670,7 @@ void initShapeUI() {
     .setMultiplier(0.5)
     .setLabel("X (mm)");
   nbCutoutX.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
   
@@ -1684,7 +1684,7 @@ void initShapeUI() {
     .setMultiplier(0.5)
     .setLabel("Y (mm)");
   nbCutoutY.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
   
@@ -1698,7 +1698,7 @@ void initShapeUI() {
     .setMultiplier(0.25)
     .setLabel("Radius (mm)");
   nbCutoutCornerR.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
 
@@ -1712,7 +1712,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setLabel("Move selected cutout  X (mm)");
   sCutoutX.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
   sCutoutY = cp5__prism.addSlider("cutout_move_y")
@@ -1723,7 +1723,7 @@ void initShapeUI() {
     .setColorLabel(color(0))
     .setLabel("Move selected cutout  Y (mm)");
   sCutoutY.getCaptionLabel()
-    .setFont(createFont("Arial", 12))
+    .setFont(uiFont(12))
     .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
     .setPaddingY(4);
 
@@ -1879,7 +1879,7 @@ void updateSidebarControlsVisibility() {
       sPatX.setPosition(SIDEBAR_PADDING, startY + 0.5*row);
       sPatX.setSize(viewControlWidth, 20);
       sPatX.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -1893,7 +1893,7 @@ void updateSidebarControlsVisibility() {
       sPatY.setPosition(SIDEBAR_PADDING, startY + 0.5*row + row + 20);
       sPatY.setSize(viewControlWidth, 20);
       sPatY.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -1908,7 +1908,7 @@ void updateSidebarControlsVisibility() {
       sStripRotation.setPosition(SIDEBAR_PADDING, startY + 0.5*row + 3*(row + 20));
       sStripRotation.setSize(viewControlWidth, 20);
       sStripRotation.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -1922,7 +1922,7 @@ void updateSidebarControlsVisibility() {
       sPatRotation.setPosition(SIDEBAR_PADDING, startY + 0.5*row + 2*(row + 20));
       sPatRotation.setSize(viewControlWidth, 20);
       sPatRotation.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -1937,7 +1937,7 @@ void updateSidebarControlsVisibility() {
       sLidOffsetX.setSize(viewControlWidth, 20);
       sLidOffsetX.setRange(-200, 200);  // Match pattern X range
       sLidOffsetX.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -1952,7 +1952,7 @@ void updateSidebarControlsVisibility() {
       sLidOffsetY.setSize(viewControlWidth, 20);
       sLidOffsetY.setRange(-200, 200);  // Match pattern Y range
       sLidOffsetY.getCaptionLabel()
-        .setFont(createFont("Arial", 15))
+        .setFont(uiFont(15))
         .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
         .setPaddingX(0)
         .setPaddingY(6);
@@ -3222,15 +3222,16 @@ float exportCtrlWidth(controlP5.Controller<?> c) {
   // Only the small square toggles carry their caption outside, to the right; the wide ones
   // (VIEW IN 3D, MESH, DISTANCES) centre it inside the box, where it costs no extra width.
   if (c instanceof controlP5.Toggle && wBox < 30) {
-    return max(wBox, TOGGLE_CAPTION_PAD + t.length() * TOGGLE_CAPTION_CHAR_W);
+    return max(wBox, TOGGLE_CAPTION_PAD + t.length() * toggleCaptionCharW());
   }
   return wBox;
 }
-final float ADV_CAPTION_PAD    = 31;    // paddingX used on the advanced toggles
-final float ADV_CAPTION_CHAR_W = 7.2;  // 15px Arial caps, measured off a render
+final float ADV_CAPTION_PAD = 31;      // paddingX used on the advanced toggles
+// Caption widths must track UI_FONT_SCALE, or a larger font silently overruns the column.
+float advCaptionCharW() { return 7.2 * UI_FONT_SCALE; }   // 15px Arial caps, measured
 
-final float TOGGLE_CAPTION_PAD    = 30;   // paddingX used on the bottom-bar toggles
-final float TOGGLE_CAPTION_CHAR_W = 7.5;  // ControlP5's default bitmap font, measured
+final float TOGGLE_CAPTION_PAD = 30;      // paddingX used on the bottom-bar toggles
+float toggleCaptionCharW() { return 7.5 * UI_FONT_SCALE; }
 
 // Width a run of controls needs, measured from the controls themselves.
 float exportRunWidth(controlP5.Controller<?>[] cs, int[] gaps) {
@@ -3751,7 +3752,7 @@ void layoutSecondaryToggles() {
     controlP5.Toggle t = advToggles[i];
     if (t == null || !t.isVisible()) continue;
     String cap = t.getCaptionLabel().getText();
-    float estW = ADV_CAPTION_PAD + (cap == null ? 0 : cap.length() * ADV_CAPTION_CHAR_W);
+    float estW = ADV_CAPTION_PAD + (cap == null ? 0 : cap.length() * advCaptionCharW());
     boolean fullRow = estW > colW - 8;
 
     if (fullRow && gridCol != 0) { gridRow++; gridCol = 0; }

@@ -118,6 +118,9 @@ void setup() {
 }
 
 void draw() {
+  // One buffer rebuild per frame at most, however many resize events arrived.
+  ensureView3DBuffer();
+
   // Rebuild the rotated strip texture if it changed. Must happen here, before any
   // rendering starts — see updateStripRotation().
   updateStripRotation();
@@ -271,7 +274,7 @@ void draw() {
           fill(80);
           noStroke();
           textAlign(LEFT, BOTTOM);
-          textSize(10 / SCREEN_SCALE);
+          pageText(10 / SCREEN_SCALE);
           text(_s.label, 0, -tabDepth_px - 3 / SCREEN_SCALE);
           popStyle();
         }
@@ -904,7 +907,7 @@ void drawShapeInfoNote() {
   
   pushStyle();
   textAlign(LEFT, BOTTOM);
-  textSize(8 / SCREEN_SCALE);
+  pageText(8 / SCREEN_SCALE);
   
   // Distinct colors for each shape (up to 8, then cycle)
   color[] shapeColors = {
@@ -1160,9 +1163,11 @@ void relayout() {
   // everything below reads BOTTOM_EXPORT_HEIGHT.
   updateExportControlPositions();
 
-  if (view3DBuffer == null || view3DBuffer.width != view3DBufW() || view3DBuffer.height != view3DBufH()) {
-    view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
-  }
+  // Do NOT allocate the P3D buffer here. Dragging a window edge fires windowResized() on
+  // every mouse move, and building a P3D framebuffer per event stalls the drag hard enough
+  // that the window looks like it cannot be resized at all. Flag it and rebuild once, in
+  // draw(), after the size has settled.
+  view3DBufferDirty = true;
   if (mini3DBuffer == null) {
     mini3DBuffer = createGraphics(MINI_3D_WIDTH, MINI_3D_HEIGHT, P3D);
   }
@@ -1209,6 +1214,18 @@ boolean mouseInCanvasArea() {
   return mouseX >= LEFT_SIDEBAR_WIDTH &&
          mouseY >= TOOLBAR_HEIGHT &&
          mouseY <= height - BOTTOM_EXPORT_HEIGHT;
+}
+
+// Set by relayout(); acted on once per frame by ensureView3DBuffer().
+boolean view3DBufferDirty = true;
+
+void ensureView3DBuffer() {
+  if (!view3DBufferDirty && view3DBuffer != null
+      && view3DBuffer.width == view3DBufW() && view3DBuffer.height == view3DBufH()) return;
+  view3DBufferDirty = false;
+  if (view3DBuffer == null || view3DBuffer.width != view3DBufW() || view3DBuffer.height != view3DBufH()) {
+    view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
+  }
 }
 
 int view3DBufW() { return max(1, width  - LEFT_SIDEBAR_WIDTH); }

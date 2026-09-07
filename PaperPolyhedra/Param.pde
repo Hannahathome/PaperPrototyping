@@ -141,20 +141,39 @@ final float STEP_COARSE = 5.0;                   // Coarse adjustment step (mm)
 // resampling at all. Cached, because createFont() inside draw() rebuilds it every frame.
 HashMap<Integer, PFont> _uiFonts = new HashMap<Integer, PFont>();
 
-PFont uiFont(int size) {
-  PFont f = _uiFonts.get(size);
+// Scales every piece of UI text together: the raw text() calls below and the ControlP5
+// label fonts, which all build through uiFont(). Raise it if the interface reads small on a
+// high-resolution monitor; the layout audit checks that nothing collides at a given value.
+float UI_FONT_SCALE = 1.15;
+
+int uiFontPx(int size) { return max(6, round(size * UI_FONT_SCALE)); }
+
+// Built at the exact pixel size it is drawn at -- the default P2D font is a fixed-size
+// bitmap, and any mismatched textSize() resamples it into mush.
+PFont uiFontExact(int px) {
+  px = max(6, px);
+  PFont f = _uiFonts.get(px);
   if (f == null) {
-    f = createFont("Arial", size, true);
-    _uiFonts.put(size, f);
+    f = createFont("Arial", px, true);
+    _uiFonts.put(px, f);
   }
   return f;
+}
+
+PFont uiFont(int size) { return uiFontExact(uiFontPx(size)); }
+
+// For text drawn INSIDE the scale(SCREEN_SCALE) page matrix. pageSize is in page units; the
+// font is built at the size the glyphs will really occupy on screen, so they are rasterised
+// at their display size instead of being scaled up from a smaller bitmap.
+void pageText(float pageSize) {
+  textFont(uiFontExact(round(pageSize * SCREEN_SCALE)), pageSize);
 }
 
 // Use instead of textSize() for text drawn straight onto the canvas in screen space.
 // (Text inside the scale(SCREEN_SCALE) page matrix should keep using textSize(), since it
 // is meant to scale with the page.)
 void uiText(int size) {
-  textFont(uiFont(size), size);
+  textFont(uiFont(size), uiFontPx(size));
 }
 
 // ==================== TOOLBAR UI ====================

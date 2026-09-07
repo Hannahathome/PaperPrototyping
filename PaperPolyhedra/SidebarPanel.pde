@@ -67,7 +67,7 @@ class SidebarButton {
     // Draw label
     fill(enabled ? colorText : color(150));
     textAlign(CENTER, CENTER);
-    textSize(12);
+    uiText(12);
     text(label, x + w/2, y + h/2);
     
     popStyle();
@@ -259,7 +259,7 @@ class SidebarPanel {
     pushStyle();
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("SHAPE PARAMETERS", round(x + SIDEBAR_PADDING), round(contentY + SIDEBAR_PADDING));
 
     // --- Reset / Load JSON, compact and on the header row ---
@@ -276,7 +276,7 @@ class SidebarPanel {
       rect(r[0], r[1], r[2], r[3], 3);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text(actLabels[i], r[0] + r[2] / 2, r[1] + r[3] / 2);
     }
 
@@ -292,7 +292,7 @@ class SidebarPanel {
     fill(addHover ? color(50, 170, 70) : color(40, 140, 55));
     noStroke();
     rect(addR[0], addR[1], addR[2], addR[3], 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(13);
+    fill(255); textAlign(CENTER, CENTER); uiText(13);
     text("+", addR[0] + addR[2] / 2, addR[1] + addR[3] / 2);
 
     float[] remR = shapeCounterBtnRect(1);
@@ -302,12 +302,12 @@ class SidebarPanel {
     fill(canRemove ? (remHover ? color(200, 60, 60) : color(160, 50, 50)) : color(100, 80, 80));
     noStroke();
     rect(remR[0], remR[1], remR[2], remR[3], 4);
-    fill(canRemove ? color(255) : color(150)); textAlign(CENTER, CENTER); textSize(13);
+    fill(canRemove ? color(255) : color(150)); textAlign(CENTER, CENTER); uiText(13);
     text("−", remR[0] + remR[2] / 2, remR[1] + remR[3] / 2);
 
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(12);
+    uiText(12);
     text(shapeLine, round(remR[0] + remR[2] + 6), round(remR[1] + remR[3] / 2));
 
     popStyle();
@@ -350,7 +350,7 @@ class SidebarPanel {
     endShape(CLOSE);
     fill(70);
     textAlign(LEFT, CENTER);
-    textSize(12);
+    uiText(12);
     text("ADVANCED OPTIONS", r[0] + 26, cy);
     popStyle();
   }
@@ -366,7 +366,7 @@ class SidebarPanel {
     float btnH = 24, gap = 5;
 
     // "Feel" label + 3 type buttons
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("Feel", round(x0), round(uiY));
     float btnY = uiY + 16;
     float bW = (fullW - 2 * gap) / 3;
@@ -377,7 +377,7 @@ class SidebarPanel {
       boolean hov = mouseX >= bx && mouseX <= bx + bW && mouseY >= btnY && mouseY <= btnY + btnH;
       fill(active ? color(50, 150, 255) : (hov ? color(120, 120, 130) : color(100, 100, 110)));
       noStroke(); rect(bx, btnY, bW, btnH, 4);
-      fill(255); textAlign(CENTER, CENTER); textSize(10);
+      fill(255); textAlign(CENTER, CENTER); uiText(10);
       text(labels[i], bx + bW / 2, btnY + btnH / 2);
     }
 
@@ -387,19 +387,19 @@ class SidebarPanel {
     boolean gHov = mouseX >= x0 && mouseX <= x0 + gW && mouseY >= genY && mouseY <= genY + btnH;
     fill(gHov ? color(60, 180, 60) : color(50, 150, 50));
     noStroke(); rect(x0, genY, gW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text("Generate", x0 + gW / 2, genY + btnH / 2);
     float rx = x0 + gW + gap;
     boolean rHov = mouseX >= rx && mouseX <= rx + gW && mouseY >= genY && mouseY <= genY + btnH;
     fill(rHov ? color(90, 90, 180) : color(75, 75, 150));
     noStroke(); rect(rx, genY, gW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text("Check", rx + gW / 2, genY + btnH / 2);
 
     // Live bistability readout — reflects the CURRENT fold height, updates as you drag
     float liveY = genY + btnH + 6;
     fill(kreslingCurrentIsBistable() ? color(30, 150, 60) : color(90));
-    textAlign(LEFT, TOP); textSize(10);
+    textAlign(LEFT, TOP); uiText(10);
     text(kreslingLiveText(), round(x0), round(liveY), fullW, 16);
 
     // Last Generate/Check result: red when "not possible", amber when may buckle, else neutral
@@ -407,7 +407,7 @@ class SidebarPanel {
     boolean fail = (kreslingLastResult != null && !kreslingLastResultOk());
     boolean warn = kreslingLastResultOk() && kreslingLastResult.bucklingRisk;
     fill(fail ? color(190, 40, 40) : (warn ? color(200, 120, 20) : color(60)));
-    textAlign(LEFT, TOP); textSize(10);
+    textAlign(LEFT, TOP); uiText(10);
     text(kreslingReadoutText(), round(x0), round(roY), fullW, 34);
 
     popStyle();
@@ -425,7 +425,7 @@ class SidebarPanel {
 
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(13);
+    uiText(13);
     text("TAB LENGTH", round(x + SIDEBAR_PADDING), round(rowY));
 
     float btnY = rowY + 18;
@@ -442,7 +442,7 @@ class SidebarPanel {
       rect(bx, btnY, btnW, btnH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(12);
+      uiText(12);
       text(TAB_LEN_PRESETS[i] + "mm", bx + btnW / 2, btnY + btnH / 2);
     }
     popStyle();
@@ -463,7 +463,7 @@ class SidebarPanel {
       fill(60);
       noStroke();
       textAlign(LEFT, TOP);
-      textSize(11);
+      uiText(11);
       text("SOLID FILL", sx, swLabelY);
     }
 
@@ -552,11 +552,11 @@ class SidebarPanel {
     pushStyle();
     fill(60);
     textAlign(LEFT, TOP);
-    textSize(11);
+    uiText(11);
     text("ARUCO MARKERS", sx, sy);
 
     fill(120);
-    textSize(10);
+    uiText(10);
     text("Placement and the marker grid stay in the bottom bar.", sx, sy + 16);
 
     popStyle();
@@ -583,7 +583,7 @@ class SidebarPanel {
       rect(tx, sy, tabWidth, tabHeight, 4);
       fill(active ? 255 : 60);
       textAlign(CENTER, CENTER);
-      textSize(13);
+      uiText(13);
       text(printTabLabels[i], tx + tabWidth/2, sy + tabHeight/2);
     }
     sy += tabHeight + 12;
@@ -608,10 +608,10 @@ class SidebarPanel {
     pushStyle();
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("BASE PLATE", round(sx), round(sy));
     fill(90);
-    textSize(11);
+    uiText(11);
     text("A plate with a slit at each bottom-lid tab base. Enable it to add to the cut page.",
          round(sx), round(sy + 22), w - 2 * SIDEBAR_PADDING, 40);
     popStyle();
@@ -622,7 +622,7 @@ class SidebarPanel {
     if (!workshopMode) {
       fill(0);
       textAlign(LEFT, TOP);
-      textSize(15);
+      uiText(15);
       text("PAGE SIZE", round(sx), round(sy));
       sy += 22;
 
@@ -638,7 +638,7 @@ class SidebarPanel {
         rect(bx, sy, btnW, btnH, 4);
         fill(255);
         textAlign(CENTER, CENTER);
-        textSize(13);
+        uiText(13);
         text(PAGE_SIZE_NAMES[i], bx + btnW/2, sy + btnH/2);
       }
       sy += btnH + 14;  // = PAGE_SIZE_BLOCK_H total advance
@@ -647,7 +647,7 @@ class SidebarPanel {
     // --- 2D VIEW POSITIONING section ---
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     //text("2D VIEW POSITIONING", round(sx), round(sy));
     
     // REPEAT / FREE PLACEMENT section header — positioned below the lid d-pads
@@ -655,7 +655,7 @@ class SidebarPanel {
     float baseYP = sY + 0.5*rw + 5*(rw + 20) + 10;
     float freePlaceY = baseYP + 3*(btnSz + btnGp) + 25;
     fill(60);
-    textSize(12);
+    uiText(12);
     text("REPEATS", round(sx), round(freePlaceY - 18));
     
     // Note: ControlP5 sliders (sPatX, sPatY, sLidOffsetX, sLidOffsetY) have their own labels
@@ -670,7 +670,7 @@ class SidebarPanel {
     
     fill(80);
     textAlign(CENTER, TOP);
-    textSize(11);
+    uiText(11);
     
     // Top lid label - centered above the D-pad
     float topCenterX = sx + btnSize + btnGap + btnSize/2;
@@ -731,13 +731,13 @@ class SidebarPanel {
     // =====================================================================
     // Section 1 — SHAPE PALETTE
     // =====================================================================
-    fill(0); noStroke(); textAlign(LEFT, TOP); textSize(12);
+    fill(0); noStroke(); textAlign(LEFT, TOP); uiText(12);
     text("SHAPE PALETTE", round(sx), round(sy));
     sy += 18;
 
     int shapeCount = (shapes != null) ? shapes.size() : 0;
     if (shapeCount == 0) {
-      fill(140); textSize(10); textAlign(LEFT, TOP);
+      fill(140); uiText(10); textAlign(LEFT, TOP);
       text("No shapes loaded.\nImport a JSON file first.", sx, sy);
       sy += 36;
     } else {
@@ -757,10 +757,10 @@ class SidebarPanel {
         rect(sx + 4, rowY + (ROW_H - SQ) / 2, SQ, SQ, 3);
         String lbl = (s.label != null && s.label.length() > 0) ? s.label : ("Shape " + (i + 1));
         fill(isSel ? color(255) : color(30));
-        textAlign(LEFT, CENTER); textSize(11);
+        textAlign(LEFT, CENTER); uiText(11);
         text(lbl, sx + 4 + SQ + 6, rowY + ROW_H / 2);
         fill(isSel ? color(200) : color(100));
-        textAlign(RIGHT, CENTER); textSize(10);
+        textAlign(RIGHT, CENTER); uiText(10);
         text(nf(s.uiTopW, 1, 0) + "x" + nf(s.uiHeight, 1, 0) + "mm", sx + availW - 4, rowY + ROW_H / 2);
       }
       sy = listY + maxVisible * ROW_H + 4;
@@ -771,7 +771,7 @@ class SidebarPanel {
       fill(eraseSel ? color(100, 30, 30) : (eraseHov ? color(210, 195, 195) : color(220, 210, 210)));
       noStroke(); rect(sx, sy, availW, ROW_H - 2, 3);
       fill(eraseSel ? color(255) : color(80));
-      textAlign(CENTER, CENTER); textSize(11);
+      textAlign(CENTER, CENTER); uiText(11);
       text("Erase", sx + availW / 2, sy + (ROW_H - 2) / 2);
       sy += ROW_H + 4;
     }
@@ -782,33 +782,33 @@ class SidebarPanel {
     // =====================================================================
     // Section 2 — GRID
     // =====================================================================
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("GRID", round(sx), round(sy));
     sy += 18;
 
     // W and H controls on one row
-    fill(80); textAlign(LEFT, CENTER); textSize(11); text("W:", sx, sy + BTN / 2);
+    fill(80); textAlign(LEFT, CENTER); uiText(11); text("W:", sx, sy + BTN / 2);
     float bxW = sx + 18;
     fill((mouseX >= bxW && mouseX <= bxW + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(bxW, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("-", bxW + BTN/2, sy + BTN/2);
-    fill(30); textAlign(CENTER, CENTER); textSize(12); text("" + activeAssembly.gridW, bxW + BTN + 14, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("-", bxW + BTN/2, sy + BTN/2);
+    fill(30); textAlign(CENTER, CENTER); uiText(12); text("" + activeAssembly.gridW, bxW + BTN + 14, sy + BTN/2);
     float pxW = bxW + BTN + 28;
     fill((mouseX >= pxW && mouseX <= pxW + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(pxW, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("+", pxW + BTN/2, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("+", pxW + BTN/2, sy + BTN/2);
 
     float hStart = sx + 110;
-    fill(80); textAlign(LEFT, CENTER); textSize(11); text("H:", hStart, sy + BTN / 2);
+    fill(80); textAlign(LEFT, CENTER); uiText(11); text("H:", hStart, sy + BTN / 2);
     float bxH = hStart + 18;
     fill((mouseX >= bxH && mouseX <= bxH + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(bxH, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("-", bxH + BTN/2, sy + BTN/2);
-    fill(30); textAlign(CENTER, CENTER); textSize(12); text("" + activeAssembly.gridH, bxH + BTN + 14, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("-", bxH + BTN/2, sy + BTN/2);
+    fill(30); textAlign(CENTER, CENTER); uiText(12); text("" + activeAssembly.gridH, bxH + BTN + 14, sy + BTN/2);
     float pxH = bxH + BTN + 28;
     fill((mouseX >= pxH && mouseX <= pxH + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(pxH, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("+", pxH + BTN/2, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("+", pxH + BTN/2, sy + BTN/2);
     sy += 30;
 
     // 2D grid
@@ -834,11 +834,11 @@ class SidebarPanel {
     float btnH = 26;
     fill((mouseX >= sx && mouseX <= sx + btnW && mouseY >= sy && mouseY <= sy + btnH)
          ? color(190, 65, 65) : color(155, 50, 50)); noStroke(); rect(sx, sy, btnW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11); text("Clear All", sx + btnW / 2, sy + btnH / 2);
+    fill(255); textAlign(CENTER, CENTER); uiText(11); text("Clear All", sx + btnW / 2, sy + btnH / 2);
     float fillBtnX = sx + btnW + 6;
     fill((mouseX >= fillBtnX && mouseX <= fillBtnX + btnW && mouseY >= sy && mouseY <= sy + btnH)
          ? color(50, 160, 55) : color(40, 125, 45)); noStroke(); rect(fillBtnX, sy, btnW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11); text("Fill All", fillBtnX + btnW / 2, sy + btnH / 2);
+    fill(255); textAlign(CENTER, CENTER); uiText(11); text("Fill All", fillBtnX + btnW / 2, sy + btnH / 2);
     sy += btnH + 8;
 
     // ---- Divider ----
@@ -847,7 +847,7 @@ class SidebarPanel {
     // =====================================================================
     // Section 3 — VIEW
     // =====================================================================
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("VIEW", round(sx), round(sy));
     sy += 18;
 
@@ -858,7 +858,7 @@ class SidebarPanel {
               : ((mouseX >= sx && mouseX <= sx + viewBtnW && mouseY >= sy && mouseY <= sy + viewBtnH)
                  ? color(160, 180, 210) : color(120, 140, 170)));
     noStroke(); rect(sx, sy, viewBtnW, viewBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(is3D ? "3D View \u2713" : "3D View", sx + viewBtnW / 2, sy + viewBtnH / 2);
 
     float tplBtnX = sx + viewBtnW + 6;
@@ -867,7 +867,7 @@ class SidebarPanel {
                : ((mouseX >= tplBtnX && mouseX <= tplBtnX + viewBtnW && mouseY >= sy && mouseY <= sy + viewBtnH)
                   ? color(160, 210, 170) : color(120, 160, 130)));
     noStroke(); rect(tplBtnX, sy, viewBtnW, viewBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(isTpl ? "Template \u2713" : "Template", tplBtnX + viewBtnW / 2, sy + viewBtnH / 2);
     sy += viewBtnH + 6;
 
@@ -877,7 +877,7 @@ class SidebarPanel {
                            : ((mouseX >= sx && mouseX <= sx + availW && mouseY >= sy && mouseY <= sy + tcBtnH)
                               ? color(190, 145, 80) : color(140, 100, 50)));
     noStroke(); rect(sx, sy, availW, tcBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(assemblyTrueColor ? "True Colours \u2713" : "True Colours", sx + availW / 2, sy + tcBtnH / 2);
 
     popStyle();
@@ -897,7 +897,7 @@ class SidebarPanel {
     // Section header
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("CUTOUTS", round(sx), round(sy));
     sy += 25;
     
@@ -914,7 +914,7 @@ class SidebarPanel {
     rect(sx, sy, btnW, btnH, 4);
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text("16 x 16 mm", sx + btnW/2, sy + btnH/2);
     
     // 54mm button
@@ -931,7 +931,7 @@ class SidebarPanel {
     // Corner radius display
     fill(80);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text("Corner radius: " + nf(cutoutCornerRadius, 0, 1) + " mm", sx, sy + 8);
     sy += 25;
     
@@ -945,14 +945,14 @@ class SidebarPanel {
     rect(sx, sy, addBtnW, addBtnH, 4);
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(12);
+    uiText(12);
     text("+ ADD CUTOUT", sx + addBtnW/2, sy + addBtnH/2);
     sy += addBtnH + 15;
     
     // List of existing cutouts
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(12);
+    uiText(12);
     text("Placed cutouts: " + cutouts.size(), sx, sy);
     sy += 20;
     
@@ -972,7 +972,7 @@ class SidebarPanel {
       // Cutout info
       fill(i == selectedCutoutIndex ? color(0, 60, 180) : color(60));
       textAlign(LEFT, CENTER);
-      textSize(10);
+      uiText(10);
       String info = "#" + (i+1) + "  " + nf(c.size_mm, 0, 0) + "mm  X:" + nf(c.x_mm, 0, 1) + "  Y:" + nf(c.y_mm, 0, 1);
       text(info, sx + 4, rowY + rowH/2);
       
@@ -987,7 +987,7 @@ class SidebarPanel {
       rect(delX, delY, 24, delH, 3);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text("X", delX + 12, delY + delH/2);
     }
     
@@ -1132,7 +1132,7 @@ class SidebarPanel {
 
     fill(100);
     textAlign(CENTER, TOP);
-    textSize(11);
+    uiText(11);
 
     if (activeTextureTab == TEX_TAB_PER_PANEL) {
       text("Upload texture for each panel", sx + areaWidth/2, sy + 10);
@@ -1176,7 +1176,7 @@ class SidebarPanel {
       rect(r[0], r[1], r[2], r[3], 4);
       fill(enabled ? color(255) : color(205));
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text(actLabels[i], r[0] + r[2]/2, r[1] + r[3]/2);
     }
 
@@ -1195,7 +1195,7 @@ class SidebarPanel {
 
       fill(80);
       textAlign(LEFT, CENTER);
-      textSize(11);
+      uiText(11);
       text("Panel " + (i + 1) + ":", r[0], r[1] + toggleH/2);
 
       float toggleX = r[0] + labelWidth;
@@ -1207,7 +1207,7 @@ class SidebarPanel {
       rect(toggleX, r[1], toggleW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text(perPanelEnabled[i] ? "ON" : "OFF", toggleX + toggleW/2, r[1] + toggleH/2);
 
       boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
@@ -1219,7 +1219,7 @@ class SidebarPanel {
       rect(uploadX, r[1], buttonW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, r[1] + toggleH/2);
     }
 
@@ -1264,7 +1264,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text("Restore to Default", restoreBtnX + restoreBtnWidth/2, restoreBtnY + restoreBtnHeight/2);
     
     // Adjust Y position for upload/edit button
@@ -1281,13 +1281,13 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(13);
+    uiText(13);
     text(hasStripTexture ? "Edit Strip" : "Upload Strip", bx + fullBtnWidth/2, by + btnHeight/2);
     
     // Show current texture info if loaded
     if (stripImg != null) {
       fill(80);
-      textSize(10);
+      uiText(10);
       text(stripImg.width + "x" + stripImg.height + " px", bx + (areaWidth - 2 * SIDEBAR_PADDING)/2, by + btnHeight + 15);
     }
     
@@ -1315,13 +1315,13 @@ class SidebarPanel {
     rect(toggleX, sy, toggleW, toggleH, 4);
     fill(textureBleed ? 255 : 60);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(textureBleed ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     // Label
     fill(80);
     textAlign(LEFT, CENTER);
-    textSize(12);
+    uiText(12);
     text("Texture bleed (" + nf(textureBleedMM, 0, 0) + "mm)", toggleX + toggleW + 8, sy + toggleH/2);
     
     popStyle();
@@ -1344,7 +1344,7 @@ class SidebarPanel {
     // Section header with spacing
     fill(80);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("LID TEXTURES", round(sx + 5), round(sy + 5));
     
     sy += 25;
@@ -1366,7 +1366,7 @@ class SidebarPanel {
     // Label
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text(label, sx, sy + 15);
     
     // Toggle button
@@ -1384,7 +1384,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(toggleState ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     // Handle toggle click (stored for mousePressed event handler)
@@ -1406,13 +1406,13 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(10);
+    uiText(10);
     text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, sy + uploadH/2);
     
     // Show image info if loaded
     if (lidImg != null) {
       fill(80);
-      textSize(9);
+      uiText(9);
       text(lidImg.width + "x" + lidImg.height, uploadX + (areaWidth - (uploadX - sx))/2, sy + uploadH + 10);
     }
     
@@ -1429,7 +1429,7 @@ class SidebarPanel {
     // Label
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text(label, sx, sy + 15);
     
     // Toggle button
@@ -1446,7 +1446,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(state ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     popStyle();
