@@ -4,7 +4,7 @@
 
 config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x widgets
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0               671       408       994       533       994      23
+1000x700|2D|tab0               685       408      1000       550      1000      23
 1000x700|2D|tab0|advopen       549       408      1000       550      1000      29
 1000x700|2D|tab1               579       408      1000       550      1000      13
 1000x700|2D|tab1|panels14       579       408      1000       550      1000      13
@@ -59,6 +59,7 @@ config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x
 1500x800|3D|tab2               642       408      1500       690      1500      30
 1500x800|ASSEMBLY|tab3         418       408      1500       690      1500      13
 1500x800|WORKSHOP|tab0         685       408      1500       690      1500      23
+1920x1080|2D|tab0              685       408      1920       990      1920      23
 1920x1080|2D|tab0|advopen       822       408      1920       990      1920      28
 1920x1080|2D|tab1              407       396      1920       990      1920      17
 1920x1080|2D|tab1|panels14       959       408      1920       990      1920      13
@@ -69,7 +70,6 @@ config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x
 1920x1080|3D|tab2              642       408      1920       990      1920      30
 1920x1080|ASSEMBLY|tab3        418       408      1920       990      1920      13
 1920x1080|WORKSHOP|tab0        685       408      1920       990      1920      23
-1920x1080|2D|tab0              685       408      1926      1007      1926      23
 2560x1440|2D|tab0              685       408      2560      1350      2560      23
 2560x1440|2D|tab0|advopen       822       408      2560      1350      2560      28
 2560x1440|2D|tab1              407       396      2560      1350      2560      17
@@ -88,7 +88,7 @@ config                    sbar_bot sbar_max_x tbar_max_x export_top export_max_x
 
 config                     win_h  content_bot   overflow  verdict
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0             683          671        -12  fits (12 px spare)
+1000x700|2D|tab0             700          685        -15  fits (15 px spare)
 1000x700|2D|tab0|advopen     700          549       -151  fits (151 px spare)
 1000x700|2D|tab1             700          579       -121  fits (121 px spare)
 1000x700|2D|tab1|panels14     700          579       -121  fits (121 px spare)
@@ -143,6 +143,7 @@ config                     win_h  content_bot   overflow  verdict
 1500x800|3D|tab2             800          642       -158  fits (158 px spare)
 1500x800|ASSEMBLY|tab3       800          418       -382  fits (382 px spare)
 1500x800|WORKSHOP|tab0       800          685       -115  fits (115 px spare)
+1920x1080|2D|tab0           1080          685       -395  fits (395 px spare)
 1920x1080|2D|tab0|advopen    1080          822       -258  fits (258 px spare)
 1920x1080|2D|tab1           1080          407       -673  fits (673 px spare)
 1920x1080|2D|tab1|panels14    1080          959       -121  fits (121 px spare)
@@ -153,7 +154,6 @@ config                     win_h  content_bot   overflow  verdict
 1920x1080|3D|tab2           1080          642       -438  fits (438 px spare)
 1920x1080|ASSEMBLY|tab3     1080          418       -662  fits (662 px spare)
 1920x1080|WORKSHOP|tab0     1080          685       -395  fits (395 px spare)
-1920x1080|2D|tab0           1097          685       -412  fits (412 px spare)
 2560x1440|2D|tab0           1440          685       -755  fits (755 px spare)
 2560x1440|2D|tab0|advopen    1440          822       -618  fits (618 px spare)
 2560x1440|2D|tab1           1440          407      -1033  fits (1033 px spare)
@@ -194,7 +194,7 @@ Export bar spans x=420..win_w, y=win_h-90..win_h
 
 config                      win_w   left_group  right_group  gap
 --------------------------------------------------------------------------------------------
-1000x700|2D|tab0              994          655          658  3 px clear
+1000x700|2D|tab0             1000          678          688  10 px clear
 1000x700|2D|tab0|advopen     1000          678          688  10 px clear
 1000x700|2D|tab1             1000          678          688  10 px clear
 1000x700|2D|tab1|panels14     1000          678          688  10 px clear
@@ -249,6 +249,7 @@ config                      win_w   left_group  right_group  gap
 1500x800|3D|tab2             1500         1115         1180  65 px clear
 1500x800|ASSEMBLY|tab3       1500         1115         1180  65 px clear
 1500x800|WORKSHOP|tab0       1500         1115         1180  65 px clear
+1920x1080|2D|tab0            1920         1319         1600  281 px clear
 1920x1080|2D|tab0|advopen     1920         1319         1600  281 px clear
 1920x1080|2D|tab1            1920         1319         1600  281 px clear
 1920x1080|2D|tab1|panels14     1920         1319         1600  281 px clear
@@ -259,7 +260,6 @@ config                      win_w   left_group  right_group  gap
 1920x1080|3D|tab2            1920         1319         1600  281 px clear
 1920x1080|ASSEMBLY|tab3      1920         1319         1600  281 px clear
 1920x1080|WORKSHOP|tab0      1920         1319         1600  281 px clear
-1920x1080|2D|tab0            1926         1319         1600  281 px clear
 2560x1440|2D|tab0            2560         1319         2240  921 px clear
 2560x1440|2D|tab0|advopen     2560         1319         2240  921 px clear
 2560x1440|2D|tab1            2560         1319         2240  921 px clear

@@ -59,20 +59,25 @@ boolean bExportingCutFile = false;  // True while writing SVG cut file — suppr
 //--RH--
 //----------------------------------------------------------------------------------
 
-// The window size must be chosen here, not in setup(). Calling surface.setSize() after the
-// renderer exists recreates the drawable, and on Windows that can leave the sketch's
-// width/height out of step with the native window the mouse events come from -- which shows
-// up as clicks landing next to the buttons rather than on them.
+// The window opens at this size and is resizable; maximise it with the window button.
 //
-// Opening maximised rather than fullScreen(): a borderless full screen fixes the size again,
-// and makes the export / image-import file dialogs awkward to reach.
+// Do NOT size this from displayWidth / displayHeight. In settings() they report raw device
+// pixels -- 3840x2160 on a 4K panel at 200% scaling -- so asking for displayWidth-80 built a
+// 3760x2040 canvas that the OS then displayed across about 1880 logical pixels. Every control
+// rendered at half size, text was resampled to mush, the window could not be resized, and the
+// mouse position no longer matched what was drawn.
+//
+// Growing the window programmatically instead is not an option on this JOGL/NEWT build:
+// surface.setSize() from setup() deadlocks the window event thread, and the native
+// setMaximized() throws on the GL animator thread whether called from setup() or the first
+// frame. A fixed opening size the user can maximise is the one approach that behaves.
 void settings() {
-  size(max(MIN_WIN_W, displayWidth - 80), max(MIN_WIN_H, displayHeight - 120), P2D);
+  size(1500, 900, P2D);
 }
 
 void setup() {
+  // Resizable, and never resized by computing a pixel size ourselves -- see settings().
   surface.setResizable(true);
-  surface.setLocation(40, 40);
   ensurePlaceholderAssets();  // data/ artwork is gitignored; generate it if absent
   setParams(false);
   background(200);
