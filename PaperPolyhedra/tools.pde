@@ -657,26 +657,27 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
 
   // Record where this shape's faces landed on screen, while its transform is still applied.
   if (_captureFaces) {
-    captureFaceHit(pg, idx, true);
-    captureFaceHit(pg, idx, false);
+    captureAllFaceHits(pg, idx);
   }
 
   for (Connection c : childrenOf(idx)) {
     if (c.childShapeIdx < 0 || c.childShapeIdx >= shapes.size()) continue;
 
-    // Attach point, computed while the PARENT's globals are still loaded.
-    PVector p = lidLocalTo3D(c.posLocal, c.parentFaceIsTop);
+    // The host face's frame, built while the PARENT's globals are still loaded. Null when
+    // the face has no frame — a per-edge lid, say, or a wall on a shape that has since been
+    // given fewer sides. Skip rather than guess.
+    FaceBasis3D fb = faceBasis3D(c.parentFaceKind, c.parentFaceIndex);
+    if (fb == null) continue;
     float childHalfH = (shapes.get(c.childShapeIdx).cylinder.z * MM_current) / 2.0;
 
     pg.pushMatrix();
-    pg.translate(p.x, p.y, p.z);
-    pg.rotateY(radians(c.spinDeg));
-    // P3D is y-down: the top face is at -halfH and a child grows upward off it. Off the
-    // bottom face the child hangs downward instead — a half-turn about x. childFlipped
-    // means the child mates by its top lid, which is another half-turn; on a bottom face
-    // the two cancel and the child hangs the right way up.
-    if (!c.parentFaceIsTop) pg.rotateX(PI);
-    if (c.childFlipped)     pg.rotateX(PI);
+    // Stands the child on the face: its own +x along the face's +u, and the direction it
+    // grows out of its bottom lid along the outward normal. For the two lids the basis is
+    // exactly the translate/rotateX(PI) pair this used to do by hand; the spin is now taken
+    // about the face's own normal rather than world y — see applyFaceTransform3D.
+    applyFaceTransform3D(pg, fb, c.posLocal, c.spinDeg);
+    // childFlipped means the child mates by its TOP lid, so it is turned over.
+    if (c.childFlipped) pg.rotateX(PI);
     // The child draws centred on its own origin, so drop it by half its height and its
     // mating lid lands exactly on the parent's face.
     pg.translate(0, -childHalfH, 0);
@@ -692,18 +693,27 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
 // Rough extent (px) of a connected assembly, for the 3D auto-zoom: the deepest stack of
 // heights against the widest cross-section anywhere in the tree. Perimeter stands in for
 // width, matching the proxy the single-shape auto-zoom already used.
+//
+// A child on a LID stacks upward, so it adds to the height. A child on a WALL sticks out
+// sideways, so it adds to the width instead — without that the wall-mounted child is simply
+// framed out of the view.
 float treeSpanPx(int idx, int depth) {
   if (shapes == null || idx < 0 || idx >= shapes.size() || depth > CONNECTION_MAX_DEPTH) return 0;
   ShapeSpec s = shapes.get(idx);
   float ownW = max(s.cylinder.x, s.cylinder.y) * MM_current;
   float ownH = s.cylinder.z * MM_current;
+  float sideW = 0;    // widest thing hanging off a wall, plus the body it hangs off
   float childW = 0;
   float childH = 0;
   for (Connection c : childrenOf(idx)) {
     childW = max(childW, treeSpanPx(c.childShapeIdx, depth + 1));
-    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    if (c.onLid()) {
+      childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    } else {
+      sideW = max(sideW, ownW + 2 * treeStackHeightPx(c.childShapeIdx, depth + 1));
+    }
   }
-  return max(max(ownW, childW), ownH + childH);
+  return max(max(max(ownW, childW), sideW), ownH + childH);
 }
 
 float treeStackHeightPx(int idx, int depth) {
@@ -711,7 +721,8 @@ float treeStackHeightPx(int idx, int depth) {
   float h = shapes.get(idx).cylinder.z * MM_current;
   float childH = 0;
   for (Connection c : childrenOf(idx)) {
-    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    // Only a lid-mounted grandchild extends the stack along this shape's own axis.
+    if (c.onLid()) childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
   }
   return h + childH;
 }

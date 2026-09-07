@@ -161,6 +161,9 @@ ShapeSpec buildShapeFromJSON(JSONObject e) {
   uiHeight = ht;
   uiLock   = true;
   nSides   = sides;
+  // An imported shape can have fewer walls than the one it replaces, which would strand any
+  // connection addressed to a panel that no longer exists.
+  clampConnectionsToPanelCount(selectedShapeIdx, nSides);
 
   // Compute perimeter using the same formula as applyToModel()
   float topPerim, botPerim;

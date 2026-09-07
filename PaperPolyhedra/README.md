@@ -19,7 +19,7 @@ texture path has something to load — see [data/README.md](data/README.md).
 - Frustums — independent top and bottom perimeters
 - Kresling fold patterns, including haptic button variants
 - Base plates, cutouts and internal bar assemblies
-- Connected shapes — mount one form on another's lid, with the mounting slits cut automatically
+- Connected shapes — mount one form on another's lid **or side wall**, with the mounting slits cut automatically
 - Automatic tab and flap generation for assembly
 - Texture mapping: per-panel, or one strip bent across the whole perimeter
 - ArUco fiducial markers for tracked prototypes
@@ -68,6 +68,7 @@ Print the calibration SVG first to verify alignment before committing material.
 | `KreslingPattern.pde`, `KreslingHaptics.pde` | Kresling folds and haptic buttons |
 | `BasePlate.pde`, `Cutout.pde`, `BarAssembly.pde` | Base plates, cutouts, assemblies |
 | `LidFrame.pde` | Canonical lid coordinate frame shared by the pattern and the 3D view |
+| `SidePanelFrame.pde` | The same, for one panel of the side strip |
 | `Connection.pde` | Connected shapes — model, mounting slits, 3D face picking |
 | `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
@@ -105,43 +106,65 @@ by binary search such that `Σ 2·arcsin(s[i]/(2R)) = 2π`, guaranteeing closure
 positions come from bilinear interpolation of the corners, UVs map linearly.
 Raise the density to 16 if texture seams appear.
 
-**Connections.** A connection mounts one shape on a lid of another. In the 3D preview the
-child is posed on the host face; in the flat pattern a ring of tab-through slits is cut into
-the host's lid, so the child's bottom-lid tabs push through and lock — the same joint the
-base plate uses. Both come from one shared coordinate frame (`LidFrame.pde`), so the preview
-and the cut file cannot disagree about where a connection sits.
+**Connections.** A connection mounts one shape on a **face** of another — either lid, or any
+panel of the side strip. In the 3D preview the child is posed on the host face; in the flat
+pattern a ring of tab-through slits is cut into that face, so the child's bottom-lid tabs
+push through and lock — the same joint the base plate uses. Each kind of face has one
+canonical coordinate frame, `LidFrame.pde` for the lids and `SidePanelFrame.pde` for the
+walls, and the preview and the cut file both read it, so they cannot disagree about where a
+connection sits.
 
 ## Connecting two shapes
 
 1. Press `G` for the 3D view, then click **Connect**.
-2. Click a face on the shape you want to attach. It lights up blue — this is the child's
+2. Click a **lid** on the shape you want to attach. It lights up blue — this is the child's
    **mating lid**.
-3. Click a face on another shape. The two are joined, and the child lands centred.
+3. Click any face on another shape — a lid or a side wall. The two are joined, and the child
+   lands centred on that face.
 
-Because step 2 picks the child's own face, picking its **top** face gives a top-to-top
+Because step 2 picks the child's own face, picking its **top** lid gives a top-to-top
 joint: the child is turned over, and the slit ring is sized to its top lid rather than its
 bottom. `F` flips an existing connection between the two.
 
+Step 2 only accepts a lid, because a child always mates by one of its own lids. A wall can
+*host* a shape but cannot be the face that attaches; clicking one selects it (and whatever
+is mounted on it) instead of starting a join.
+
 | Action | Result |
 |---|---|
-| Click a face | Pick it (or join it to an already-picked face) |
+| Click a face | Pick it (or join it to an already-picked lid) |
 | Click the same face again | Deselect it |
-| Drag on a face | Move the child; snaps to centre near the middle |
+| Drag on a face | Move the child; snaps to the face's guides |
+| Drag the ring on the flat pattern | Move a wall-mounted child, exactly |
+| Arrows (`Shift` = 5mm) | Nudge the child 1mm across its face |
 | `,` / `.` | Spin the child on its face |
 | `F` | Flip which lid of the child mates |
 | `Del` or **Disconnect** | Detach the child — it becomes free-standing again |
 
 Dragging never deselects: the toggle only fires on a click that does not move.
 
+**Placing a wall-mounted child.** The 3D view often shows a wall edge-on or hides it behind
+the solid, and a face turned edge-on has no usable drag — so a drag there is ignored rather
+than throwing the child across the panel. The arrow keys always work, and the slit ring can
+be dragged directly on the flat pattern, which is the most precise way to place it.
+
+A lid snaps to its centre. A wall snaps to three lines: its vertical midline, its horizontal
+midline, and **flush against each fold line** — which is how you mount something right at the
+rim. The guides are drawn on the face while you drag.
+
 The 3D view shows **all** shapes by default; **Selected** narrows it to the assembly the
 selected shape belongs to.
 
-A red slit ring, and a warning next to the buttons, mean the child's footprint runs off the
-edge of the host lid; move it inward before cutting.
+A red slit ring, and a warning next to the buttons, mean the child's footprint runs off its
+host face; move it inward before cutting. On a wall this fires 2mm early, because all four
+of a panel's boundaries are fold lines and a cut that reaches one ruins the fold.
 
 Scope: uniform regular polygons, matching the base plate's own scope. Per-edge, cuboid and
-hollow lids are refused rather than mis-placed. A shape can host many children and chains
-nest up to 8 deep, but a shape can only hang off one parent.
+hollow shapes are refused rather than mis-placed, and so are kresling walls — the strip is
+sheared as a whole, which would shear a slit ring without shearing the child pushing through
+it. A shape can host many children and chains nest up to 8 deep, but a shape can only hang
+off one parent. Giving a shape fewer sides detaches anything mounted on a wall that no longer
+exists.
 
 Connections live for the session only, like cutouts and marker placements — the sketch has
 no shape-export format to persist them into.

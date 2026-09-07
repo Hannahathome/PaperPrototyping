@@ -3582,7 +3582,12 @@ boolean isMouseOver(float x, float y, float w, float h) {
 
 void applyToModel() {
   nSides = max(3, uiSides);
-  
+
+  // Wall connections are addressed by panel index, so cutting the shape down to fewer sides
+  // would leave some of them pointing at panels that no longer exist. Detach those rather
+  // than let them drift onto a different wall.
+  clampConnectionsToPanelCount(selectedShapeIdx, nSides);
+
   // === ENFORCE TOP/BOTTOM LOCK ===
   // Read lock state directly from the toggle button (ground truth),
   // not from the global which may be stale after a loadGlobalsFrom call.

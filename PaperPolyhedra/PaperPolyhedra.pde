@@ -568,6 +568,17 @@ void drawPlan(boolean img) {
     }
   } else {
     // if not variable prism, use the uniform pattern:
+
+    // Mounting slits for anything connected to a WALL. Drawn at the strip origin, outside
+    // the per-half matrices, because the poses already carry the split-strip offsets.
+    //
+    // Position in the file matters and differs by output. In the SVG cut file the slits are
+    // inner cuts and must be emitted BEFORE the panel outlines, so the sheet stays anchored
+    // until the perimeter is cut last — the same rule the cutouts and the base plate follow.
+    // On screen and in the printed PDF there are fills and textures to contend with, and a
+    // ring emitted first would be painted over, so there it goes on top instead.
+    if (bExportingCutFile) drawConnectionSlitsOnPanels();
+
     if (splitStrip && nSides >= 4) {
       // --- SPLIT STRIP MODE (uniform) ---
       int splitAt = (int)ceil(nSides / 2.0);  // ceil(n/2) panels in first half
@@ -636,6 +647,10 @@ void drawPlan(boolean img) {
       drawTzTopFolds(0, 0, cellTopL_px, cellBaseL_px, cylinderH_px, (cols-1), (rows-1));
       popMatrix();
     }
+    // Preview and print layer: the wall slits go on top, where fills and textures cannot
+    // bury them. The cut file drew them first instead — see the note above the strip.
+    if (!bExportingCutFile) drawConnectionSlitsOnPanels();
+
     // Use actual strip height to prevent overlap
     float stripHeight = getStripHeight();
     // When split, lids need to be below both halves
@@ -1068,14 +1083,21 @@ void draw3DViewModeButtons() {
     float hintY = r[1] + r[3] + 6;
 
     if (selectedFaceShapeIdx < 0 || selectedFaceShapeIdx >= shapes.size()) {
-      text("Click the face of the shape you want to attach", r[0] + r[2], hintY);
+      text("Click a LID of the shape you want to attach", r[0] + r[2], hintY);
     } else {
       ShapeSpec src = shapes.get(selectedFaceShapeIdx);
       String srcName = (src.label != null && !src.label.isEmpty())
                      ? src.label : ("Shape " + (selectedFaceShapeIdx + 1));
-      String srcFace = srcName + " · " + (selectedFaceIsTop ? "top" : "bottom");
-      text("Now click a face on another shape to join " + srcFace + " to it · click the same face again to deselect",
-           r[0] + r[2], hintY);
+      String srcFace = srcName + " · " + faceName(selectedFaceKind, selectedFaceIndex);
+      if (faceIsLid(selectedFaceKind)) {
+        text("Now click any face — lid or wall — on another shape to join " + srcFace +
+             " to it · click the same face again to deselect", r[0] + r[2], hintY);
+      } else {
+        // A child mates by one of its own lids, so a wall cannot start a join. Say so
+        // rather than leaving the next click silently doing nothing.
+        text(srcFace + " can host a shape but cannot be attached by — pick a LID to attach with",
+             r[0] + r[2], hintY);
+      }
     }
     hintY += 16;
 
@@ -1086,22 +1108,25 @@ void draw3DViewModeButtons() {
         ShapeSpec ch = shapes.get(c.childShapeIdx);
         String chName = (ch.label != null && !ch.label.isEmpty())
                       ? ch.label : ("Shape " + (c.childShapeIdx + 1));
+        ShapeSpec ph = shapes.get(c.parentShapeIdx);
+        String phName = (ph.label != null && !ph.label.isEmpty())
+                      ? ph.label : ("Shape " + (c.parentShapeIdx + 1));
         fill(150, 200, 255);
-        text("Selected: " + chName + " mating by its " + (c.childFlipped ? "TOP" : "BOTTOM") +
-             " lid · F flips · drag to move · , . spin · Del / Disconnect detaches",
+        text("Selected: " + chName + " on " + phName + " · " + faceName(c.parentFaceKind, c.parentFaceIndex) +
+             ", mating by its " + (c.childFlipped ? "TOP" : "BOTTOM") + " lid",
+             r[0] + r[2], hintY);
+        hintY += 16;
+        text("F flips · drag here or on the pattern to move · arrows nudge (Shift = 5mm) · , . spin · Del detaches",
              r[0] + r[2], hintY);
         hintY += 16;
 
-        // Warn when the footprint runs off the edge of its host lid — a slit ring crossing
-        // the lid outline destroys the piece.
-        loadGlobalsFrom(shapes.get(c.parentShapeIdx));
-        setParams(false);
-        boolean fits = connectionFits(c);
-        loadGlobalsFrom(shapes.get(selectedShapeIdx));
-        setParams(false);
-        if (!fits) {
+        // Warn when the footprint runs off the edge of its host face — a slit ring crossing
+        // an outline, or a wall's fold lines, destroys the piece.
+        if (!connectionFitsInParentFrame(c)) {
           fill(230, 60, 60);
-          text("Footprint overhangs the host lid — move it inward", r[0] + r[2], hintY);
+          text(c.onLid() ? "Footprint overhangs the host lid — move it inward"
+                         : "Footprint reaches the panel's fold lines — move it inward",
+               r[0] + r[2], hintY);
         }
       }
     }
