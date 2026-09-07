@@ -83,7 +83,7 @@ class ToolbarButton {
 
 class Toolbar {
   ArrayList<ToolbarButton> buttons;
-  int height;
+  int barH;   // was 'height', which shadowed PApplet.height throughout this class
   color bgColor;
   color btnNormal, btnActive, btnHover;
   float separatorX1, separatorX2, separatorX3;
@@ -97,7 +97,7 @@ class Toolbar {
   
   Toolbar() {
     buttons = new ArrayList<ToolbarButton>();
-    height = TOOLBAR_HEIGHT;
+    barH = TOOLBAR_HEIGHT;
     bgColor = color(30, 40, 80);  // Dark blue
     btnNormal = color(100, 100, 110);
     btnActive = color(50, 150, 255);
@@ -109,7 +109,7 @@ class Toolbar {
     buttons.clear();
     
     // Calculate vertical center for buttons
-    float btnY = (height - TOOLBAR_BTN_HEIGHT) / 2;
+    float btnY = (barH - TOOLBAR_BTN_HEIGHT) / 2;
     float x = TOOLBAR_PADDING;
     
     // ===== WORKSHOP MODE BUTTON (LEFT SIDE, before Assembly) =====
@@ -210,7 +210,7 @@ class Toolbar {
     // Draw toolbar background
     fill(bgColor);
     noStroke();
-    rect(0, 0, width, height);
+    rect(0, 0, width, barH);
     
     // Draw separator lines
     // stroke(100, 100, 110);
@@ -221,7 +221,7 @@ class Toolbar {
     // Draw bottom border
     stroke(40, 40, 50);
     strokeWeight(2);
-    line(0, height, width, height);
+    line(0, barH, width, barH);
     
     // Draw all buttons
     for (ToolbarButton btn : buttons) {
@@ -257,7 +257,7 @@ class Toolbar {
     // Position: right-aligned to button, drops down from toolbar
     dropdownX = dimensionsBtn.x + dimensionsBtn.w - dropdownWidth;  // Align right edge
     dropdownX = max(10, dropdownX);  // Make sure it doesn't go off left side
-    dropdownY = height;  // Start at bottom of toolbar
+    dropdownY = barH;  // Start at bottom of toolbar
     
     pushStyle();
     
@@ -337,13 +337,15 @@ class Toolbar {
       status = nSides + "-sided " + (uiLock ? "Cylinder" : "Prism");
     }
     
-    // Mode indicator
-    text(status, width - 15, height / 2);
+    // Mode indicator, right-aligned to the left of the Info button rather than to the window
+    // edge, which put it underneath the button.
+    float statusRight = (dimensionsBtn != null ? dimensionsBtn.x : width - 15) - TOOLBAR_SEPARATOR;
+    text(status, statusRight, barH / 2);
   }
   
   boolean mousePressed() {
     // Check if click is within toolbar area
-    if (mouseY <= height) {
+    if (mouseY <= barH) {
       // Check each button (in toolbar)
       for (ToolbarButton btn : buttons) {
         if (btn.isMouseOver() && btn.enabled) {
@@ -357,7 +359,7 @@ class Toolbar {
     // Click is below toolbar
     // Check if it's on the dropdown - if so, keep it open
     if (dropdownOpen && mouseX >= dropdownX && mouseX <= dropdownX + dropdownWidth &&
-        mouseY >= height && mouseY <= height + dropdownBoxHeight) {
+        mouseY >= barH && mouseY <= barH + dropdownBoxHeight) {
       // Clicked on dropdown, keep it open
       return true;
     }

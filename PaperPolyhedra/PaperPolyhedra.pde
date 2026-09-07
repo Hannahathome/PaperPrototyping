@@ -61,6 +61,12 @@ boolean bExportingCutFile = false;  // True while writing SVG cut file — suppr
 
 void setup() {
   size(1500, 800, P2D);
+  // Open maximised on the current display and let the user resize from there. A borderless
+  // fullScreen() would fix the size again, and makes the export / image-import file dialogs
+  // awkward to reach.
+  surface.setResizable(true);
+  surface.setSize(max(MIN_WIN_W, displayWidth - 80), max(MIN_WIN_H, displayHeight - 120));
+  surface.setLocation(40, 40);
   ensurePlaceholderAssets();  // data/ artwork is gitignored; generate it if absent
   setParams(false);
   background(200);
@@ -71,7 +77,7 @@ void setup() {
   initShapeUI();
   
   // Initialize 3D buffer (adjust for sidebar)
-  view3DBuffer = createGraphics(width - LEFT_SIDEBAR_WIDTH, height - TOOLBAR_HEIGHT, P3D);
+  view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
   
   // Initialize mini 3D buffer for 2D mode
   mini3DBuffer = createGraphics(MINI_3D_WIDTH, MINI_3D_HEIGHT, P3D);
@@ -94,6 +100,8 @@ void setup() {
   
   //--RH-- Markers: Lazy loaded when user enables toggle (not in setup to avoid PDF issues)
   //--RH--
+
+  relayout();   // size every zone, buffer and widget to the window we actually opened at
 
   if (AUDIT_MODE) auditInit();  // TEMP: layout measurement harness, see LayoutAudit.pde
 }
@@ -850,16 +858,14 @@ void drawBottomExportButton() {
   noStroke();
   rect(LEFT_SIDEBAR_WIDTH, height - BOTTOM_EXPORT_HEIGHT, width - LEFT_SIDEBAR_WIDTH, BOTTOM_EXPORT_HEIGHT);
   
-  // Draw label for text field
-  fill(80);
-  uiText(10);
-  float bottomControlX = LEFT_SIDEBAR_WIDTH + 20;
-  float exportBarY = height - BOTTOM_EXPORT_HEIGHT + 10;
-  float bottomControlY = exportBarY + 8;
-  textAlign(LEFT, CENTER);
-  uiText(15);  // Increased to match sidebar header text
-  float exportBarX = width - 320;
-  text("File name input field", exportBarX - 140, exportBarY + 23);
+  // Caption sits directly above the filename field. It used to be drawn 140 px to its left,
+  // where it ran into whichever control the flow layout had put there.
+  float exportBarX = width - EXPORT_RIGHT_W;
+  float fieldTop   = height - BOTTOM_EXPORT_HEIGHT + 18;
+  fill(110);
+  textAlign(LEFT, BOTTOM);
+  uiText(11);
+  text("File name", exportBarX, fieldTop - 3);
 
   // Export success notification: green fading text above the export button
   if (exportNotifyTimer > 0) {
@@ -868,8 +874,7 @@ void drawBottomExportButton() {
     fill(30, 160, 60, fadeAlpha);
     textAlign(RIGHT, BOTTOM);
     uiText(12);
-    String notifyLabel = "Saved: " + exportNotifyPath;
-    text(notifyLabel, exportBarX + 310, exportBarY + 4);
+    text("Saved: " + exportNotifyPath, width - 10, fieldTop - 3);
   }
   
   popStyle();
@@ -1127,24 +1132,40 @@ void draw3DViewModeButtons() {
 }
 
 void windowResized() {
-  // Update 3D buffer size
-  if (view3DBuffer != null) {
-    view3DBuffer = createGraphics(width - LEFT_SIDEBAR_WIDTH, height - TOOLBAR_HEIGHT, P3D);
+  // No forced re-size here: calling surface.setSize() from inside windowResized() re-enters
+  // the JOGL event thread and deadlocks it. MIN_WIN_W / MIN_WIN_H are the supported minimum
+  // -- below them the export bar clips at the right edge rather than overlapping itself.
+  relayout();
+}
+
+// The single place that reacts to the window size. Everything that caches a coordinate or a
+// buffer size must be refreshed from here, so there is one layout authority instead of the
+// three that used to walk through each other.
+void relayout() {
+  // The export bar decides its own height (it wraps on narrow windows), so it goes first —
+  // everything below reads BOTTOM_EXPORT_HEIGHT.
+  updateExportControlPositions();
+
+  if (view3DBuffer == null || view3DBuffer.width != view3DBufW() || view3DBuffer.height != view3DBufH()) {
+    view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
   }
-  
-  // Update mini 3D buffer (fixed size, no need to recreate)
   if (mini3DBuffer == null) {
     mini3DBuffer = createGraphics(MINI_3D_WIDTH, MINI_3D_HEIGHT, P3D);
   }
-  
-  // Update sidebar layout
-  if (sidebar != null) {
-    sidebar.setup();
-  }
-  
-  // Update export control positions
-  updateExportControlPositions();
+
+  if (toolbar != null) toolbar.setup();      // the Info button is anchored to the right edge
+  if (sidebar != null) sidebar.relayout();   // panel rect + contentY, then rebuild the tabs
+
+  updateSidebarControlsVisibility();
+  fitPageToCanvas();                          // the page follows the window
+  updateExportControlPositions();             // re-run: the sidebar pass can resize widgets
 }
+
+// The 3D view is blitted at (LEFT_SIDEBAR_WIDTH, TOOLBAR_HEIGHT) into the area above the
+// export bar. Sizing the buffer to the window minus the toolbar rendered 90 px that the
+// export bar then painted over, and pushed the scene 45 px below the visible centre.
+int view3DBufW() { return max(1, width  - LEFT_SIDEBAR_WIDTH); }
+int view3DBufH() { return max(1, height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT); }
 
 
 

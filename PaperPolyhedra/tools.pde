@@ -782,24 +782,42 @@ void drawMini3DView() {
 }
 
 // Helper function to check if mouse is inside mini 3D view
-boolean isMouseInMini3DView() {
-  if (view3DMode) return false;  // Mini view only visible in 2D mode
-  if (kreslingMode) return false;  // Mini view hidden in Kresling mode
+// The sidebar 3D preview rectangle, as {x, y, w, h}, or null when there is no room for it.
+//
+// It used to be pinned to the window bottom while the control stack grew from the top, so the
+// two met and overlapped on any window shorter than ~900px. It now flows below whatever the
+// Shape tab last laid out, and shrinks (then disappears) when the column runs out of height.
+// Both the drawing and the hit test read this one function; they used to compute it separately.
+float[] mini3DViewRect() {
+  if (view3DMode || kreslingMode) return null;
+  if (sidebar != null && sidebar.activeMainTab != 0) return null;
 
-  // Only check if on Shape tab (activeMainTab == 0)
-  if (sidebar != null && sidebar.activeMainTab != 0) return false;
-  
-  // Calculate position at bottom of sidebar (matching drawMini3DViewInSidebar)
-  float miniW = (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2) * 0.7;  // 70% of sidebar width
-  float miniH = miniW;  // Keep it square
-  float miniX = SIDEBAR_PADDING + (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2 - miniW) / 2;  // Center horizontally
-  float miniY = height - BOTTOM_EXPORT_HEIGHT - miniH - SIDEBAR_PADDING + 80;
-  
-  return mouseX >= miniX && mouseX <= miniX + miniW &&
-         mouseY >= miniY && mouseY <= miniY + miniH;
+  final float MINI_MIN = 120;
+  if (shapeStackBottomY <= 0) return null;   // the column has not been laid out yet
+  float top    = shapeStackBottomY + 10;
+  float avail  = height - SIDEBAR_PADDING - top;
+  float maxW   = (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2) * 0.7;
+  float size   = min(maxW, avail);
+  if (size < MINI_MIN) return null;   // not enough column left - hide rather than overlap
+
+  float mx = SIDEBAR_PADDING + (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2 - size) / 2;
+  return new float[] { mx, top, size, size };
+}
+
+boolean isMouseInMini3DView() {
+  float[] r = mini3DViewRect();
+  if (r == null) return false;
+  return mouseX >= r[0] && mouseX <= r[0] + r[2] &&
+         mouseY >= r[1] && mouseY <= r[1] + r[3];
 }
 
 void drawMini3DViewInSidebar() {
+  // Bail before rendering, not after: there is no point filling the buffer if the column has
+  // no room to show it.
+  float[] _mr = mini3DViewRect();
+  if (_mr == null) return;
+  float miniX = _mr[0], miniY = _mr[1], miniW = _mr[2], miniH = _mr[3];
+
   // Render 3D view to mini buffer
   mini3DBuffer.beginDraw();
   mini3DBuffer.background(220);
@@ -829,12 +847,6 @@ void drawMini3DViewInSidebar() {
   mini3DBuffer.popMatrix();
   mini3DBuffer.endDraw();
 
-  // Calculate position at bottom of sidebar
-  float miniW = (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2) * 0.7;  // 70% of sidebar width
-  float miniH = miniW;  // Keep it square
-  float miniX = SIDEBAR_PADDING + (LEFT_SIDEBAR_WIDTH - SIDEBAR_PADDING * 2 - miniW) / 2;  // Center horizontally
-  float miniY = height - BOTTOM_EXPORT_HEIGHT - miniH - SIDEBAR_PADDING + 80; // move it down 
-  
   pushStyle();
   
   // Draw outer frame with sidebar matching color

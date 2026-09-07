@@ -14,8 +14,14 @@
 // (window size x mode x sidebar tab) configurations, writes one CSV row per box, and exits.
 //----------------------------------------------------------------------
 
-final boolean AUDIT_MODE = false;   // flip to true to re-run the sweep
+final boolean AUDIT_MODE = true;   // flip to true to re-run the sweep
 String AUDIT_OUT = "docs/layout_boxes.csv";  // relative to the sketch folder
+// Also save a PNG of each configuration, for eyeballing what the numbers describe.
+final boolean AUDIT_SHOTS = true;
+String AUDIT_SHOT_DIR = "docs/shots/";
+
+// '|' is not a legal filename character on Windows.
+String auditSafeName(String id) { return id.replace('|', '_'); }
 
 boolean auditRecording = false;
 PrintWriter auditWriter = null;
@@ -45,7 +51,7 @@ public void handleDraw() {
 void auditInit() {
   surface.setResizable(true);
   // The current fixed size, two common laptop sizes, and 1080p / 1440p full screen.
-  int[][] sizes = { {1500,800}, {1280,720}, {1366,768}, {1920,1080}, {2560,1440} };
+  int[][] sizes = { {1000,700}, {1500,800}, {1920,1080} };
   for (int si = 0; si < sizes.length; si++) {
     int sw = sizes[si][0], sh = sizes[si][1];
     for (int t = 0; t < 3; t++) auditPlan.add(new AuditCfg(sw, sh, "2D", t, false, false, false));
@@ -69,9 +75,7 @@ void auditApplyCfg(AuditCfg c) {
     sidebar.mainTabs.clear();
     sidebar.setupMainTabs();
   }
-  if (toolbar != null) toolbar.setup();
-  updateSidebarControlsVisibility();
-  updateExportControlPositions();
+  relayout();   // the sketch's own single layout entry point
 }
 
 void auditPre() {
@@ -93,6 +97,7 @@ void auditPost() {
   for (int i = 0; i < auditRows.size(); i++) auditWriter.println(prefix + auditRows.get(i));
   auditWriter.flush();
   println("[AUDIT] " + c.id() + " -> " + auditRows.size() + " boxes");
+  if (AUDIT_SHOTS) save(AUDIT_SHOT_DIR + auditSafeName(c.id()) + ".png");
   auditRecording = false;
   auditSettle = 0;
   auditCfgIdx++;

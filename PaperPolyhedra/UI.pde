@@ -106,9 +106,26 @@ final int KRESLING_HAPTIC_BLOCK_H = 134;
 // Shared by layoutSecondaryToggles() (to place the sliders under it) and the sidebar draw
 // + click code (to place/hit-test the buttons), so they stay aligned.
 float kreslingHapticUIY() {
-  float startY = (cuboidMode ? togglesYWhenCuboidOn : togglesYWhenCuboidOff) + TAB_LEN_ROW_H;
-  return startY + (29 + 12);  // row + 12 = one gridRowH below the toggle
+  return advancedGroupTop() + (29 + 12);  // row + 12 = one gridRowH below the toggle
 }
+
+// --- Advanced options -------------------------------------------------------------
+// Cuboid mode and the five strip/wall switches live behind a disclosure on the Shape tab,
+// so the main column stays on the controls people reach for every session.
+boolean advancedOpen = false;
+final int ADV_HEADER_H = 26;
+
+// Where the sliders begin, measured from the bottom of the toolbar. The header row now
+// carries Reset / Load JSON, which freed ~90px that used to sit above this.
+final int SHAPE_STACK_TOP = 124;
+
+// First row of the advanced toggle grid.
+float advancedGroupTop() { return advancedHeaderY() + ADV_HEADER_H + 6; }
+float advancedHeaderY()  { return (cuboidMode ? togglesYWhenCuboidOn : togglesYWhenCuboidOff) + TAB_LEN_ROW_H; }
+
+// Bottom of everything the Shape tab lays out, recorded by layoutSecondaryToggles() so the
+// 3D preview can flow below it instead of being pinned to the window bottom.
+float shapeStackBottomY = 0;
 
 // Height reserved for the TAB LENGTH preset row (label + button row) drawn on the Shape
 // tab just above the secondary toggle group.
@@ -237,7 +254,7 @@ void initShapeUI() {
   
   // Position controls in sidebar (Shape Control tab content area)
   // Starting Y increased to make room for shape counter row + Reset + Load JSON buttons
-  int x = SIDEBAR_PADDING, y = TOOLBAR_HEIGHT + 202, w = LEFT_SIDEBAR_WIDTH - 2*SIDEBAR_PADDING - 120, h = 20, row = 29;
+  int x = SIDEBAR_PADDING, y = TOOLBAR_HEIGHT + SHAPE_STACK_TOP, w = LEFT_SIDEBAR_WIDTH - 2*SIDEBAR_PADDING - 120, h = 20, row = 29;
 
   drawPerEdgeHUD();
 
@@ -458,11 +475,12 @@ void initShapeUI() {
     .setFocus(false);
   tfBotSize.getCaptionLabel().setVisible(false);
   
-  y += row +5;
+  y += row + 5;
 
-  // Cuboid mode toggle (only shown when nSides==4)
+  // Cuboid mode toggle. It no longer occupies a row of the main column — it is placed inside
+  // the advanced group by layoutSecondaryToggles(), so no vertical space is reserved here.
   tCuboidMode = cp5__prism.addToggle("ui_cuboid_mode")
-    .setPosition(x, y)
+    .setPosition(-1000, -1000)
     .setSize(22, 22)
     .setLabel("CUBOID MODE (RECTANGULAR LIDS)")
     .setColorLabel(color(0))
@@ -471,11 +489,9 @@ void initShapeUI() {
     .setFont(createFont("Arial", 15))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
-  tCuboidMode.setVisible(nSides == 4);
-  y += row + 20;
+  tCuboidMode.setVisible(false);
 
-  // Compact anchor for the secondary toggle group (used when cuboid mode is off,
-  // so the toggles sit here instead of overlapping the 3D preview lower down).
+  // Anchor for the TAB LENGTH row and the advanced group below it (cuboid mode off).
   togglesYWhenCuboidOff = y;
 
   // === CUBOID MODE CONTROLS (only visible when cuboidMode is on) ===
@@ -1685,24 +1701,27 @@ void updateSidebarControlsVisibility() {
   if (sTopSize != null) sTopSize.setVisible(shapeVisible);
   if (sBotSize != null) sBotSize.setVisible(shapeVisible);
   if (tLock != null) tLock.setVisible(shapeVisible);
+  // The advanced group is behind a disclosure — everything in it is hidden while it is closed.
+  boolean adv = shapeVisible && advancedOpen;
   // Kresling is its own mode — hide the other strip options that don't apply to it
-  if (tHidePanelFolds != null) tHidePanelFolds.setVisible(shapeVisible && !kreslingMode);
+  if (tHidePanelFolds != null) tHidePanelFolds.setVisible(adv && !kreslingMode);
   // Light gray cutting lines is hidden in workshop mode (and in Kresling mode)
-  if (tLightGrayCutLines != null) tLightGrayCutLines.setVisible(shapeVisible && !workshopMode && !kreslingMode);
-  if (tSplitStrip != null) tSplitStrip.setVisible(shapeVisible && !kreslingMode);
-  if (tKresling != null) tKresling.setVisible(shapeVisible);
-  if (sKreslingUnits != null) sKreslingUnits.setVisible(shapeVisible && kreslingMode);
-  if (sKreslingSegments != null) sKreslingSegments.setVisible(shapeVisible && kreslingMode);
+  if (tLightGrayCutLines != null) tLightGrayCutLines.setVisible(adv && !workshopMode && !kreslingMode);
+  if (tSplitStrip != null) tSplitStrip.setVisible(adv && !kreslingMode);
+  if (tKresling != null) tKresling.setVisible(adv);
+  if (sKreslingUnits != null) sKreslingUnits.setVisible(adv && kreslingMode);
+  if (sKreslingSegments != null) sKreslingSegments.setVisible(adv && kreslingMode);
   // Hollow / double-wall mode is hidden in workshop mode (and in Kresling mode)
-  if (tHollowMode != null) tHollowMode.setVisible(shapeVisible && !workshopMode && !kreslingMode);
-  if (sWallThickness != null) sWallThickness.setVisible(shapeVisible && hollowMode);
-  if (tEnableInnerShape != null) tEnableInnerShape.setVisible(shapeVisible && hollowMode);
-  if (sInnerSides != null) sInnerSides.setVisible(shapeVisible && hollowMode && enableInnerShape);
-  if (sInnerScale != null) sInnerScale.setVisible(shapeVisible && hollowMode && enableInnerShape);
-  if (sInnerRotation != null) sInnerRotation.setVisible(shapeVisible && hollowMode && enableInnerShape);
-  
-  // Cuboid mode controls
-  if (tCuboidMode != null) tCuboidMode.setVisible(shapeVisible && nSides == 4);
+  if (tHollowMode != null) tHollowMode.setVisible(adv && !workshopMode && !kreslingMode);
+  if (sWallThickness != null) sWallThickness.setVisible(adv && hollowMode);
+  if (tEnableInnerShape != null) tEnableInnerShape.setVisible(adv && hollowMode);
+  if (sInnerSides != null) sInnerSides.setVisible(adv && hollowMode && enableInnerShape);
+  if (sInnerScale != null) sInnerScale.setVisible(adv && hollowMode && enableInnerShape);
+  if (sInnerRotation != null) sInnerRotation.setVisible(adv && hollowMode && enableInnerShape);
+
+  // Cuboid mode toggle now lives in the advanced group; its dimension sliders stay in the
+  // main column, because once cuboid mode is on they are the primary size controls.
+  if (tCuboidMode != null) tCuboidMode.setVisible(adv && nSides == 4);
   if (shapeVisible) {
     setCuboidControlsVisible(cuboidMode);
   } else {
@@ -3021,6 +3040,9 @@ void syncUIToSelectedShape() {
   }
   // Visibility refresh
   updateSidebarControlsVisibility();
+  // The advanced group's slider stack depends on the visibility flags set above, so lay it
+  // out last and record where the column ends.
+  layoutSecondaryToggles();
 }
 
 void setAdvancedVisible(boolean visible) {
@@ -3036,77 +3058,107 @@ void setAdvancedVisible(boolean visible) {
 }
 
 //------------------------------------------------------------------------------------
-void updateExportControlPositions() {
-  if (tfExportFilename != null && btnExportMain != null) {
-    float exportBarY = height - BOTTOM_EXPORT_HEIGHT + 10;
-    float exportBarX = width - 320;
-    
-    tfExportFilename.setPosition(exportBarX, exportBarY + 8);
-    btnExportMain.setPosition(exportBarX + 190, exportBarY + 8);
-    
-    // Update 2D/3D toggle position
-    float bottomControlX = LEFT_SIDEBAR_WIDTH + 20;
-    float bottomControlY = exportBarY + 8;
-    tView3D.setPosition(bottomControlX, bottomControlY);
-    if (tShowDistances != null) tShowDistances.setPosition(bottomControlX + 640, bottomControlY);
-    
-    // Update tessellation mesh toggle position (next to 2D/3D toggle)
-    if (tShowTessellationMesh != null) {
-      tShowTessellationMesh.setPosition(bottomControlX + 90, bottomControlY);
-    }
-    
-    // Update marker controls position (next to mesh/3D buttons)
-    float markerControlX = LEFT_SIDEBAR_WIDTH + 240;
-    float markerControlY = exportBarY + 8;
-    if (tEnableMarkers != null) {
-      tEnableMarkers.setPosition(markerControlX - 30, markerControlY);
-    }
-    if (m_idNumbox != null) {
-      m_idNumbox.setPosition(markerControlX, markerControlY);
-    }
-    if (m_sizeNumbox != null) {
-      m_sizeNumbox.setPosition(markerControlX + 95, markerControlY);
-    }
-    if (tfMarkerID != null) {
-      tfMarkerID.setPosition(markerControlX + 73, markerControlY);
-    }
-    if (tfMarkerSize != null) {
-      tfMarkerSize.setPosition(markerControlX + 168, markerControlY);
-    }
-    if (tAutoMarkerIDs != null) {
-      tAutoMarkerIDs.setPosition(markerControlX + 195, markerControlY);
-    }
-    if (m_gridNumbox != null) {
-      m_gridNumbox.setPosition(markerControlX + 285, markerControlY);
-    }
-    if (tMarkerFreePlace != null) {
-      tMarkerFreePlace.setPosition(markerControlX + 345, markerControlY);
-    }
+// Lays the bottom export bar out left-to-right with a running cursor, and right-aligns only
+// the filename field and Export button. When the two groups would meet, the marker group drops
+// onto a second row and the bar grows, instead of the two silently overlapping - which they
+// did at any window narrower than 1480 px.
+//
+// Every advance uses the control's own getWidth(). Hardcoding widths here is what let the lid
+// sliders drift 116 px into each other once they were resized elsewhere.
+//
+// The lid-offset sliders are deliberately NOT placed here: they belong to the sidebar, and
+// updateSidebarControlsVisibility() already positions and sizes them.
+final int EXPORT_GAP       = 10;   // between controls
+final int EXPORT_GAP_TIGHT = 3;    // numberbox -> its unit textfield
+final int EXPORT_GAP_GROUP = 24;   // between logical groups
+final int EXPORT_RIGHT_W   = 320;  // filename field + Export button + right margin
+final int EXPORT_ROW_H     = 34;
 
-    /* Update view preset button positions (commented out for now)
-    if (btnViewTop != null) {
-      float presetX = bottomControlX + 90;
-      int presetBtnW = 45;
-      btnViewTop.setPosition(presetX, bottomControlY);
-      presetX += presetBtnW + 5;
-      btnViewFront.setPosition(presetX, bottomControlY);
-      presetX += presetBtnW + 5;
-      btnViewRight.setPosition(presetX, bottomControlY);
-      presetX += presetBtnW + 5;
-      btnViewIso.setPosition(presetX, bottomControlY);
-    }
-    */
-    
-    // Update lid offset control positions
-    float lidControlX = bottomControlX + 100;
-    int lidSliderW = 140;
-    int lidSliderH = 12;
-    // Align bottom of sliders with bottom of buttons (button height = 34px)
-    float lidControlY = bottomControlY + 34 - lidSliderH;
-    
-    sLidOffsetX.setPosition(lidControlX, lidControlY);
-    sLidOffsetY.setPosition(lidControlX + lidSliderW + 20, lidControlY);
+// The bar's left half, in order, with the gap that follows each control.
+controlP5.Controller<?>[] exportRow1() {
+  return new controlP5.Controller<?>[] { tView3D, tShowTessellationMesh };
+}
+controlP5.Controller<?>[] exportRow2() {
+  return new controlP5.Controller<?>[] {
+    tEnableMarkers, m_idNumbox, tfMarkerID, m_sizeNumbox, tfMarkerSize,
+    tAutoMarkerIDs, m_gridNumbox, tMarkerFreePlace, tShowDistances };
+}
+int[] exportRow1Gaps() { return new int[] { EXPORT_GAP, EXPORT_GAP }; }
+int[] exportRow2Gaps() {
+  return new int[] { EXPORT_GAP, EXPORT_GAP_TIGHT, EXPORT_GAP, EXPORT_GAP_TIGHT, EXPORT_GAP,
+                     EXPORT_GAP, EXPORT_GAP, EXPORT_GAP_GROUP, 0 };
+}
+
+// Space a control actually occupies. getWidth() covers only the widget box, so a 22px toggle
+// whose caption is drawn to its right measures 22 while occupying ~120 - which is how the
+// bottom bar's labels ended up underneath the next control along.
+float exportCtrlWidth(controlP5.Controller<?> c) {
+  float wBox = c.getWidth();
+  controlP5.Label cap = c.getCaptionLabel();
+  if (cap == null) return wBox;
+  String t = cap.getText();
+  if (t == null || t.length() == 0) return wBox;
+  // Numberbox captions are centred BELOW the box, so they never push the row along.
+  if (c instanceof controlP5.Numberbox) return wBox;
+  // Toggle captions sit to the right, offset by the paddingX set where they are built.
+  if (c instanceof controlP5.Toggle) return max(wBox, TOGGLE_CAPTION_PAD + t.length() * TOGGLE_CAPTION_CHAR_W);
+  return wBox;
+}
+final float TOGGLE_CAPTION_PAD    = 30;   // paddingX used on the bottom-bar toggles
+final float TOGGLE_CAPTION_CHAR_W = 7.5;  // ControlP5's default bitmap font, measured
+
+// Width a run of controls needs, measured from the controls themselves.
+float exportRunWidth(controlP5.Controller<?>[] cs, int[] gaps) {
+  float wsum = 0;
+  for (int i = 0; i < cs.length; i++) {
+    if (cs[i] == null) continue;
+    wsum += exportCtrlWidth(cs[i]);
+    if (i < cs.length - 1) wsum += gaps[i];
   }
+  return wsum;
+}
+
+// Places a run at (cx, cy), top-aligned, and returns the cursor after it.
+float exportPlaceRun(controlP5.Controller<?>[] cs, int[] gaps, float cx, float cy) {
+  for (int i = 0; i < cs.length; i++) {
+    if (cs[i] == null) continue;
+    cs[i].setPosition(cx, cy);
+    cx += exportCtrlWidth(cs[i]) + (i < cs.length - 1 ? gaps[i] : 0);
+  }
+  return cx;
+}
+
+// Narrowest window this bar can lay out without overlapping. windowResized() clamps to it.
+float exportBarMinWidth() {
+  float leftStart = LEFT_SIDEBAR_WIDTH + 20;
+  float w1 = exportRunWidth(exportRow1(), exportRow1Gaps());
+  float w2 = exportRunWidth(exportRow2(), exportRow2Gaps());
+  return max(leftStart + w1 + EXPORT_GAP_GROUP + EXPORT_RIGHT_W, leftStart + w2 + 10);
+}
+
+void updateExportControlPositions() {
+  if (tfExportFilename == null || btnExportMain == null) return;
+
+  controlP5.Controller<?>[] r1 = exportRow1();
+  controlP5.Controller<?>[] r2 = exportRow2();
+  int[] g1 = exportRow1Gaps(), g2 = exportRow2Gaps();
+
+  float leftStart = LEFT_SIDEBAR_WIDTH + 20;
+  float rightX    = width - EXPORT_RIGHT_W;
+  float w1 = exportRunWidth(r1, g1);
+  float w2 = exportRunWidth(r2, g2);
+
+  boolean twoRow = (leftStart + w1 + EXPORT_GAP_GROUP + w2 > rightX);
+  BOTTOM_EXPORT_HEIGHT = twoRow ? EXPORT_H_2ROW : EXPORT_H_1ROW;
+
+  float rowY = height - BOTTOM_EXPORT_HEIGHT + 18;
+
+  tfExportFilename.setPosition(rightX, rowY);
+  btnExportMain.setPosition(rightX + 190, rowY);
+
+  float cx = exportPlaceRun(r1, g1, leftStart, rowY);
+  if (twoRow) exportPlaceRun(r2, g2, leftStart, rowY + EXPORT_ROW_H + 6);
+  else        exportPlaceRun(r2, g2, cx + EXPORT_GAP_GROUP, rowY);
 }
 
 // Update lid positions when buttons are held down
@@ -3504,13 +3556,18 @@ float calculatePolygonCircumradius(int numberOfSides, float sideLength) {
 // match the vertical steps used when these controls are first created in initShapeUI.
 void layoutSecondaryToggles() {
   int row = 29;
-  // Leave room for the TAB LENGTH preset row that sits above this group
-  float startY = (cuboidMode ? togglesYWhenCuboidOn : togglesYWhenCuboidOff) + TAB_LEN_ROW_H;
+  float startY = advancedGroupTop();
 
-  // Two-column grid for the four toggles
+  // Two-column grid for the advanced toggles
   float col1X = SIDEBAR_PADDING;
   float col2X = SIDEBAR_PADDING + (LEFT_SIDEBAR_WIDTH - 2 * SIDEBAR_PADDING) / 2.0;
   float gridRowH = row + 12;  // vertical space per toggle row
+
+  if (!advancedOpen) {
+    // Collapsed: nothing to place, and the 3D preview starts right under the header.
+    shapeStackBottomY = advancedHeaderY() + ADV_HEADER_H;
+    return;
+  }
 
   // In Kresling mode it's the only strip option shown — put its toggle at the top
   // (the other toggles are hidden) and stack its sliders right below.
@@ -3521,27 +3578,30 @@ void layoutSecondaryToggles() {
     float ky = kreslingHapticUIY() + KRESLING_HAPTIC_BLOCK_H;
     if (sKreslingUnits    != null) { sKreslingUnits.setPosition(col1X, ky);    ky += gridRowH; }
     if (sKreslingSegments != null) { sKreslingSegments.setPosition(col1X, ky); ky += gridRowH; }
+    shapeStackBottomY = ky;
     return;
   }
 
-  //  [ Hide panel folds ]   [ Light gray cut lines ]
-  //  [ Split strip in half] [ Hollow / double wall ]   (hollow hidden in workshop mode)
-  //  [ Kresling pattern   ]
-  if (tHidePanelFolds    != null) tHidePanelFolds.setPosition(col1X, startY);
-  if (tLightGrayCutLines != null) tLightGrayCutLines.setPosition(col2X, startY);
-  if (tSplitStrip        != null) tSplitStrip.setPosition(col1X, startY + gridRowH);
-  if (tHollowMode        != null) tHollowMode.setPosition(col2X, startY + gridRowH);
-  if (tKresling          != null) tKresling.setPosition(col1X, startY + 2 * gridRowH);
+  //  [ Cuboid mode        ]  [ Hide panel folds    ]
+  //  [ Light gray cutlines ]  [ Split strip in half ]
+  //  [ Hollow / double wall]  [ Kresling pattern    ]
+  if (tCuboidMode        != null) tCuboidMode.setPosition(col1X, startY);
+  if (tHidePanelFolds    != null) tHidePanelFolds.setPosition(col2X, startY);
+  if (tLightGrayCutLines != null) tLightGrayCutLines.setPosition(col1X, startY + gridRowH);
+  if (tSplitStrip        != null) tSplitStrip.setPosition(col2X, startY + gridRowH);
+  if (tHollowMode        != null) tHollowMode.setPosition(col1X, startY + 2 * gridRowH);
+  if (tKresling          != null) tKresling.setPosition(col2X, startY + 2 * gridRowH);
 
-  // Sub-controls stacked in a single column below the grid
+  // Sub-controls stacked in a single column below the grid, only when their parent is on.
   float y = startY + 3 * gridRowH + 8;
-  if (sKreslingUnits    != null) { sKreslingUnits.setPosition(col1X, y);    y += row; }
-  if (sKreslingSegments != null) { sKreslingSegments.setPosition(col1X, y); y += row; }
-  if (sWallThickness    != null) { sWallThickness.setPosition(col1X, y);    y += row; }
-  if (tEnableInnerShape != null) { tEnableInnerShape.setPosition(col1X, y); y += row; }
-  if (sInnerSides       != null) { sInnerSides.setPosition(col1X, y);       y += row; }
-  if (sInnerScale       != null) { sInnerScale.setPosition(col1X, y);       y += row; }
-  if (sInnerRotation    != null) { sInnerRotation.setPosition(col1X, y);    y += row; }
+  if (sKreslingUnits    != null && sKreslingUnits.isVisible())    { sKreslingUnits.setPosition(col1X, y);    y += row; }
+  if (sKreslingSegments != null && sKreslingSegments.isVisible()) { sKreslingSegments.setPosition(col1X, y); y += row; }
+  if (sWallThickness    != null && sWallThickness.isVisible())    { sWallThickness.setPosition(col1X, y);    y += row; }
+  if (tEnableInnerShape != null && tEnableInnerShape.isVisible()) { tEnableInnerShape.setPosition(col1X, y); y += row; }
+  if (sInnerSides       != null && sInnerSides.isVisible())       { sInnerSides.setPosition(col1X, y);       y += row; }
+  if (sInnerScale       != null && sInnerScale.isVisible())       { sInnerScale.setPosition(col1X, y);       y += row; }
+  if (sInnerRotation    != null && sInnerRotation.isVisible())    { sInnerRotation.setPosition(col1X, y);    y += row; }
+  shapeStackBottomY = y;
 }
 
 void setCuboidControlsVisible(boolean vis) {

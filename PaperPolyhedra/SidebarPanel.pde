@@ -148,6 +148,19 @@ class SidebarPanel {
     mainTabs.clear();
     setupMainTabs();
   }
+
+  // Recomputes the panel rectangle from the current window size, then rebuilds the tabs.
+  // The constructor used to be the only place these were set, so the panel kept its startup
+  // geometry for the life of the sketch.
+  void relayout() {
+    x = 0;
+    y = TOOLBAR_HEIGHT;
+    w = LEFT_SIDEBAR_WIDTH;
+    h = height - TOOLBAR_HEIGHT;
+    contentY      = y + tabAreaHeight;
+    contentHeight = h - tabAreaHeight;
+    setup();
+  }
   
   void setupMainTabs() {
     // Show "Assem" tab only when assembly mode is active.
@@ -225,97 +238,121 @@ class SidebarPanel {
   }
   
   // tab Content Drawing Functions 
+  // --- Shape tab: geometry shared by the drawing and the hit-testing, so the two cannot
+  // drift apart. Each returns {x, y, w, h}.
+  float[] shapeActionBtnRect(int i) {          // 0 = Reset, 1 = Load JSON
+    float bw = 100, bh = 22, gap = 6;
+    float bx = x + w - SIDEBAR_PADDING - (2 * bw + gap) + i * (bw + gap);
+    return new float[] { bx, contentY + SIDEBAR_PADDING - 3, bw, bh };
+  }
+  float shapeCounterY() { return contentY + SIDEBAR_PADDING + 26; }
+  float[] shapeCounterBtnRect(int i) {         // 0 = Add, 1 = Remove
+    float bs = 26, gap = 6, bw = bs + gap + 10;
+    return new float[] { x + SIDEBAR_PADDING + i * (bw + 4), shapeCounterY(), bw, bs };
+  }
+
   void drawShapeControlContent() {
     // Shape controls content area
     // ControlP5 elements are positioned in UI.pde
     // This just provides the background area
-    
+
     pushStyle();
     fill(0);
     textAlign(LEFT, TOP);
     textSize(15);
     text("SHAPE PARAMETERS", round(x + SIDEBAR_PADDING), round(contentY + SIDEBAR_PADDING));
-    
+
+    // --- Reset / Load JSON, compact and on the header row ---
+    // They used to be two full-width 28px bars stacked below the counter, which cost ~90px
+    // of the column that the sliders needed.
+    String[] actLabels = { "Reset 30mm", "Load JSON" };
+    color[]  actBase   = { color(160, 60, 60), color(25, 110, 140) };
+    color[]  actHover  = { color(185, 80, 80), color(35, 135, 170) };
+    for (int i = 0; i < 2; i++) {
+      float[] r = shapeActionBtnRect(i);
+      boolean hov = mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3];
+      fill(hov ? actHover[i] : actBase[i]);
+      noStroke();
+      rect(r[0], r[1], r[2], r[3], 3);
+      fill(255);
+      textAlign(CENTER, CENTER);
+      textSize(10);
+      text(actLabels[i], r[0] + r[2] / 2, r[1] + r[3] / 2);
+    }
+
     // --- Multi-shape counter + Add/Remove buttons ---
     int shapeCount = (shapes != null) ? shapes.size() : 1;
     int selIdx     = (shapes != null) ? selectedShapeIdx + 1 : 1;
-    float ctrBtnSize = 26;
-    float ctrBtnGap  = 6;
-    float ctrY       = contentY + SIDEBAR_PADDING + 20;
-    // "Shape N of M" label (include shape label if set)
-    fill(60);
-    textAlign(LEFT, CENTER);
-    textSize(12);
     String shapeLabel = (shapes != null && shapes.size() > 0) ? shapes.get(selectedShapeIdx).label : "";
     String shapeLine  = "Shape " + selIdx + (shapeLabel != null && !shapeLabel.isEmpty() ? ": " + shapeLabel : "") + " of " + shapeCount;
-    // "+ Add" button (left-anchored)
-    float addBtnX = x + SIDEBAR_PADDING;
-    boolean addHover = mouseX >= addBtnX && mouseX <= addBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-                       mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize;
+
+    float[] addR = shapeCounterBtnRect(0);
+    boolean addHover = mouseX >= addR[0] && mouseX <= addR[0] + addR[2] &&
+                       mouseY >= addR[1] && mouseY <= addR[1] + addR[3];
     fill(addHover ? color(50, 170, 70) : color(40, 140, 55));
     noStroke();
-    rect(addBtnX, ctrY, ctrBtnSize + ctrBtnGap + 10, ctrBtnSize, 4);
+    rect(addR[0], addR[1], addR[2], addR[3], 4);
     fill(255); textAlign(CENTER, CENTER); textSize(13);
-    text("+", addBtnX + (ctrBtnSize + ctrBtnGap + 10) / 2, ctrY + ctrBtnSize / 2);
-    // "- Remove" button (disabled when only 1 shape)
-    float remBtnX = addBtnX + ctrBtnSize + ctrBtnGap + 10 + 4;
+    text("+", addR[0] + addR[2] / 2, addR[1] + addR[3] / 2);
+
+    float[] remR = shapeCounterBtnRect(1);
     boolean canRemove = shapeCount > 1;
-    boolean remHover  = canRemove && mouseX >= remBtnX && mouseX <= remBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-                        mouseY >= ctrY && mouseY <= ctrY + ctrBtnSize;
+    boolean remHover  = canRemove && mouseX >= remR[0] && mouseX <= remR[0] + remR[2] &&
+                        mouseY >= remR[1] && mouseY <= remR[1] + remR[3];
     fill(canRemove ? (remHover ? color(200, 60, 60) : color(160, 50, 50)) : color(100, 80, 80));
     noStroke();
-    rect(remBtnX, ctrY, ctrBtnSize + ctrBtnGap + 10, ctrBtnSize, 4);
+    rect(remR[0], remR[1], remR[2], remR[3], 4);
     fill(canRemove ? color(255) : color(150)); textAlign(CENTER, CENTER); textSize(13);
-    text("\u2212", remBtnX + (ctrBtnSize + ctrBtnGap + 10) / 2, ctrY + ctrBtnSize / 2);
-    // "Shape N of M" label to the right of the buttons
+    text("−", remR[0] + remR[2] / 2, remR[1] + remR[3] / 2);
+
     fill(60);
     textAlign(LEFT, CENTER);
     textSize(12);
-    float labelX = remBtnX + ctrBtnSize + ctrBtnGap + 10 + 6;
-    text(shapeLine, round(labelX), round(ctrY + ctrBtnSize / 2));
-    
-    // Draw "Reset to Default" button below the counter row
-    float btnX = x + SIDEBAR_PADDING;
-    float btnY = ctrY + ctrBtnSize + 6;
-    float btnW = w - 2 * SIDEBAR_PADDING;
-    float btnH = 28;
-    boolean btnHover = mouseX >= btnX && mouseX <= btnX + btnW &&
-                       mouseY >= btnY && mouseY <= btnY + btnH;
-    
-    fill(btnHover ? color(180, 70, 70) : color(160, 60, 60));
-    noStroke();
-    rect(btnX, btnY, btnW, btnH, 4);
-    
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Reset to Default (30mm)", btnX + btnW/2, btnY + btnH/2);
-    
-    // "Load JSON" button below Reset
-    float jsonBtnY = btnY + btnH + 4;
-    boolean jsonHover = mouseX >= btnX && mouseX <= btnX + btnW &&
-                        mouseY >= jsonBtnY && mouseY <= jsonBtnY + btnH;
-    fill(jsonHover ? color(30, 130, 160) : color(25, 110, 140));
-    noStroke();
-    rect(btnX, jsonBtnY, btnW, btnH, 4);
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Load JSON", btnX + btnW/2, jsonBtnY + btnH/2);
-    
+    text(shapeLine, round(remR[0] + remR[2] + 6), round(remR[1] + remR[3] / 2));
+
     popStyle();
 
-    // Tab length preset buttons (sit just above the secondary toggle group)
+    // Tab length preset buttons (sit just above the advanced group)
     drawTabLengthButtons();
 
-    // Kresling haptic-behavior selector (only in Kresling mode)
-    if (kreslingMode) drawKreslingHapticUI();
+    // "Advanced options" disclosure
+    drawAdvancedHeader();
+
+    // Kresling haptic-behavior selector (only in Kresling mode, inside the advanced group)
+    if (kreslingMode && advancedOpen) drawKreslingHapticUI();
 
     // Draw mini 3D view at the bottom of shape control when in 2D mode
     // (hidden in Kresling mode — the 3D preview doesn't reflect the flat pattern)
     if (!view3DMode && !kreslingMode) {
       drawMini3DViewInSidebar();
     }
+  }
+
+  // The advanced-options disclosure row. Returns {x, y, w, h}; shared with mousePressed().
+  float[] advancedHeaderRect() {
+    return new float[] { x + SIDEBAR_PADDING, advancedHeaderY(),
+                         w - 2 * SIDEBAR_PADDING, ADV_HEADER_H };
+  }
+
+  void drawAdvancedHeader() {
+    float[] r = advancedHeaderRect();
+    boolean hov = mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3];
+    pushStyle();
+    noStroke();
+    fill(hov ? color(214, 216, 226) : color(226, 228, 236));
+    rect(r[0], r[1], r[2], r[3], 4);
+    // Disclosure triangle, pointing right when collapsed and down when open
+    fill(90);
+    float cx = r[0] + 12, cy = r[1] + r[3] / 2;
+    beginShape();
+    if (advancedOpen) { vertex(cx - 5, cy - 3); vertex(cx + 5, cy - 3); vertex(cx, cy + 4); }
+    else              { vertex(cx - 3, cy - 5); vertex(cx + 4, cy);     vertex(cx - 3, cy + 5); }
+    endShape(CLOSE);
+    fill(70);
+    textAlign(LEFT, CENTER);
+    textSize(12);
+    text("ADVANCED OPTIONS", r[0] + 26, cy);
+    popStyle();
   }
 
   // Draws the Kresling haptic selector: "Feel" + 3 type buttons, Generate / Check,
@@ -1372,41 +1409,40 @@ class SidebarPanel {
       }
     }
     
-    // Check Add / Remove shape buttons and Reset to Default on Shape tab
+    // Check Add / Remove shape buttons and the header actions on the Shape tab
     if (activeMainTab == 0) {
-      float ctrBtnSize = 26;
-      float ctrBtnGap  = 6;
-      float ctrY       = contentY + SIDEBAR_PADDING + 20;
-
-      // "+ Add" button (left-anchored)
-      float addBtnX = x + SIDEBAR_PADDING;
-      if (mouseX >= addBtnX && mouseX <= addBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-          mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize) {
+      float[] addR = shapeCounterBtnRect(0);
+      if (mouseX >= addR[0] && mouseX <= addR[0] + addR[2] &&
+          mouseY >= addR[1] && mouseY <= addR[1] + addR[3]) {
         addShape();
         return true;
       }
-      // "- Remove" button
-      float remBtnX = addBtnX + ctrBtnSize + ctrBtnGap + 10 + 4;
+      float[] remR = shapeCounterBtnRect(1);
       if (shapes != null && shapes.size() > 1 &&
-          mouseX >= remBtnX && mouseX <= remBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-          mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize) {
+          mouseX >= remR[0] && mouseX <= remR[0] + remR[2] &&
+          mouseY >= remR[1] && mouseY <= remR[1] + remR[3]) {
         removeShape();
         return true;
       }
-      // "Reset to Default" button (positioned below the counter row)
-      float btnY = ctrY + ctrBtnSize + 6;
-      float btnW = w - 2 * SIDEBAR_PADDING;
-      float btnH = 28;
-      if (mouseX >= x + SIDEBAR_PADDING && mouseX <= x + SIDEBAR_PADDING + btnW &&
-          mouseY >= btnY && mouseY <= btnY + btnH) {
+      float[] resetR = shapeActionBtnRect(0);
+      if (mouseX >= resetR[0] && mouseX <= resetR[0] + resetR[2] &&
+          mouseY >= resetR[1] && mouseY <= resetR[1] + resetR[3]) {
         resetShapeToDefault();
         return true;
       }
-      // "Load JSON" button (below Reset)
-      float jsonBtnY = btnY + btnH + 4;
-      if (mouseX >= x + SIDEBAR_PADDING && mouseX <= x + SIDEBAR_PADDING + btnW &&
-          mouseY >= jsonBtnY && mouseY <= jsonBtnY + btnH) {
+      float[] jsonR = shapeActionBtnRect(1);
+      if (mouseX >= jsonR[0] && mouseX <= jsonR[0] + jsonR[2] &&
+          mouseY >= jsonR[1] && mouseY <= jsonR[1] + jsonR[3]) {
         loadJSONShapes();
+        return true;
+      }
+      // "Advanced options" disclosure header
+      float[] advR = advancedHeaderRect();
+      if (mouseX >= advR[0] && mouseX <= advR[0] + advR[2] &&
+          mouseY >= advR[1] && mouseY <= advR[1] + advR[3]) {
+        advancedOpen = !advancedOpen;
+        updateSidebarControlsVisibility();
+        layoutSecondaryToggles();
         return true;
       }
       // TAB LENGTH preset buttons (5 / 10 / 15 mm) — must match drawTabLengthButtons()

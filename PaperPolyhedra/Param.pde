@@ -166,7 +166,14 @@ final int TOOLBAR_SEPARATOR = 12;                // Space between button groups
 
 // ==================== SIDEBAR UI ====================
 final int LEFT_SIDEBAR_WIDTH = 420;              // Width of left control sidebar
-final int BOTTOM_EXPORT_HEIGHT = 90;             // Height of bottom export button area
+// Height of the bottom export area. Not final: the bar wraps onto a second row when the
+// window is too narrow to fit its controls in one, and relayout() sets this accordingly.
+final int EXPORT_H_1ROW = 90;
+final int EXPORT_H_2ROW = 130;
+int BOTTOM_EXPORT_HEIGHT = EXPORT_H_1ROW;
+// Smallest window the layout is designed to hold. windowResized() clamps to these.
+final int MIN_WIN_W = 1000;
+final int MIN_WIN_H = 700;
 final int SIDEBAR_PADDING = 12;                  // Internal sidebar padding
 final float SIDEBAR_TOP_SECTION_RATIO = 0.25;    // Top 1/3 for shape controls
 
@@ -240,16 +247,20 @@ void applyPageSize(int idx) {
   widthA4_render  = PRINT_W * (TEXTURE_DPI / 25.4);
   heightA4_render = PRINT_H * (TEXTURE_DPI / 25.4);
 
-  // Auto-fit SCREEN_SCALE so the page fills the available canvas area (5% margin)
-  float availW = width  - LEFT_SIDEBAR_WIDTH;
-  float availH = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
-  SCREEN_SCALE = min(availW / widthA4, availH / heightA4) * 0.95;
-
-  widthA4_display  = widthA4  * SCREEN_SCALE;
-  heightA4_display = heightA4 * SCREEN_SCALE;
-
+  fitPageToCanvas();
   setParams(false);
   println("[applyPageSize] " + PAGE_SIZE_NAMES[idx] + "  " + PRINT_W + "x" + PRINT_H + "mm  SCREEN_SCALE=" + nf(SCREEN_SCALE, 1, 3));
+}
+
+// Scales the page so it fills the canvas area with a 5% margin. Called from applyPageSize()
+// and from relayout(), so the page follows the window instead of staying at its startup size.
+void fitPageToCanvas() {
+  float availW = width  - LEFT_SIDEBAR_WIDTH;
+  float availH = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
+  if (availW <= 0 || availH <= 0) return;
+  SCREEN_SCALE = min(availW / widthA4, availH / heightA4) * 0.95;
+  widthA4_display  = widthA4  * SCREEN_SCALE;
+  heightA4_display = heightA4 * SCREEN_SCALE;
 }
 
 void setParams(boolean cut) {
