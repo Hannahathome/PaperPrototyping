@@ -67,7 +67,7 @@ class SidebarButton {
     // Draw label
     fill(enabled ? colorText : color(150));
     textAlign(CENTER, CENTER);
-    textSize(12);
+    uiText(12);
     text(label, x + w/2, y + h/2);
     
     popStyle();
@@ -107,7 +107,7 @@ class SidebarPanel {
   int activeMainTab = 0;
   
   // texture sub-tab state (when in texture tab)
-  int activeTextureTab = 0; // 0=Per-Panel, 1=Strip
+  int activeTextureTab = 0; // 0=Per-Panel, 1=Strip, 2=Tracking
   
   // print sub-tab state (when in print tab)
   int activePrintTab = 0; // 0=Placement, 1=Cutouts
@@ -147,6 +147,19 @@ class SidebarPanel {
     buttons.clear();
     mainTabs.clear();
     setupMainTabs();
+  }
+
+  // Recomputes the panel rectangle from the current window size, then rebuilds the tabs.
+  // The constructor used to be the only place these were set, so the panel kept its startup
+  // geometry for the life of the sketch.
+  void relayout() {
+    x = 0;
+    y = TOOLBAR_HEIGHT;
+    w = LEFT_SIDEBAR_WIDTH;
+    h = height - TOOLBAR_HEIGHT;
+    contentY      = y + tabAreaHeight;
+    contentHeight = h - tabAreaHeight;
+    setup();
   }
   
   void setupMainTabs() {
@@ -225,97 +238,121 @@ class SidebarPanel {
   }
   
   // tab Content Drawing Functions 
+  // --- Shape tab: geometry shared by the drawing and the hit-testing, so the two cannot
+  // drift apart. Each returns {x, y, w, h}.
+  float[] shapeActionBtnRect(int i) {          // 0 = Reset, 1 = Load JSON
+    float bw = 100, bh = 22, gap = 6;
+    float bx = x + w - SIDEBAR_PADDING - (2 * bw + gap) + i * (bw + gap);
+    return new float[] { bx, contentY + SIDEBAR_PADDING - 3, bw, bh };
+  }
+  float shapeCounterY() { return contentY + SIDEBAR_PADDING + 26; }
+  float[] shapeCounterBtnRect(int i) {         // 0 = Add, 1 = Remove
+    float bs = 26, gap = 6, bw = bs + gap + 10;
+    return new float[] { x + SIDEBAR_PADDING + i * (bw + 4), shapeCounterY(), bw, bs };
+  }
+
   void drawShapeControlContent() {
     // Shape controls content area
     // ControlP5 elements are positioned in UI.pde
     // This just provides the background area
-    
+
     pushStyle();
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("SHAPE PARAMETERS", round(x + SIDEBAR_PADDING), round(contentY + SIDEBAR_PADDING));
-    
+
+    // --- Reset / Load JSON, compact and on the header row ---
+    // They used to be two full-width 28px bars stacked below the counter, which cost ~90px
+    // of the column that the sliders needed.
+    String[] actLabels = { "Reset 30mm", "Load JSON" };
+    color[]  actBase   = { color(160, 60, 60), color(25, 110, 140) };
+    color[]  actHover  = { color(185, 80, 80), color(35, 135, 170) };
+    for (int i = 0; i < 2; i++) {
+      float[] r = shapeActionBtnRect(i);
+      boolean hov = mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3];
+      fill(hov ? actHover[i] : actBase[i]);
+      noStroke();
+      rect(r[0], r[1], r[2], r[3], 3);
+      fill(255);
+      textAlign(CENTER, CENTER);
+      uiText(10);
+      text(actLabels[i], r[0] + r[2] / 2, r[1] + r[3] / 2);
+    }
+
     // --- Multi-shape counter + Add/Remove buttons ---
     int shapeCount = (shapes != null) ? shapes.size() : 1;
     int selIdx     = (shapes != null) ? selectedShapeIdx + 1 : 1;
-    float ctrBtnSize = 26;
-    float ctrBtnGap  = 6;
-    float ctrY       = contentY + SIDEBAR_PADDING + 20;
-    // "Shape N of M" label (include shape label if set)
-    fill(60);
-    textAlign(LEFT, CENTER);
-    textSize(12);
     String shapeLabel = (shapes != null && shapes.size() > 0) ? shapes.get(selectedShapeIdx).label : "";
     String shapeLine  = "Shape " + selIdx + (shapeLabel != null && !shapeLabel.isEmpty() ? ": " + shapeLabel : "") + " of " + shapeCount;
-    // "+ Add" button (left-anchored)
-    float addBtnX = x + SIDEBAR_PADDING;
-    boolean addHover = mouseX >= addBtnX && mouseX <= addBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-                       mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize;
+
+    float[] addR = shapeCounterBtnRect(0);
+    boolean addHover = mouseX >= addR[0] && mouseX <= addR[0] + addR[2] &&
+                       mouseY >= addR[1] && mouseY <= addR[1] + addR[3];
     fill(addHover ? color(50, 170, 70) : color(40, 140, 55));
     noStroke();
-    rect(addBtnX, ctrY, ctrBtnSize + ctrBtnGap + 10, ctrBtnSize, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(13);
-    text("+", addBtnX + (ctrBtnSize + ctrBtnGap + 10) / 2, ctrY + ctrBtnSize / 2);
-    // "- Remove" button (disabled when only 1 shape)
-    float remBtnX = addBtnX + ctrBtnSize + ctrBtnGap + 10 + 4;
+    rect(addR[0], addR[1], addR[2], addR[3], 4);
+    fill(255); textAlign(CENTER, CENTER); uiText(13);
+    text("+", addR[0] + addR[2] / 2, addR[1] + addR[3] / 2);
+
+    float[] remR = shapeCounterBtnRect(1);
     boolean canRemove = shapeCount > 1;
-    boolean remHover  = canRemove && mouseX >= remBtnX && mouseX <= remBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-                        mouseY >= ctrY && mouseY <= ctrY + ctrBtnSize;
+    boolean remHover  = canRemove && mouseX >= remR[0] && mouseX <= remR[0] + remR[2] &&
+                        mouseY >= remR[1] && mouseY <= remR[1] + remR[3];
     fill(canRemove ? (remHover ? color(200, 60, 60) : color(160, 50, 50)) : color(100, 80, 80));
     noStroke();
-    rect(remBtnX, ctrY, ctrBtnSize + ctrBtnGap + 10, ctrBtnSize, 4);
-    fill(canRemove ? color(255) : color(150)); textAlign(CENTER, CENTER); textSize(13);
-    text("\u2212", remBtnX + (ctrBtnSize + ctrBtnGap + 10) / 2, ctrY + ctrBtnSize / 2);
-    // "Shape N of M" label to the right of the buttons
+    rect(remR[0], remR[1], remR[2], remR[3], 4);
+    fill(canRemove ? color(255) : color(150)); textAlign(CENTER, CENTER); uiText(13);
+    text("−", remR[0] + remR[2] / 2, remR[1] + remR[3] / 2);
+
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(12);
-    float labelX = remBtnX + ctrBtnSize + ctrBtnGap + 10 + 6;
-    text(shapeLine, round(labelX), round(ctrY + ctrBtnSize / 2));
-    
-    // Draw "Reset to Default" button below the counter row
-    float btnX = x + SIDEBAR_PADDING;
-    float btnY = ctrY + ctrBtnSize + 6;
-    float btnW = w - 2 * SIDEBAR_PADDING;
-    float btnH = 28;
-    boolean btnHover = mouseX >= btnX && mouseX <= btnX + btnW &&
-                       mouseY >= btnY && mouseY <= btnY + btnH;
-    
-    fill(btnHover ? color(180, 70, 70) : color(160, 60, 60));
-    noStroke();
-    rect(btnX, btnY, btnW, btnH, 4);
-    
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Reset to Default (30mm)", btnX + btnW/2, btnY + btnH/2);
-    
-    // "Load JSON" button below Reset
-    float jsonBtnY = btnY + btnH + 4;
-    boolean jsonHover = mouseX >= btnX && mouseX <= btnX + btnW &&
-                        mouseY >= jsonBtnY && mouseY <= jsonBtnY + btnH;
-    fill(jsonHover ? color(30, 130, 160) : color(25, 110, 140));
-    noStroke();
-    rect(btnX, jsonBtnY, btnW, btnH, 4);
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Load JSON", btnX + btnW/2, jsonBtnY + btnH/2);
-    
+    uiText(12);
+    text(shapeLine, round(remR[0] + remR[2] + 6), round(remR[1] + remR[3] / 2));
+
     popStyle();
 
-    // Tab length preset buttons (sit just above the secondary toggle group)
+    // Tab length preset buttons (sit just above the advanced group)
     drawTabLengthButtons();
 
-    // Kresling haptic-behavior selector (only in Kresling mode)
-    if (kreslingMode) drawKreslingHapticUI();
+    // "Advanced options" disclosure
+    drawAdvancedHeader();
+
+    // Kresling haptic-behavior selector (only in Kresling mode, inside the advanced group)
+    if (kreslingMode && advancedOpen) drawKreslingHapticUI();
 
     // Draw mini 3D view at the bottom of shape control when in 2D mode
     // (hidden in Kresling mode — the 3D preview doesn't reflect the flat pattern)
     if (!view3DMode && !kreslingMode) {
       drawMini3DViewInSidebar();
     }
+  }
+
+  // The advanced-options disclosure row. Returns {x, y, w, h}; shared with mousePressed().
+  float[] advancedHeaderRect() {
+    return new float[] { x + SIDEBAR_PADDING, advancedHeaderY(),
+                         w - 2 * SIDEBAR_PADDING, ADV_HEADER_H };
+  }
+
+  void drawAdvancedHeader() {
+    float[] r = advancedHeaderRect();
+    boolean hov = mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3];
+    pushStyle();
+    noStroke();
+    fill(hov ? color(214, 216, 226) : color(226, 228, 236));
+    rect(r[0], r[1], r[2], r[3], 4);
+    // Disclosure triangle, pointing right when collapsed and down when open
+    fill(90);
+    float cx = r[0] + 12, cy = r[1] + r[3] / 2;
+    beginShape();
+    if (advancedOpen) { vertex(cx - 5, cy - 3); vertex(cx + 5, cy - 3); vertex(cx, cy + 4); }
+    else              { vertex(cx - 3, cy - 5); vertex(cx + 4, cy);     vertex(cx - 3, cy + 5); }
+    endShape(CLOSE);
+    fill(70);
+    textAlign(LEFT, CENTER);
+    uiText(12);
+    text("ADVANCED OPTIONS", r[0] + 26, cy);
+    popStyle();
   }
 
   // Draws the Kresling haptic selector: "Feel" + 3 type buttons, Generate / Check,
@@ -329,7 +366,7 @@ class SidebarPanel {
     float btnH = 24, gap = 5;
 
     // "Feel" label + 3 type buttons
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("Feel", round(x0), round(uiY));
     float btnY = uiY + 16;
     float bW = (fullW - 2 * gap) / 3;
@@ -340,7 +377,7 @@ class SidebarPanel {
       boolean hov = mouseX >= bx && mouseX <= bx + bW && mouseY >= btnY && mouseY <= btnY + btnH;
       fill(active ? color(50, 150, 255) : (hov ? color(120, 120, 130) : color(100, 100, 110)));
       noStroke(); rect(bx, btnY, bW, btnH, 4);
-      fill(255); textAlign(CENTER, CENTER); textSize(10);
+      fill(255); textAlign(CENTER, CENTER); uiText(10);
       text(labels[i], bx + bW / 2, btnY + btnH / 2);
     }
 
@@ -350,19 +387,19 @@ class SidebarPanel {
     boolean gHov = mouseX >= x0 && mouseX <= x0 + gW && mouseY >= genY && mouseY <= genY + btnH;
     fill(gHov ? color(60, 180, 60) : color(50, 150, 50));
     noStroke(); rect(x0, genY, gW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text("Generate", x0 + gW / 2, genY + btnH / 2);
     float rx = x0 + gW + gap;
     boolean rHov = mouseX >= rx && mouseX <= rx + gW && mouseY >= genY && mouseY <= genY + btnH;
     fill(rHov ? color(90, 90, 180) : color(75, 75, 150));
     noStroke(); rect(rx, genY, gW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text("Check", rx + gW / 2, genY + btnH / 2);
 
     // Live bistability readout — reflects the CURRENT fold height, updates as you drag
     float liveY = genY + btnH + 6;
     fill(kreslingCurrentIsBistable() ? color(30, 150, 60) : color(90));
-    textAlign(LEFT, TOP); textSize(10);
+    textAlign(LEFT, TOP); uiText(10);
     text(kreslingLiveText(), round(x0), round(liveY), fullW, 16);
 
     // Last Generate/Check result: red when "not possible", amber when may buckle, else neutral
@@ -370,7 +407,7 @@ class SidebarPanel {
     boolean fail = (kreslingLastResult != null && !kreslingLastResultOk());
     boolean warn = kreslingLastResultOk() && kreslingLastResult.bucklingRisk;
     fill(fail ? color(190, 40, 40) : (warn ? color(200, 120, 20) : color(60)));
-    textAlign(LEFT, TOP); textSize(10);
+    textAlign(LEFT, TOP); uiText(10);
     text(kreslingReadoutText(), round(x0), round(roY), fullW, 34);
 
     popStyle();
@@ -388,7 +425,7 @@ class SidebarPanel {
 
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(13);
+    uiText(13);
     text("TAB LENGTH", round(x + SIDEBAR_PADDING), round(rowY));
 
     float btnY = rowY + 18;
@@ -405,7 +442,7 @@ class SidebarPanel {
       rect(bx, btnY, btnW, btnH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(12);
+      uiText(12);
       text(TAB_LEN_PRESETS[i] + "mm", bx + btnW / 2, btnY + btnH / 2);
     }
     popStyle();
@@ -422,14 +459,16 @@ class SidebarPanel {
     float swLabelY = contentY + SIDEBAR_PADDING;
     float swRowY   = swLabelY + 16;
 
-    fill(60);
-    noStroke();
-    textAlign(LEFT, TOP);
-    textSize(11);
-    text("SOLID FILL", sx, swLabelY);
+    if (activeTextureTab != TEX_TAB_TRACKING) {
+      fill(60);
+      noStroke();
+      textAlign(LEFT, TOP);
+      uiText(11);
+      text("SOLID FILL", sx, swLabelY);
+    }
 
     ShapeSpec _swSel = (shapes != null && shapes.size() > 0) ? shapes.get(selectedShapeIdx) : null;
-    for (int _i = 0; _i < 9; _i++) {
+    for (int _i = 0; _i < 9 && activeTextureTab != TEX_TAB_TRACKING; _i++) {
       float swX = sx + _i * (SW_SIZE + SW_GAP);
       if (_i < 8) {
         stroke(160); strokeWeight(1);
@@ -464,13 +503,14 @@ class SidebarPanel {
     
     // Draw texture sub-tabs (shifted down by SW_SECTION_H)
     float sy = contentY + SIDEBAR_PADDING + SW_SECTION_H;
-    float tabWidth = (w - 3 * SIDEBAR_PADDING) / 2;
+    float tabWidth = (w - 4 * SIDEBAR_PADDING) / 3;
     float tabHeight = 31;
-    
-    // Clear and recreate texture sub-tabs
+
+    // Clear and recreate texture sub-tabs. Tracking sits alongside the two texture modes,
+    // the same way the Print tab groups Placement / Cutouts / Base.
     buttons.clear();
-    String[] tabLabels = {"Per Panel", "Strip"};
-    for (int i = 0; i < 2; i++) {
+    String[] tabLabels = {"Per Panel", "Strip", "Tracking"};
+    for (int i = 0; i < 3; i++) {
       SidebarButton tabBtn = new SidebarButton(
         "texture_tab_" + i,
         sx + i * (tabWidth + SIDEBAR_PADDING/2),
@@ -488,15 +528,37 @@ class SidebarPanel {
       btn.draw();
     }
     
+    if (activeTextureTab == TEX_TAB_TRACKING) {
+      drawTrackingContent(sx, sy + tabHeight + SIDEBAR_PADDING);
+      popStyle();
+      return;
+    }
+
     // Draw texture upload area based on active sub-tab
     drawTextureUploadArea();
-    
+
     // Draw texture bleed toggle
     drawTextureBleedToggle();
-    
+
     // Draw lid texture controls at bottom
     drawLidTextureControls();
-    
+
+    popStyle();
+  }
+
+  // Texture > Tracking. A shortcut for the three marker settings that get changed most; the
+  // full set (enable, grid, free placement) stays in the bottom bar.
+  void drawTrackingContent(float sx, float sy) {
+    pushStyle();
+    fill(60);
+    textAlign(LEFT, TOP);
+    uiText(11);
+    text("ARUCO MARKERS", sx, sy);
+
+    fill(120);
+    uiText(10);
+    text("Placement and the marker grid stay in the bottom bar.", sx, sy + 16);
+
     popStyle();
   }
   
@@ -521,7 +583,7 @@ class SidebarPanel {
       rect(tx, sy, tabWidth, tabHeight, 4);
       fill(active ? 255 : 60);
       textAlign(CENTER, CENTER);
-      textSize(13);
+      uiText(13);
       text(printTabLabels[i], tx + tabWidth/2, sy + tabHeight/2);
     }
     sy += tabHeight + 12;
@@ -546,10 +608,10 @@ class SidebarPanel {
     pushStyle();
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("BASE PLATE", round(sx), round(sy));
     fill(90);
-    textSize(11);
+    uiText(11);
     text("A plate with a slit at each bottom-lid tab base. Enable it to add to the cut page.",
          round(sx), round(sy + 22), w - 2 * SIDEBAR_PADDING, 40);
     popStyle();
@@ -560,7 +622,7 @@ class SidebarPanel {
     if (!workshopMode) {
       fill(0);
       textAlign(LEFT, TOP);
-      textSize(15);
+      uiText(15);
       text("PAGE SIZE", round(sx), round(sy));
       sy += 22;
 
@@ -576,7 +638,7 @@ class SidebarPanel {
         rect(bx, sy, btnW, btnH, 4);
         fill(255);
         textAlign(CENTER, CENTER);
-        textSize(13);
+        uiText(13);
         text(PAGE_SIZE_NAMES[i], bx + btnW/2, sy + btnH/2);
       }
       sy += btnH + 14;  // = PAGE_SIZE_BLOCK_H total advance
@@ -585,7 +647,7 @@ class SidebarPanel {
     // --- 2D VIEW POSITIONING section ---
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     //text("2D VIEW POSITIONING", round(sx), round(sy));
     
     // REPEAT / FREE PLACEMENT section header — positioned below the lid d-pads
@@ -593,7 +655,7 @@ class SidebarPanel {
     float baseYP = sY + 0.5*rw + 5*(rw + 20) + 10;
     float freePlaceY = baseYP + 3*(btnSz + btnGp) + 25;
     fill(60);
-    textSize(12);
+    uiText(12);
     text("REPEATS", round(sx), round(freePlaceY - 18));
     
     // Note: ControlP5 sliders (sPatX, sPatY, sLidOffsetX, sLidOffsetY) have their own labels
@@ -608,7 +670,7 @@ class SidebarPanel {
     
     fill(80);
     textAlign(CENTER, TOP);
-    textSize(11);
+    uiText(11);
     
     // Top lid label - centered above the D-pad
     float topCenterX = sx + btnSize + btnGap + btnSize/2;
@@ -669,13 +731,13 @@ class SidebarPanel {
     // =====================================================================
     // Section 1 — SHAPE PALETTE
     // =====================================================================
-    fill(0); noStroke(); textAlign(LEFT, TOP); textSize(12);
+    fill(0); noStroke(); textAlign(LEFT, TOP); uiText(12);
     text("SHAPE PALETTE", round(sx), round(sy));
     sy += 18;
 
     int shapeCount = (shapes != null) ? shapes.size() : 0;
     if (shapeCount == 0) {
-      fill(140); textSize(10); textAlign(LEFT, TOP);
+      fill(140); uiText(10); textAlign(LEFT, TOP);
       text("No shapes loaded.\nImport a JSON file first.", sx, sy);
       sy += 36;
     } else {
@@ -695,10 +757,10 @@ class SidebarPanel {
         rect(sx + 4, rowY + (ROW_H - SQ) / 2, SQ, SQ, 3);
         String lbl = (s.label != null && s.label.length() > 0) ? s.label : ("Shape " + (i + 1));
         fill(isSel ? color(255) : color(30));
-        textAlign(LEFT, CENTER); textSize(11);
+        textAlign(LEFT, CENTER); uiText(11);
         text(lbl, sx + 4 + SQ + 6, rowY + ROW_H / 2);
         fill(isSel ? color(200) : color(100));
-        textAlign(RIGHT, CENTER); textSize(10);
+        textAlign(RIGHT, CENTER); uiText(10);
         text(nf(s.uiTopW, 1, 0) + "x" + nf(s.uiHeight, 1, 0) + "mm", sx + availW - 4, rowY + ROW_H / 2);
       }
       sy = listY + maxVisible * ROW_H + 4;
@@ -709,7 +771,7 @@ class SidebarPanel {
       fill(eraseSel ? color(100, 30, 30) : (eraseHov ? color(210, 195, 195) : color(220, 210, 210)));
       noStroke(); rect(sx, sy, availW, ROW_H - 2, 3);
       fill(eraseSel ? color(255) : color(80));
-      textAlign(CENTER, CENTER); textSize(11);
+      textAlign(CENTER, CENTER); uiText(11);
       text("Erase", sx + availW / 2, sy + (ROW_H - 2) / 2);
       sy += ROW_H + 4;
     }
@@ -720,33 +782,33 @@ class SidebarPanel {
     // =====================================================================
     // Section 2 — GRID
     // =====================================================================
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("GRID", round(sx), round(sy));
     sy += 18;
 
     // W and H controls on one row
-    fill(80); textAlign(LEFT, CENTER); textSize(11); text("W:", sx, sy + BTN / 2);
+    fill(80); textAlign(LEFT, CENTER); uiText(11); text("W:", sx, sy + BTN / 2);
     float bxW = sx + 18;
     fill((mouseX >= bxW && mouseX <= bxW + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(bxW, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("-", bxW + BTN/2, sy + BTN/2);
-    fill(30); textAlign(CENTER, CENTER); textSize(12); text("" + activeAssembly.gridW, bxW + BTN + 14, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("-", bxW + BTN/2, sy + BTN/2);
+    fill(30); textAlign(CENTER, CENTER); uiText(12); text("" + activeAssembly.gridW, bxW + BTN + 14, sy + BTN/2);
     float pxW = bxW + BTN + 28;
     fill((mouseX >= pxW && mouseX <= pxW + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(pxW, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("+", pxW + BTN/2, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("+", pxW + BTN/2, sy + BTN/2);
 
     float hStart = sx + 110;
-    fill(80); textAlign(LEFT, CENTER); textSize(11); text("H:", hStart, sy + BTN / 2);
+    fill(80); textAlign(LEFT, CENTER); uiText(11); text("H:", hStart, sy + BTN / 2);
     float bxH = hStart + 18;
     fill((mouseX >= bxH && mouseX <= bxH + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(bxH, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("-", bxH + BTN/2, sy + BTN/2);
-    fill(30); textAlign(CENTER, CENTER); textSize(12); text("" + activeAssembly.gridH, bxH + BTN + 14, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("-", bxH + BTN/2, sy + BTN/2);
+    fill(30); textAlign(CENTER, CENTER); uiText(12); text("" + activeAssembly.gridH, bxH + BTN + 14, sy + BTN/2);
     float pxH = bxH + BTN + 28;
     fill((mouseX >= pxH && mouseX <= pxH + BTN && mouseY >= sy && mouseY <= sy + BTN) ? color(180) : color(150));
     noStroke(); rect(pxH, sy, BTN, BTN, 3);
-    fill(255); textAlign(CENTER, CENTER); textSize(14); text("+", pxH + BTN/2, sy + BTN/2);
+    fill(255); textAlign(CENTER, CENTER); uiText(14); text("+", pxH + BTN/2, sy + BTN/2);
     sy += 30;
 
     // 2D grid
@@ -772,11 +834,11 @@ class SidebarPanel {
     float btnH = 26;
     fill((mouseX >= sx && mouseX <= sx + btnW && mouseY >= sy && mouseY <= sy + btnH)
          ? color(190, 65, 65) : color(155, 50, 50)); noStroke(); rect(sx, sy, btnW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11); text("Clear All", sx + btnW / 2, sy + btnH / 2);
+    fill(255); textAlign(CENTER, CENTER); uiText(11); text("Clear All", sx + btnW / 2, sy + btnH / 2);
     float fillBtnX = sx + btnW + 6;
     fill((mouseX >= fillBtnX && mouseX <= fillBtnX + btnW && mouseY >= sy && mouseY <= sy + btnH)
          ? color(50, 160, 55) : color(40, 125, 45)); noStroke(); rect(fillBtnX, sy, btnW, btnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11); text("Fill All", fillBtnX + btnW / 2, sy + btnH / 2);
+    fill(255); textAlign(CENTER, CENTER); uiText(11); text("Fill All", fillBtnX + btnW / 2, sy + btnH / 2);
     sy += btnH + 8;
 
     // ---- Divider ----
@@ -785,7 +847,7 @@ class SidebarPanel {
     // =====================================================================
     // Section 3 — VIEW
     // =====================================================================
-    fill(0); textAlign(LEFT, TOP); textSize(12);
+    fill(0); textAlign(LEFT, TOP); uiText(12);
     text("VIEW", round(sx), round(sy));
     sy += 18;
 
@@ -796,7 +858,7 @@ class SidebarPanel {
               : ((mouseX >= sx && mouseX <= sx + viewBtnW && mouseY >= sy && mouseY <= sy + viewBtnH)
                  ? color(160, 180, 210) : color(120, 140, 170)));
     noStroke(); rect(sx, sy, viewBtnW, viewBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(is3D ? "3D View \u2713" : "3D View", sx + viewBtnW / 2, sy + viewBtnH / 2);
 
     float tplBtnX = sx + viewBtnW + 6;
@@ -805,7 +867,7 @@ class SidebarPanel {
                : ((mouseX >= tplBtnX && mouseX <= tplBtnX + viewBtnW && mouseY >= sy && mouseY <= sy + viewBtnH)
                   ? color(160, 210, 170) : color(120, 160, 130)));
     noStroke(); rect(tplBtnX, sy, viewBtnW, viewBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(isTpl ? "Template \u2713" : "Template", tplBtnX + viewBtnW / 2, sy + viewBtnH / 2);
     sy += viewBtnH + 6;
 
@@ -815,7 +877,7 @@ class SidebarPanel {
                            : ((mouseX >= sx && mouseX <= sx + availW && mouseY >= sy && mouseY <= sy + tcBtnH)
                               ? color(190, 145, 80) : color(140, 100, 50)));
     noStroke(); rect(sx, sy, availW, tcBtnH, 4);
-    fill(255); textAlign(CENTER, CENTER); textSize(11);
+    fill(255); textAlign(CENTER, CENTER); uiText(11);
     text(assemblyTrueColor ? "True Colours \u2713" : "True Colours", sx + availW / 2, sy + tcBtnH / 2);
 
     popStyle();
@@ -835,7 +897,7 @@ class SidebarPanel {
     // Section header
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("CUTOUTS", round(sx), round(sy));
     sy += 25;
     
@@ -852,7 +914,7 @@ class SidebarPanel {
     rect(sx, sy, btnW, btnH, 4);
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text("16 x 16 mm", sx + btnW/2, sy + btnH/2);
     
     // 54mm button
@@ -869,7 +931,7 @@ class SidebarPanel {
     // Corner radius display
     fill(80);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text("Corner radius: " + nf(cutoutCornerRadius, 0, 1) + " mm", sx, sy + 8);
     sy += 25;
     
@@ -883,14 +945,14 @@ class SidebarPanel {
     rect(sx, sy, addBtnW, addBtnH, 4);
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(12);
+    uiText(12);
     text("+ ADD CUTOUT", sx + addBtnW/2, sy + addBtnH/2);
     sy += addBtnH + 15;
     
     // List of existing cutouts
     fill(0);
     textAlign(LEFT, TOP);
-    textSize(12);
+    uiText(12);
     text("Placed cutouts: " + cutouts.size(), sx, sy);
     sy += 20;
     
@@ -910,7 +972,7 @@ class SidebarPanel {
       // Cutout info
       fill(i == selectedCutoutIndex ? color(0, 60, 180) : color(60));
       textAlign(LEFT, CENTER);
-      textSize(10);
+      uiText(10);
       String info = "#" + (i+1) + "  " + nf(c.size_mm, 0, 0) + "mm  X:" + nf(c.x_mm, 0, 1) + "  Y:" + nf(c.y_mm, 0, 1);
       text(info, sx + 4, rowY + rowH/2);
       
@@ -925,7 +987,7 @@ class SidebarPanel {
       rect(delX, delY, 24, delH, 3);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
+      uiText(10);
       text("X", delX + 12, delY + delH/2);
     }
     
@@ -1013,54 +1075,84 @@ class SidebarPanel {
 
   // texture upload area functions
   
-  void drawTextureUploadArea() {
+  // --- Per-panel texture list: one source of geometry for drawing, hit-testing and scrolling.
+  float panelScrollY = 0;                 // pixels scrolled, 0 = top
+  static final float PANEL_ROW_H   = 35;
+  static final float PANEL_ACTION_H = 28;
+
+  // The bordered upload area, as {x, y, w, h}.
+  float[] textureAreaRect() {
     float sx = x + SIDEBAR_PADDING;
-    float sy = contentY + SIDEBAR_PADDING + 116; // Below solid-fill row (44px) + texture sub-tabs (72px)
-    float areaWidth = w - 2 * SIDEBAR_PADDING;
-    float areaHeight = contentHeight - 200; // Space for upload area - leaves room for lid controls
-    
-    // Make sure area doesn't overlap with lid controls (which start at contentY + contentHeight - 110)
-    float maxAreaHeight = (contentY + contentHeight - 110) - sy - 10; // 10px gap
-    areaHeight = min(areaHeight, maxAreaHeight);
-    
+    float sy = contentY + SIDEBAR_PADDING + 116;   // below solid-fill row (44) + sub-tabs (72)
+    float areaW = w - 2 * SIDEBAR_PADDING;
+    // Stop above the texture-bleed toggle (contentY + contentHeight - 145), which the old
+    // bound of -110 ran underneath.
+    float areaH = min(contentHeight - 200, (contentY + contentHeight - 153) - sy - 10);
+    return new float[] { sx, sy, areaW, areaH };
+  }
+
+  // The Restore / Apply row, as {x, y, w, h} for button i (0 = Restore All, 1 = Apply to All).
+  float[] panelActionRect(int i) {
+    float[] a = textureAreaRect();
+    float gap = 6;
+    float bw = (a[2] - 10 - gap) / 2;
+    return new float[] { a[0] + 5 + i * (bw + gap), a[1] + 30, bw, PANEL_ACTION_H };
+  }
+
+  // The clipped viewport the panel rows scroll inside, as {x, y, w, h}.
+  float[] panelListViewport() {
+    float[] a = textureAreaRect();
+    float top = a[1] + 30 + PANEL_ACTION_H + 10;
+    return new float[] { a[0], top, a[2], max(0, (a[1] + a[3] - 10) - top) };
+  }
+
+  float panelListContentH() { return max(3, nSides) * PANEL_ROW_H; }
+
+  float panelScrollMax() {
+    float[] v = panelListViewport();
+    return max(0, panelListContentH() - v[3]);
+  }
+
+  // Row i's rectangle in screen space, with the scroll offset applied.
+  float[] panelRowRect(int i) {
+    float[] v = panelListViewport();
+    return new float[] { v[0], v[1] + i * PANEL_ROW_H - panelScrollY, v[2], 24 };
+  }
+
+  void drawTextureUploadArea() {
+    float[] a = textureAreaRect();
+    float sx = a[0], sy = a[1], areaWidth = a[2], areaHeight = a[3];
+
     pushStyle();
-    
+
     fill(245);
     stroke(200);
     strokeWeight(1);
     rect(sx, sy, areaWidth, areaHeight, 4);
-    
+
     fill(100);
     textAlign(CENTER, TOP);
-    textSize(11);
-    
-    if (activeTextureTab == 0) {
-      // Per-panel texture
+    uiText(11);
+
+    if (activeTextureTab == TEX_TAB_PER_PANEL) {
       text("Upload texture for each panel", sx + areaWidth/2, sy + 10);
       drawPerPanelUploadButtons(sx, sy + 30, areaWidth, areaHeight - 40);
-    } else if (activeTextureTab == 1) {
-      // Strip texture
+    } else if (activeTextureTab == TEX_TAB_STRIP) {
       text("Upload continuous strip texture", sx + areaWidth/2, sy + 10);
       drawStripUploadButton(sx, sy + 30, areaWidth, areaHeight - 40);
     }
-    
+
     popStyle();
   }
-  
-  void drawPerPanelUploadButtons(float sx, float sy, float areaWidth, float areaHeight) {
-    // Draw individual toggle+upload for each panel
+
+  void drawPerPanelUploadButtons(float sxIgnored, float syIgnored, float awIgnored, float ahIgnored) {
     pushStyle();
-    
+
     int numPanels = max(3, nSides);
-    
+
     // Ensure arrays are sized correctly
     if (perPanelEnabled == null || perPanelEnabled.length != numPanels) {
       boolean[] newEnabled = new boolean[numPanels];
-      // Initialize all to false (OFF by default)
-      for (int i = 0; i < numPanels; i++) {
-        newEnabled[i] = false;
-      }
-      // Copy existing states if available
       if (perPanelEnabled != null) {
         for (int i = 0; i < min(perPanelEnabled.length, numPanels); i++) {
           newEnabled[i] = perPanelEnabled[i];
@@ -1068,83 +1160,87 @@ class SidebarPanel {
       }
       perPanelEnabled = newEnabled;
     }
-    
-    // Draw Restore to Default button at the top
-    float restoreBtnWidth = areaWidth - 10;
-    float restoreBtnHeight = 28;
-    float restoreBtnX = sx + 5;
-    float restoreBtnY = sy;
-    boolean restoreHover = mouseX >= restoreBtnX && mouseX <= restoreBtnX + restoreBtnWidth &&
-                           mouseY >= restoreBtnY && mouseY <= restoreBtnY + restoreBtnHeight;
-    
-    fill(restoreHover ? color(180, 70, 70) : color(160, 60, 60));
-    noStroke();
-    rect(restoreBtnX, restoreBtnY, restoreBtnWidth, restoreBtnHeight, 4);
-    
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(11);
-    text("Restore All to Default", restoreBtnX + restoreBtnWidth/2, restoreBtnY + restoreBtnHeight/2);
-    
-    // Adjust starting Y position for panel rows
-    sy += restoreBtnHeight + 10;
-    
-    float rowHeight = 35;
-    float labelWidth = 72;
-    float toggleW = 50;
-    float toggleH = 24;
-    float spacing = 7;
-    
+
+    // --- Restore All / Apply to All ---
+    String[] actLabels = { "Restore All to Default", "Apply to All" };
+    color[]  actBase   = { color(160, 60, 60), color(45, 120, 75) };
+    color[]  actHover  = { color(180, 70, 70), color(55, 145, 90) };
+    boolean canApply = (panelTextureSourceIndex() >= 0);
+    for (int i = 0; i < 2; i++) {
+      float[] r = panelActionRect(i);
+      boolean enabled = (i == 0) || canApply;
+      boolean hov = enabled && mouseX >= r[0] && mouseX <= r[0] + r[2] &&
+                    mouseY >= r[1] && mouseY <= r[1] + r[3];
+      fill(enabled ? (hov ? actHover[i] : actBase[i]) : color(150, 150, 155));
+      noStroke();
+      rect(r[0], r[1], r[2], r[3], 4);
+      fill(enabled ? color(255) : color(205));
+      textAlign(CENTER, CENTER);
+      uiText(10);
+      text(actLabels[i], r[0] + r[2]/2, r[1] + r[3]/2);
+    }
+
+    // --- Scrollable panel rows ---
+    float[] v = panelListViewport();
+    panelScrollY = constrain(panelScrollY, 0, panelScrollMax());
+    boolean scrollable = panelScrollMax() > 0;
+    float listW = v[2] - (scrollable ? 8 : 0);   // leave a lane for the scrollbar
+
+    clip(v[0], v[1], v[2], v[3]);
+
+    float labelWidth = 72, toggleW = 50, toggleH = 24, spacing = 7;
     for (int i = 0; i < numPanels; i++) {
-      float controlY = sy + i * rowHeight;
-      
-      // Panel label
+      float[] r = panelRowRect(i);
+      if (r[1] + toggleH < v[1] || r[1] > v[1] + v[3]) continue;   // fully scrolled out
+
       fill(80);
       textAlign(LEFT, CENTER);
-      textSize(11);
-      text("Panel " + (i + 1) + ":", sx, controlY + toggleH/2);
-      
-      // Toggle button
-      float toggleX = sx + labelWidth;
+      uiText(11);
+      text("Panel " + (i + 1) + ":", r[0], r[1] + toggleH/2);
+
+      float toggleX = r[0] + labelWidth;
       boolean toggleHover = mouseX >= toggleX && mouseX <= toggleX + toggleW &&
-                            mouseY >= controlY && mouseY <= controlY + toggleH;
-      
+                            mouseY >= r[1] && mouseY <= r[1] + toggleH;
       fill(perPanelEnabled[i] ? color(50, 150, 50) : color(150, 150, 150));
       if (toggleHover && !perPanelEnabled[i]) fill(color(170, 170, 170));
       noStroke();
-      rect(toggleX, controlY, toggleW, toggleH, 4);
-      
+      rect(toggleX, r[1], toggleW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
-      text(perPanelEnabled[i] ? "ON" : "OFF", toggleX + toggleW/2, controlY + toggleH/2);
-      
-      // Check if texture is loaded
+      uiText(10);
+      text(perPanelEnabled[i] ? "ON" : "OFF", toggleX + toggleW/2, r[1] + toggleH/2);
+
       boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
-      
-      // Combined Upload/Edit button
       float uploadX = toggleX + toggleW + spacing;
-      float buttonW = areaWidth - (uploadX - sx);  // Full width for single button
-      float uploadH = toggleH;
+      float buttonW = listW - (uploadX - r[0]);
       boolean uploadHover = mouseX >= uploadX && mouseX <= uploadX + buttonW &&
-                            mouseY >= controlY && mouseY <= controlY + uploadH;
-      
-      if (hasTexture) {
-        fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
-      } else {
-        fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
-      }
-      rect(uploadX, controlY, buttonW, uploadH, 4);
-      
+                            mouseY >= r[1] && mouseY <= r[1] + toggleH;
+      fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
+      rect(uploadX, r[1], buttonW, toggleH, 4);
       fill(255);
       textAlign(CENTER, CENTER);
-      textSize(10);
-      text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, controlY + uploadH/2);
+      uiText(10);
+      text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, r[1] + toggleH/2);
     }
-    
+
+    noClip();
+
+    // Scrollbar: only when the list is taller than its viewport, which is roughly 8+ sides.
+    if (scrollable) {
+      float trackX = v[0] + v[2] - 6;
+      fill(225);
+      noStroke();
+      rect(trackX, v[1], 5, v[3], 2);
+      float frac  = v[3] / panelListContentH();
+      float thumbH = max(24, v[3] * frac);
+      float thumbY = v[1] + (v[3] - thumbH) * (panelScrollY / panelScrollMax());
+      fill(150);
+      rect(trackX, thumbY, 5, thumbH, 2);
+    }
+
     popStyle();
   }
-  
+
   void drawStripUploadButton(float sx, float sy, float areaWidth, float areaHeight) {
     float btnWidth = (areaWidth - 2 * SIDEBAR_PADDING - 7) / 2;  // Split into two buttons
     float btnHeight = 44;
@@ -1168,7 +1264,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text("Restore to Default", restoreBtnX + restoreBtnWidth/2, restoreBtnY + restoreBtnHeight/2);
     
     // Adjust Y position for upload/edit button
@@ -1185,13 +1281,13 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(13);
+    uiText(13);
     text(hasStripTexture ? "Edit Strip" : "Upload Strip", bx + fullBtnWidth/2, by + btnHeight/2);
     
     // Show current texture info if loaded
     if (stripImg != null) {
       fill(80);
-      textSize(10);
+      uiText(10);
       text(stripImg.width + "x" + stripImg.height + " px", bx + (areaWidth - 2 * SIDEBAR_PADDING)/2, by + btnHeight + 15);
     }
     
@@ -1219,13 +1315,13 @@ class SidebarPanel {
     rect(toggleX, sy, toggleW, toggleH, 4);
     fill(textureBleed ? 255 : 60);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(textureBleed ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     // Label
     fill(80);
     textAlign(LEFT, CENTER);
-    textSize(12);
+    uiText(12);
     text("Texture bleed (" + nf(textureBleedMM, 0, 0) + "mm)", toggleX + toggleW + 8, sy + toggleH/2);
     
     popStyle();
@@ -1248,7 +1344,7 @@ class SidebarPanel {
     // Section header with spacing
     fill(80);
     textAlign(LEFT, TOP);
-    textSize(15);
+    uiText(15);
     text("LID TEXTURES", round(sx + 5), round(sy + 5));
     
     sy += 25;
@@ -1270,7 +1366,7 @@ class SidebarPanel {
     // Label
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text(label, sx, sy + 15);
     
     // Toggle button
@@ -1288,7 +1384,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(toggleState ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     // Handle toggle click (stored for mousePressed event handler)
@@ -1310,13 +1406,13 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(10);
+    uiText(10);
     text(hasTexture ? "Edit" : "Upload", uploadX + buttonW/2, sy + uploadH/2);
     
     // Show image info if loaded
     if (lidImg != null) {
       fill(80);
-      textSize(9);
+      uiText(9);
       text(lidImg.width + "x" + lidImg.height, uploadX + (areaWidth - (uploadX - sx))/2, sy + uploadH + 10);
     }
     
@@ -1333,7 +1429,7 @@ class SidebarPanel {
     // Label
     fill(60);
     textAlign(LEFT, CENTER);
-    textSize(11);
+    uiText(11);
     text(label, sx, sy + 15);
     
     // Toggle button
@@ -1350,7 +1446,7 @@ class SidebarPanel {
     
     fill(255);
     textAlign(CENTER, CENTER);
-    textSize(11);
+    uiText(11);
     text(state ? "ON" : "OFF", toggleX + toggleW/2, sy + toggleH/2);
     
     popStyle();
@@ -1372,41 +1468,40 @@ class SidebarPanel {
       }
     }
     
-    // Check Add / Remove shape buttons and Reset to Default on Shape tab
+    // Check Add / Remove shape buttons and the header actions on the Shape tab
     if (activeMainTab == 0) {
-      float ctrBtnSize = 26;
-      float ctrBtnGap  = 6;
-      float ctrY       = contentY + SIDEBAR_PADDING + 20;
-
-      // "+ Add" button (left-anchored)
-      float addBtnX = x + SIDEBAR_PADDING;
-      if (mouseX >= addBtnX && mouseX <= addBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-          mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize) {
+      float[] addR = shapeCounterBtnRect(0);
+      if (mouseX >= addR[0] && mouseX <= addR[0] + addR[2] &&
+          mouseY >= addR[1] && mouseY <= addR[1] + addR[3]) {
         addShape();
         return true;
       }
-      // "- Remove" button
-      float remBtnX = addBtnX + ctrBtnSize + ctrBtnGap + 10 + 4;
+      float[] remR = shapeCounterBtnRect(1);
       if (shapes != null && shapes.size() > 1 &&
-          mouseX >= remBtnX && mouseX <= remBtnX + ctrBtnSize + ctrBtnGap + 10 &&
-          mouseY >= ctrY     && mouseY <= ctrY + ctrBtnSize) {
+          mouseX >= remR[0] && mouseX <= remR[0] + remR[2] &&
+          mouseY >= remR[1] && mouseY <= remR[1] + remR[3]) {
         removeShape();
         return true;
       }
-      // "Reset to Default" button (positioned below the counter row)
-      float btnY = ctrY + ctrBtnSize + 6;
-      float btnW = w - 2 * SIDEBAR_PADDING;
-      float btnH = 28;
-      if (mouseX >= x + SIDEBAR_PADDING && mouseX <= x + SIDEBAR_PADDING + btnW &&
-          mouseY >= btnY && mouseY <= btnY + btnH) {
+      float[] resetR = shapeActionBtnRect(0);
+      if (mouseX >= resetR[0] && mouseX <= resetR[0] + resetR[2] &&
+          mouseY >= resetR[1] && mouseY <= resetR[1] + resetR[3]) {
         resetShapeToDefault();
         return true;
       }
-      // "Load JSON" button (below Reset)
-      float jsonBtnY = btnY + btnH + 4;
-      if (mouseX >= x + SIDEBAR_PADDING && mouseX <= x + SIDEBAR_PADDING + btnW &&
-          mouseY >= jsonBtnY && mouseY <= jsonBtnY + btnH) {
+      float[] jsonR = shapeActionBtnRect(1);
+      if (mouseX >= jsonR[0] && mouseX <= jsonR[0] + jsonR[2] &&
+          mouseY >= jsonR[1] && mouseY <= jsonR[1] + jsonR[3]) {
         loadJSONShapes();
+        return true;
+      }
+      // "Advanced options" disclosure header
+      float[] advR = advancedHeaderRect();
+      if (mouseX >= advR[0] && mouseX <= advR[0] + advR[2] &&
+          mouseY >= advR[1] && mouseY <= advR[1] + advR[3]) {
+        advancedOpen = !advancedOpen;
+        updateSidebarControlsVisibility();
+        layoutSecondaryToggles();
         return true;
       }
       // TAB LENGTH preset buttons (5 / 10 / 15 mm) — must match drawTabLengthButtons()
@@ -1670,59 +1765,61 @@ class SidebarPanel {
       }
     }
     
+    // Tracking has only ControlP5 widgets, which handle their own clicks.
+    if (activeTextureTab == TEX_TAB_TRACKING) return true;
+
     // Check texture upload area buttons (per-panel and strip)
     float sx = x + SIDEBAR_PADDING;
     float sy = contentY + SIDEBAR_PADDING + 116; // Must match drawTextureUploadArea()
     float areaWidth = w - 2 * SIDEBAR_PADDING;
     
-    // Check per-panel toggle and upload buttons for each panel
-    if (activeTextureTab == 0) {
-      // Check Restore to Default button
-      float restoreBtnWidth = areaWidth - 10;
-      float restoreBtnHeight = 28;
-      float restoreBtnX = sx + 5;
-      float restoreBtnY = sy + 30;
-      if (mouseX >= restoreBtnX && mouseX <= restoreBtnX + restoreBtnWidth &&
-          mouseY >= restoreBtnY && mouseY <= restoreBtnY + restoreBtnHeight) {
+    // Check per-panel actions and rows. All geometry comes from the shared helpers, so this
+    // cannot drift away from what drawPerPanelUploadButtons() painted.
+    if (activeTextureTab == TEX_TAB_PER_PANEL) {
+      float[] restoreR = panelActionRect(0);
+      if (mouseX >= restoreR[0] && mouseX <= restoreR[0] + restoreR[2] &&
+          mouseY >= restoreR[1] && mouseY <= restoreR[1] + restoreR[3]) {
         restorePerPanelTexturesToDefault();
         return true;
       }
-      
-      int numPanels = max(3, nSides);
-      float rowHeight = 35;
-      float labelWidth = 72;
-      float toggleW = 50;
-      float toggleH = 24;
-      float spacing = 7;
-      
-      for (int i = 0; i < numPanels; i++) {
-        float controlY = sy + 30 + restoreBtnHeight + 10 + i * rowHeight; // Offset for restore button
-        float toggleX = sx + labelWidth;
-        
-        // Check toggle for this panel
-        if (mouseX >= toggleX && mouseX <= toggleX + toggleW &&
-            mouseY >= controlY && mouseY <= controlY + toggleH) {
-          perPanelEnabled[i] = !perPanelEnabled[i];
-          saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
-          return true;
-        }
-        
-        // Check combined upload/edit button for this panel
-        float uploadX = toggleX + toggleW + spacing;
-        float buttonW = areaWidth - (uploadX - sx);
-        if (mouseX >= uploadX && mouseX <= uploadX + buttonW &&
-            mouseY >= controlY && mouseY <= controlY + toggleH) {
-          boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
-          if (hasTexture) {
-            editPanelTexture(i);
-          } else {
-            selectPanelTexture(i);
+      float[] applyR = panelActionRect(1);
+      if (mouseX >= applyR[0] && mouseX <= applyR[0] + applyR[2] &&
+          mouseY >= applyR[1] && mouseY <= applyR[1] + applyR[3]) {
+        applyPanelTextureToAll();
+        return true;
+      }
+
+      float[] v = panelListViewport();
+      boolean inList = mouseY >= v[1] && mouseY <= v[1] + v[3];
+      if (inList) {
+        int numPanels = max(3, nSides);
+        boolean scrollable = panelScrollMax() > 0;
+        float listW = v[2] - (scrollable ? 8 : 0);
+        float labelWidth = 72, toggleW = 50, toggleH = 24, spacing = 7;
+
+        for (int i = 0; i < numPanels; i++) {
+          float[] r = panelRowRect(i);
+          if (mouseY < r[1] || mouseY > r[1] + toggleH) continue;
+
+          float toggleX = r[0] + labelWidth;
+          if (mouseX >= toggleX && mouseX <= toggleX + toggleW) {
+            perPanelEnabled[i] = !perPanelEnabled[i];
+            saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+            return true;
           }
-          return true;
+          float uploadX = toggleX + toggleW + spacing;
+          float buttonW = listW - (uploadX - r[0]);
+          if (mouseX >= uploadX && mouseX <= uploadX + buttonW) {
+            boolean hasTexture = panelTextures != null && i < panelTextures.length && panelTextures[i] != null;
+            if (hasTexture) editPanelTexture(i);
+            else            selectPanelTexture(i);
+            return true;
+          }
         }
+        return true;   // swallow clicks inside the list so they don't fall through
       }
     }
-    
+
     // Check strip upload and edit buttons
     if (activeTextureTab == 1) {
       float bx = sx + SIDEBAR_PADDING;
@@ -1886,7 +1983,15 @@ class SidebarPanel {
         sideTextureMode = TEX_STRIP_BENT;
         uiTextureMode = 2;
       }
-      
+      // Tab 2 = Tracking, which is not a texture mode and leaves sideTextureMode alone.
+      // The selection is per-shape state, so it has to be written back: loadGlobalsFrom()
+      // restores activeTextureTab from the ShapeSpec while drawing, and would otherwise undo
+      // this on the next frame. Tabs 0 and 1 got away with it because update() re-derives
+      // them from sideTextureMode, which was already being saved. Tracking has no such
+      // backing value.
+      if (shapes != null && shapes.size() > 0) saveGlobalsTo(shapes.get(selectedShapeIdx));
+      updateSidebarControlsVisibility();
+
       // Update tab button states
       for (SidebarButton btn : buttons) {
         if (btn.id.startsWith("texture_tab_")) {
@@ -1909,6 +2014,79 @@ class SidebarPanel {
   }
   
   // Restore per-panel textures to default (clear all)
+  // Scrolls the per-panel list when the pointer is inside it. Returns true when the event was
+  // consumed, so the caller knows not to also zoom the 3D view.
+  boolean handleMouseWheel(float count) {
+    if (activeMainTab != 1 || activeTextureTab != TEX_TAB_PER_PANEL) return false;
+    if (mouseX < x || mouseX > x + w) return false;
+    float[] v = panelListViewport();
+    if (mouseY < v[1] || mouseY > v[1] + v[3]) return false;
+    if (panelScrollMax() <= 0) return false;
+    panelScrollY = constrain(panelScrollY + count * PANEL_ROW_H * 0.6, 0, panelScrollMax());
+    return true;
+  }
+
+  // Which panel "Apply to All" copies from: the one most recently uploaded or edited, falling
+  // back to the first panel that has a texture. Returns -1 when no panel has one yet, which is
+  // when the button is disabled.
+  int panelTextureSourceIndex() {
+    int numPanels = max(3, nSides);
+    if (panelTextures == null) return -1;
+    if (currentPanelUploadIndex >= 0 && currentPanelUploadIndex < min(numPanels, panelTextures.length)
+        && panelTextures[currentPanelUploadIndex] != null) {
+      return currentPanelUploadIndex;
+    }
+    for (int i = 0; i < min(numPanels, panelTextures.length); i++) {
+      if (panelTextures[i] != null) return i;
+    }
+    return -1;
+  }
+
+  // Copies the source panel's texture and on/off state onto every panel, so a single setup can
+  // be spread across the whole object without configuring each face by hand.
+  void applyPanelTextureToAll() {
+    int src = panelTextureSourceIndex();
+    if (src < 0) {
+      println("[Sidebar] Apply to All: no panel has a texture yet");
+      return;
+    }
+    int numPanels = max(3, nSides);
+
+    if (panelTextures == null || panelTextures.length != numPanels) {
+      PImage[] resized = new PImage[numPanels];
+      if (panelTextures != null) {
+        for (int i = 0; i < min(panelTextures.length, numPanels); i++) resized[i] = panelTextures[i];
+      }
+      panelTextures = resized;
+      src = min(src, numPanels - 1);
+    }
+    if (perPanelEnabled == null || perPanelEnabled.length != numPanels) {
+      boolean[] re = new boolean[numPanels];
+      if (perPanelEnabled != null) {
+        for (int i = 0; i < min(perPanelEnabled.length, numPanels); i++) re[i] = perPanelEnabled[i];
+      }
+      perPanelEnabled = re;
+    }
+
+    PImage srcImg = panelTextures[src];
+    boolean srcOn = perPanelEnabled[src];
+    for (int i = 0; i < numPanels; i++) {
+      panelTextures[i]   = srcImg;
+      perPanelEnabled[i] = srcOn;
+    }
+
+    // Per-panel textures only render in per-panel mode; match what an upload does.
+    sideTextureMode = TEX_PER_PANEL;
+    uiTextureMode   = TEX_PER_PANEL;
+    if (sTextureMode != null) sTextureMode.setValue(TEX_PER_PANEL);
+    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+      shapes.get(selectedShapeIdx).panelTextures = panelTextures;
+    }
+    saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+    redraw();
+    println("[Sidebar] Applied panel " + (src + 1) + " texture to all " + numPanels + " panels");
+  }
+
   void restorePerPanelTexturesToDefault() {
     int numPanels = max(3, nSides);
     
@@ -1941,10 +2119,13 @@ class SidebarPanel {
     // Map texture mode constant to tab index
     // TEX_PER_PANEL (1) -> Tab 0
     // TEX_STRIP_BENT (2) -> Tab 1
-    if (sideTextureMode == TEX_PER_PANEL) {
-      activeTextureTab = 0;
-    } else if (sideTextureMode == TEX_STRIP_BENT) {
-      activeTextureTab = 1;
+    // Tracking is not a texture mode, so leave the selection alone while it is showing.
+    if (activeTextureTab != TEX_TAB_TRACKING) {
+      if (sideTextureMode == TEX_PER_PANEL) {
+        activeTextureTab = 0;
+      } else if (sideTextureMode == TEX_STRIP_BENT) {
+        activeTextureTab = 1;
+      }
     }
     
     // Don't override local lid enabled states - they control independently

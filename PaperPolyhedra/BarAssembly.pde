@@ -876,7 +876,7 @@ void drawAssemblyPlan(BarAssembly a) {
     pushStyle();
     fill(120); noStroke();
     textAlign(CENTER, CENTER);
-    textSize(13 / SCREEN_SCALE);
+    pageText(13 / SCREEN_SCALE);
     text("No bars placed.\nOpen the Assem tab, pick a shape, and click grid cells.",
          widthA4 * 0.35, heightA4 * 0.3);
     popStyle();

@@ -31,7 +31,7 @@ void _dimText(float xpx, float ypx, float mm) {
   fill(DIM_COL);
   noStroke();
   textAlign(CENTER, CENTER);
-  textSize(9 / SCREEN_SCALE);
+  pageText(9 / SCREEN_SCALE);
   text(nf(mm, 0, 1), xpx, ypx);
   popStyle();
 }
@@ -57,7 +57,7 @@ void _pieceBox(float[] bb, String label) {
   fill(DIM_COL);
   noStroke();
   textAlign(LEFT, BOTTOM);
-  textSize(9 / SCREEN_SCALE);
+  pageText(9 / SCREEN_SCALE);
   text(label + "  " + nf(bb[2], 0, 1) + " x " + nf(bb[3], 0, 1), x + 2/SCREEN_SCALE, y - 2/SCREEN_SCALE);
   popStyle();
 }

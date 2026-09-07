@@ -50,7 +50,7 @@ class Cutout {
     fill(selected ? color(255, 0, 0) : color(0, 120, 255));
     noStroke();
     textAlign(CENTER, BOTTOM);
-    textSize(10 / SCREEN_SCALE);
+    pageText(10 / SCREEN_SCALE);
     text(nf(size_mm, 0, 0) + "x" + nf(size_mm, 0, 0) + "mm", cx, py - 2 / SCREEN_SCALE);
     
     popStyle();

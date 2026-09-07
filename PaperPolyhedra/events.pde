@@ -14,6 +14,16 @@ void mousePressed() {
     return;
   }
   
+  // Everything from here to the export-bar check converts the pointer into page coordinates
+  // and picks whatever sits under it. That is only meaningful over the canvas: over the
+  // sidebar or the toolbar, screenToPatternMM() still returns a page position, and a pick
+  // there swallows the click before the UI ever sees it.
+  //
+  // It used to be masked because the page was drawn at a fixed 1:1 scale in the top-left of
+  // the canvas, so chrome coordinates mapped outside every shape. Now that the page scales to
+  // fill the canvas, they map straight onto it -- which is why the buttons stopped responding
+  // as soon as the window was resized.
+  if (mouseInCanvasArea()) {
   // Assembly template piece drag — check before UI so clicks on the canvas work
   if (assemblyMode && assemblyShowTemplate && activeAssembly != null && !view3DMode) {
     float pxX = (mouseX - canvasOffsetX) / SCREEN_SCALE - patX_px;
@@ -116,6 +126,8 @@ void mousePressed() {
     }
   }
   
+  }
+
   // Reset bottom export button click state
   bottomExportClicked = false;
   
@@ -277,6 +289,20 @@ void keyPressed() {
     return; // Let ControlP5 handle the key event
   }
   
+  // F9 toggles a crosshair drawn at (mouseX, mouseY). If it does not sit exactly under the
+  // real cursor, the mouse coordinates Processing reports disagree with the window -- a
+  // display-scaling problem, not a layout one. If it tracks the cursor perfectly but a button
+  // still will not click, the fault is in that button's hit test.
+  if (keyCode == 120) {   // F9
+    debugCursor = !debugCursor;
+    println("[Debug] cursor overlay: " + debugCursor
+      + "  win=" + width + "x" + height
+      + "  pixel=" + pixelWidth + "x" + pixelHeight
+      + "  pixelDensity=" + pixelDensity
+      + "  displayDensity=" + displayDensity());
+    return;
+  }
+
   if (key == 'e' || key == 'E') {
     bSavePDF = true;
   }
@@ -489,6 +515,10 @@ void mouseWheel(MouseEvent event) {
     return;
   }
   
+  // Scroll the per-panel texture list when the pointer is over it. Needed once a shape has
+  // more sides than the list can show at once (roughly eight).
+  if (sidebar != null && sidebar.handleMouseWheel(event.getCount())) return;
+
   // Handle 3D zoom (only in canvas area, not in bottom bar)
   boolean in3DView = view3DMode || (assemblyMode && !assemblyShowTemplate);
   if (in3DView && mouseY < height - BOTTOM_EXPORT_HEIGHT) {

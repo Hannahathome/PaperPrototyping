@@ -59,8 +59,25 @@ boolean bExportingCutFile = false;  // True while writing SVG cut file — suppr
 //--RH--
 //----------------------------------------------------------------------------------
 
+// The window opens at this size and is resizable; maximise it with the window button.
+//
+// Do NOT size this from displayWidth / displayHeight. In settings() they report raw device
+// pixels -- 3840x2160 on a 4K panel at 200% scaling -- so asking for displayWidth-80 built a
+// 3760x2040 canvas that the OS then displayed across about 1880 logical pixels. Every control
+// rendered at half size, text was resampled to mush, the window could not be resized, and the
+// mouse position no longer matched what was drawn.
+//
+// Growing the window programmatically instead is not an option on this JOGL/NEWT build:
+// surface.setSize() from setup() deadlocks the window event thread, and the native
+// setMaximized() throws on the GL animator thread whether called from setup() or the first
+// frame. A fixed opening size the user can maximise is the one approach that behaves.
+void settings() {
+  size(1500, 900, P2D);
+}
+
 void setup() {
-  size(1500, 800, P2D);
+  // Resizable, and never resized by computing a pixel size ourselves -- see settings().
+  surface.setResizable(true);
   ensurePlaceholderAssets();  // data/ artwork is gitignored; generate it if absent
   setParams(false);
   background(200);
@@ -71,7 +88,7 @@ void setup() {
   initShapeUI();
   
   // Initialize 3D buffer (adjust for sidebar)
-  view3DBuffer = createGraphics(width - LEFT_SIDEBAR_WIDTH, height - TOOLBAR_HEIGHT, P3D);
+  view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
   
   // Initialize mini 3D buffer for 2D mode
   mini3DBuffer = createGraphics(MINI_3D_WIDTH, MINI_3D_HEIGHT, P3D);
@@ -95,9 +112,15 @@ void setup() {
   //--RH-- Markers: Lazy loaded when user enables toggle (not in setup to avoid PDF issues)
   //--RH--
 
+  relayout();   // size every zone, buffer and widget to the window we actually opened at
+
+  if (AUDIT_MODE) auditInit();  // TEMP: layout measurement harness, see LayoutAudit.pde
 }
 
 void draw() {
+  // One buffer rebuild per frame at most, however many resize events arrived.
+  ensureView3DBuffer();
+
   // Rebuild the rotated strip texture if it changed. Must happen here, before any
   // rendering starts — see updateStripRotation().
   updateStripRotation();
@@ -148,6 +171,7 @@ void draw() {
       toolbar.drawDropdown();
       sidebar.draw();
       drawBottomExportButton();
+      drawDebugCursor();
       return;
     }
 
@@ -167,6 +191,7 @@ void draw() {
       toolbar.drawDropdown();  // Draw dropdown menu if active
       sidebar.draw();
       drawBottomExportButton();
+      drawDebugCursor();
       
       // Draw cropper overlay last (if active)
       if (cropperActive && imageCropper != null) {
@@ -249,7 +274,7 @@ void draw() {
           fill(80);
           noStroke();
           textAlign(LEFT, BOTTOM);
-          textSize(10 / SCREEN_SCALE);
+          pageText(10 / SCREEN_SCALE);
           text(_s.label, 0, -tabDepth_px - 3 / SCREEN_SCALE);
           popStyle();
         }
@@ -287,6 +312,7 @@ void draw() {
     toolbar.drawDropdown();  // Draw dropdown menu if active
     sidebar.draw();
     drawBottomExportButton();
+      drawDebugCursor();
     
     // Draw cropper overlay last (if active)
     if (cropperActive && imageCropper != null) {
@@ -849,16 +875,14 @@ void drawBottomExportButton() {
   noStroke();
   rect(LEFT_SIDEBAR_WIDTH, height - BOTTOM_EXPORT_HEIGHT, width - LEFT_SIDEBAR_WIDTH, BOTTOM_EXPORT_HEIGHT);
   
-  // Draw label for text field
-  fill(80);
-  uiText(10);
-  float bottomControlX = LEFT_SIDEBAR_WIDTH + 20;
-  float exportBarY = height - BOTTOM_EXPORT_HEIGHT + 10;
-  float bottomControlY = exportBarY + 8;
-  textAlign(LEFT, CENTER);
-  uiText(15);  // Increased to match sidebar header text
-  float exportBarX = width - 320;
-  text("File name input field", exportBarX - 140, exportBarY + 23);
+  // Caption sits directly above the filename field. It used to be drawn 140 px to its left,
+  // where it ran into whichever control the flow layout had put there.
+  float exportBarX = width - EXPORT_RIGHT_W;
+  float fieldTop   = height - BOTTOM_EXPORT_HEIGHT + 18;
+  fill(110);
+  textAlign(LEFT, BOTTOM);
+  uiText(11);
+  text("File name", exportBarX, fieldTop - 3);
 
   // Export success notification: green fading text above the export button
   if (exportNotifyTimer > 0) {
@@ -867,8 +891,7 @@ void drawBottomExportButton() {
     fill(30, 160, 60, fadeAlpha);
     textAlign(RIGHT, BOTTOM);
     uiText(12);
-    String notifyLabel = "Saved: " + exportNotifyPath;
-    text(notifyLabel, exportBarX + 310, exportBarY + 4);
+    text("Saved: " + exportNotifyPath, width - 10, fieldTop - 3);
   }
   
   popStyle();
@@ -884,7 +907,7 @@ void drawShapeInfoNote() {
   
   pushStyle();
   textAlign(LEFT, BOTTOM);
-  textSize(8 / SCREEN_SCALE);
+  pageText(8 / SCREEN_SCALE);
   
   // Distinct colors for each shape (up to 8, then cycle)
   color[] shapeColors = {
@@ -1126,24 +1149,91 @@ void draw3DViewModeButtons() {
 }
 
 void windowResized() {
-  // Update 3D buffer size
-  if (view3DBuffer != null) {
-    view3DBuffer = createGraphics(width - LEFT_SIDEBAR_WIDTH, height - TOOLBAR_HEIGHT, P3D);
-  }
-  
-  // Update mini 3D buffer (fixed size, no need to recreate)
+  // No forced re-size here: calling surface.setSize() from inside windowResized() re-enters
+  // the JOGL event thread and deadlocks it. MIN_WIN_W / MIN_WIN_H are the supported minimum
+  // -- below them the export bar clips at the right edge rather than overlapping itself.
+  relayout();
+}
+
+// The single place that reacts to the window size. Everything that caches a coordinate or a
+// buffer size must be refreshed from here, so there is one layout authority instead of the
+// three that used to walk through each other.
+void relayout() {
+  // ControlP5's hit-testing is clamped to the size it was built at; tell it the new one or
+  // every control below the old height stops responding.
+  syncControlP5Bounds();
+
+  // The export bar decides its own height (it wraps on narrow windows), so it goes first —
+  // everything below reads BOTTOM_EXPORT_HEIGHT.
+  updateExportControlPositions();
+
+  // Do NOT allocate the P3D buffer here. Dragging a window edge fires windowResized() on
+  // every mouse move, and building a P3D framebuffer per event stalls the drag hard enough
+  // that the window looks like it cannot be resized at all. Flag it and rebuild once, in
+  // draw(), after the size has settled.
+  view3DBufferDirty = true;
   if (mini3DBuffer == null) {
     mini3DBuffer = createGraphics(MINI_3D_WIDTH, MINI_3D_HEIGHT, P3D);
   }
-  
-  // Update sidebar layout
-  if (sidebar != null) {
-    sidebar.setup();
-  }
-  
-  // Update export control positions
-  updateExportControlPositions();
+
+  if (toolbar != null) toolbar.setup();      // the Info button is anchored to the right edge
+  if (sidebar != null) sidebar.relayout();   // panel rect + contentY, then rebuild the tabs
+
+  updateSidebarControlsVisibility();
+  fitPageToCanvas();                          // the page follows the window
+  updateExportControlPositions();             // re-run: the sidebar pass can resize widgets
 }
+
+// The 3D view is blitted at (LEFT_SIDEBAR_WIDTH, TOOLBAR_HEIGHT) into the area above the
+// export bar. Sizing the buffer to the window minus the toolbar rendered 90 px that the
+// export bar then painted over, and pushed the scene 45 px below the visible centre.
+// Diagnostic overlay, toggled with F9. Draws a crosshair at the mouse position Processing
+// reports, so a mismatch between that and the real cursor is visible at a glance.
+boolean debugCursor = false;
+
+void drawDebugCursor() {
+  if (!debugCursor) return;
+  pushStyle();
+  stroke(255, 0, 0);
+  strokeWeight(1);
+  line(mouseX - 40, mouseY, mouseX + 40, mouseY);
+  line(mouseX, mouseY - 40, mouseX, mouseY + 40);
+  noFill();
+  ellipse(mouseX, mouseY, 16, 16);
+  fill(255, 0, 0);
+  noStroke();
+  textAlign(LEFT, TOP);
+  uiText(12);
+  text("mouse " + mouseX + "," + mouseY
+     + "   win " + width + "x" + height
+     + "   pixel " + pixelWidth + "x" + pixelHeight
+     + "   density " + pixelDensity + "/" + displayDensity(),
+     12, height - 18);
+  popStyle();
+}
+
+// True when the pointer is over the drawing area rather than the surrounding chrome. Any
+// pick that works in page coordinates must be gated on this.
+boolean mouseInCanvasArea() {
+  return mouseX >= LEFT_SIDEBAR_WIDTH &&
+         mouseY >= TOOLBAR_HEIGHT &&
+         mouseY <= height - BOTTOM_EXPORT_HEIGHT;
+}
+
+// Set by relayout(); acted on once per frame by ensureView3DBuffer().
+boolean view3DBufferDirty = true;
+
+void ensureView3DBuffer() {
+  if (!view3DBufferDirty && view3DBuffer != null
+      && view3DBuffer.width == view3DBufW() && view3DBuffer.height == view3DBufH()) return;
+  view3DBufferDirty = false;
+  if (view3DBuffer == null || view3DBuffer.width != view3DBufW() || view3DBuffer.height != view3DBufH()) {
+    view3DBuffer = createGraphics(view3DBufW(), view3DBufH(), P3D);
+  }
+}
+
+int view3DBufW() { return max(1, width  - LEFT_SIDEBAR_WIDTH); }
+int view3DBufH() { return max(1, height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT); }
 
 
 

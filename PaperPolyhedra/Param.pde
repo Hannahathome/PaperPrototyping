@@ -141,20 +141,39 @@ final float STEP_COARSE = 5.0;                   // Coarse adjustment step (mm)
 // resampling at all. Cached, because createFont() inside draw() rebuilds it every frame.
 HashMap<Integer, PFont> _uiFonts = new HashMap<Integer, PFont>();
 
-PFont uiFont(int size) {
-  PFont f = _uiFonts.get(size);
+// Scales every piece of UI text together: the raw text() calls below and the ControlP5
+// label fonts, which all build through uiFont(). Raise it if the interface reads small on a
+// high-resolution monitor; the layout audit checks that nothing collides at a given value.
+float UI_FONT_SCALE = 1.15;
+
+int uiFontPx(int size) { return max(6, round(size * UI_FONT_SCALE)); }
+
+// Built at the exact pixel size it is drawn at -- the default P2D font is a fixed-size
+// bitmap, and any mismatched textSize() resamples it into mush.
+PFont uiFontExact(int px) {
+  px = max(6, px);
+  PFont f = _uiFonts.get(px);
   if (f == null) {
-    f = createFont("Arial", size, true);
-    _uiFonts.put(size, f);
+    f = createFont("Arial", px, true);
+    _uiFonts.put(px, f);
   }
   return f;
+}
+
+PFont uiFont(int size) { return uiFontExact(uiFontPx(size)); }
+
+// For text drawn INSIDE the scale(SCREEN_SCALE) page matrix. pageSize is in page units; the
+// font is built at the size the glyphs will really occupy on screen, so they are rasterised
+// at their display size instead of being scaled up from a smaller bitmap.
+void pageText(float pageSize) {
+  textFont(uiFontExact(round(pageSize * SCREEN_SCALE)), pageSize);
 }
 
 // Use instead of textSize() for text drawn straight onto the canvas in screen space.
 // (Text inside the scale(SCREEN_SCALE) page matrix should keep using textSize(), since it
 // is meant to scale with the page.)
 void uiText(int size) {
-  textFont(uiFont(size), size);
+  textFont(uiFont(size), uiFontPx(size));
 }
 
 // ==================== TOOLBAR UI ====================
@@ -166,7 +185,20 @@ final int TOOLBAR_SEPARATOR = 12;                // Space between button groups
 
 // ==================== SIDEBAR UI ====================
 final int LEFT_SIDEBAR_WIDTH = 420;              // Width of left control sidebar
-final int BOTTOM_EXPORT_HEIGHT = 90;             // Height of bottom export button area
+// Height of the bottom export area. Not final: the bar wraps onto a second row when the
+// window is too narrow to fit its controls in one, and relayout() sets this accordingly.
+final int EXPORT_H_1ROW = 90;
+final int EXPORT_H_2ROW = 130;
+int BOTTOM_EXPORT_HEIGHT = EXPORT_H_1ROW;
+// Smallest window the layout is designed to hold. windowResized() clamps to these.
+final int MIN_WIN_W = 1000;
+final int MIN_WIN_H = 700;
+// Texture sub-tabs. Tracking is not a texture mode - it groups the ArUco settings, the way
+// the Print tab groups Placement / Cutouts / Base.
+final int TEX_TAB_PER_PANEL = 0;
+final int TEX_TAB_STRIP     = 1;
+final int TEX_TAB_TRACKING  = 2;
+
 final int SIDEBAR_PADDING = 12;                  // Internal sidebar padding
 final float SIDEBAR_TOP_SECTION_RATIO = 0.25;    // Top 1/3 for shape controls
 
@@ -240,16 +272,20 @@ void applyPageSize(int idx) {
   widthA4_render  = PRINT_W * (TEXTURE_DPI / 25.4);
   heightA4_render = PRINT_H * (TEXTURE_DPI / 25.4);
 
-  // Auto-fit SCREEN_SCALE so the page fills the available canvas area (5% margin)
-  float availW = width  - LEFT_SIDEBAR_WIDTH;
-  float availH = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
-  SCREEN_SCALE = min(availW / widthA4, availH / heightA4) * 0.95;
-
-  widthA4_display  = widthA4  * SCREEN_SCALE;
-  heightA4_display = heightA4 * SCREEN_SCALE;
-
+  fitPageToCanvas();
   setParams(false);
   println("[applyPageSize] " + PAGE_SIZE_NAMES[idx] + "  " + PRINT_W + "x" + PRINT_H + "mm  SCREEN_SCALE=" + nf(SCREEN_SCALE, 1, 3));
+}
+
+// Scales the page so it fills the canvas area with a 5% margin. Called from applyPageSize()
+// and from relayout(), so the page follows the window instead of staying at its startup size.
+void fitPageToCanvas() {
+  float availW = width  - LEFT_SIDEBAR_WIDTH;
+  float availH = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
+  if (availW <= 0 || availH <= 0) return;
+  SCREEN_SCALE = min(availW / widthA4, availH / heightA4) * 0.95;
+  widthA4_display  = widthA4  * SCREEN_SCALE;
+  heightA4_display = heightA4 * SCREEN_SCALE;
 }
 
 void setParams(boolean cut) {
