@@ -76,6 +76,18 @@ void clickExpect(String what, boolean ok) {
   if (!ok) { clickFails++; println("      FAIL  " + what); }
 }
 
+// Controls in the bottom bar belong to ControlP5, which handles its own mouse events, so
+// calling the sketch's mousePressed() proves nothing about them. Post real events instead and
+// let Processing deliver them the way it delivers a user's click. ControlP5 decides what is
+// hovered while it draws, so the move, press and release each need their own frame.
+void cp5PostMouse(int action, float mx, float my) {
+  mouseX = int(mx);
+  mouseY = int(my);
+  postEvent(new processing.event.MouseEvent(null, millis(), action, 0, int(mx), int(my), LEFT, 1));
+}
+
+boolean cp5Before = false;
+
 void clickTestTick() {
   if (clickTestSize >= CLICK_SIZES.length) return;
   clickTestFrame++;
@@ -83,7 +95,25 @@ void clickTestTick() {
     surface.setSize(CLICK_SIZES[clickTestSize][0], CLICK_SIZES[clickTestSize][1]);
     return;
   }
-  if (clickTestFrame < 25) return;
+
+  // The bottom bar is the case that broke when the window was maximised: ControlP5 clamps its
+  // hit-testing to the size it was built at, so controls below that height stopped responding.
+  if (tShowDistances != null) {
+    float[] p = tShowDistances.getPosition();
+    float cx = p[0] + tShowDistances.getWidth() / 2;
+    float cy = p[1] + tShowDistances.getHeight() / 2;
+    if (clickTestFrame == 30) { cp5Before = tShowDistances.getState();
+                                cp5PostMouse(processing.event.MouseEvent.MOVE, cx, cy);    return; }
+    if (clickTestFrame == 33) { cp5PostMouse(processing.event.MouseEvent.PRESS, cx, cy);   return; }
+    if (clickTestFrame == 36) { cp5PostMouse(processing.event.MouseEvent.RELEASE, cx, cy); return; }
+    if (clickTestFrame == 39) {
+      clickExpect("bottom bar DISTANCES toggle (ControlP5)", tShowDistances.getState() != cp5Before);
+      tShowDistances.setValue(cp5Before ? 1 : 0);
+      return;
+    }
+  }
+
+  if (clickTestFrame < 45) return;
 
   println("[CLICK] " + width + "x" + height);
 

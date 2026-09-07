@@ -1159,6 +1159,10 @@ void windowResized() {
 // buffer size must be refreshed from here, so there is one layout authority instead of the
 // three that used to walk through each other.
 void relayout() {
+  // ControlP5's hit-testing is clamped to the size it was built at; tell it the new one or
+  // every control below the old height stops responding.
+  syncControlP5Bounds();
+
   // The export bar decides its own height (it wraps on narrow windows), so it goes first —
   // everything below reads BOTTOM_EXPORT_HEIGHT.
   updateExportControlPositions();

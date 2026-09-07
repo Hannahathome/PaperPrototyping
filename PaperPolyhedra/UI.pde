@@ -3287,6 +3287,30 @@ float exportBarMinWidth() {
   return leftStart + w1 + EXPORT_GAP_GROUP + EXPORT_RIGHT_W;
 }
 
+// ControlP5 clamps every controller's hit rectangle to the graphics size it was initialised
+// with: Controller.inside() bounds the box by cp5.pgw / cp5.pgh. Those are captured once, when
+// ControlP5 is constructed, and nothing updates them on resize. So after the window grows,
+// every control below the original height keeps drawing in the right place but can never be
+// clicked -- which is why the whole bottom bar went dead once the window was maximised, while
+// the sliders near the top kept working.
+//
+// setGraphics() is the public way in, but it also flips ControlP5 into explicit-graphics mode
+// and changes how it draws. These two ints are all that need to change, so set them directly.
+void syncControlP5Bounds() {
+  if (cp5__prism == null) return;
+  try {
+    java.lang.reflect.Field fw = cp5__prism.getClass().getDeclaredField("pgw");
+    java.lang.reflect.Field fh = cp5__prism.getClass().getDeclaredField("pgh");
+    fw.setAccessible(true);
+    fh.setAccessible(true);
+    fw.setInt(cp5__prism, width);
+    fh.setInt(cp5__prism, height);
+  } catch (Exception e) {
+    println("[ControlP5] could not sync hit-test bounds, controls below "
+          + "the startup height will not respond: " + e);
+  }
+}
+
 void updateExportControlPositions() {
   if (tfExportFilename == null || btnExportMain == null) return;
 
