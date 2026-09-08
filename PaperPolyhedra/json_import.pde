@@ -164,6 +164,9 @@ ShapeSpec buildShapeFromJSON(JSONObject e) {
   // An imported shape can have fewer walls than the one it replaces, which would strand any
   // connection addressed to a panel that no longer exists.
   clampConnectionsToPanelCount(selectedShapeIdx, nSides);
+  // An import redefines what the shape indices mean, so stored snapshots stop describing
+  // the assembly they were taken from.
+  invalidateConnectionUndo("shape imported");
 
   // Compute perimeter using the same formula as applyToModel()
   float topPerim, botPerim;

@@ -655,6 +655,12 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
   setParams(false);
   drawPrismWireframe(pg);
 
+  // Which shape the arrows are currently on. Only worth saying when there is more than one,
+  // matching the flat pattern's selection box.
+  if (idx == selectedShapeIdx && shapes.size() > 1) {
+    drawSelectedShapeOutline3D(pg);
+  }
+
   // Record where this shape's faces landed on screen, while its transform is still applied.
   if (_captureFaces) {
     captureAllFaceHits(pg, idx);
@@ -894,6 +900,44 @@ void drawMini3DViewInSidebar() {
 }
 
 
+
+// Traces the selected shape's edges in the 3D view, so scrolling through shapes with the
+// arrows shows which one you are on — the same job the orange box does on the flat pattern,
+// and the same orange, so the two views agree about what "selected" looks like.
+//
+// Drawn with the depth test off. That is not a way round z-fighting with the black edges
+// underneath (though it settles that too): a shape deep in an assembly, or behind another in
+// All view, would otherwise be highlighted invisibly. A selection marker that can be hidden
+// by the thing it is marking is no use.
+void drawSelectedShapeOutline3D(PGraphics pg) {
+  PVector[] topVerts = getPolygonVertices(true);
+  PVector[] botVerts = getPolygonVertices(false);
+  if (topVerts == null || botVerts == null) return;
+  int n = min(topVerts.length, botVerts.length);
+  if (n < 3) return;
+
+  pg.pushStyle();
+  pg.hint(DISABLE_DEPTH_TEST);
+  pg.noFill();
+  pg.stroke(SELECTION_ORANGE);
+  pg.strokeWeight(3.5);
+
+  pg.beginShape();
+  for (int i = 0; i < n; i++) pg.vertex(topVerts[i].x, topVerts[i].y, topVerts[i].z);
+  pg.endShape(CLOSE);
+
+  pg.beginShape();
+  for (int i = 0; i < n; i++) pg.vertex(botVerts[i].x, botVerts[i].y, botVerts[i].z);
+  pg.endShape(CLOSE);
+
+  for (int i = 0; i < n; i++) {
+    pg.line(topVerts[i].x, topVerts[i].y, topVerts[i].z,
+            botVerts[i].x, botVerts[i].y, botVerts[i].z);
+  }
+
+  pg.hint(ENABLE_DEPTH_TEST);
+  pg.popStyle();
+}
 
 void drawPrismWireframe(PGraphics pg) {
   // Calculate polygon vertices for top and bottom (outer walls)

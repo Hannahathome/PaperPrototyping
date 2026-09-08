@@ -70,6 +70,7 @@ Print the calibration SVG first to verify alignment before committing material.
 | `LidFrame.pde` | Canonical lid coordinate frame shared by the pattern and the 3D view |
 | `SidePanelFrame.pde` | The same, for one panel of the side strip |
 | `Connection.pde` | Connected shapes — model, mounting slits, 3D face picking |
+| `ConnectionUndo.pde` | Undo/redo for connection editing |
 | `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
@@ -140,8 +141,19 @@ is mounted on it) instead of starting a join.
 | `,` / `.` | Spin the child on its face |
 | `F` | Flip which lid of the child mates |
 | `Del` or **Disconnect** | Detach the child — it becomes free-standing again |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo the last connection edit |
 
 Dragging never deselects: the toggle only fires on a click that does not move.
+
+**Undo** covers connection editing — joining, detaching, moving, spinning, flipping — in
+either view, and nothing else: sliders, textures, cutouts and markers are not on the history.
+A drag or a held arrow key is one step, not one per frame. Because a connection names its
+shapes by index, deleting a shape or importing one clears the history rather than let undo
+put back a connection pointing at the wrong shape; adding a shape is safe and keeps it.
+
+The shape you are on is outlined in orange in the 3D view, matching the box the flat pattern
+draws around it, so the `◄ ►` arrows show what they are moving through. The outline draws
+through whatever is in front of it — a shape buried in an assembly still shows as selected.
 
 **Placing a wall-mounted child.** The 3D view often shows a wall edge-on or hides it behind
 the solid, and a face turned edge-on has no usable drag — so a drag there is ignored rather

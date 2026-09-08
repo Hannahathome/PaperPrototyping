@@ -71,6 +71,7 @@ void mousePressed() {
         selectedConnectionIdx = picked;
         draggedPanelConnIdx   = picked;
         panelConnDragGrab.set(local.x - pc.posLocal.x, local.y - pc.posLocal.y);
+        pushConnectionUndo("");   // once per grab, as with the 3D drag
         return;
       }
     }
@@ -258,6 +259,8 @@ void mousePressed() {
           draggedFace          = f;
           Connection c = connections.get(hit);
           connDragGrab.set(local.x - c.posLocal.x, local.y - c.posLocal.y);
+          // Once per grab, not once per frame — mouseDragged must not push.
+          pushConnectionUndo("");
         }
         return;
       }
@@ -330,6 +333,18 @@ void keyPressed() {
       + "  pixelDensity=" + pixelDensity
       + "  displayDensity=" + displayDensity());
     return;
+  }
+
+  // Undo / redo for connection editing. Deliberately ahead of every mode-specific handler,
+  // and not gated on connectMode: a join can be made in the 3D view and then moved on the
+  // flat pattern, so the two would otherwise disagree about whether it can be taken back.
+  // Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes. See ConnectionUndo.pde for what is covered.
+  // keyCode, not key: with Ctrl held, Java delivers Ctrl+Z as the control character 26
+  // rather than 'z', so testing `key` would never match. keyCode stays 'Z' (90).
+  if (keyEvent != null && (keyEvent.isControlDown() || keyEvent.isMetaDown())) {
+    if (keyCode == 'Z' && keyEvent.isShiftDown()) { redoConnections(); return; }
+    if (keyCode == 'Z')                           { undoConnections(); return; }
+    if (keyCode == 'Y')                           { redoConnections(); return; }
   }
 
   if (key == 'e' || key == 'E') {
@@ -433,6 +448,7 @@ void keyPressed() {
       return;
     }
     if (key == ',' || key == '<' || key == '.' || key == '>') {
+      pushConnectionUndo("spin:" + selectedConnectionIdx);   // a held key is one step
       selConn.spinDeg += (key == ',' || key == '<') ? -5 : 5;
       // Spinning changes how far the footprint reaches, so a child sitting flush against a
       // fold line has to be re-settled or it creeps over the edge.

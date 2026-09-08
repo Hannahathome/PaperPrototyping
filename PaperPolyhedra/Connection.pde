@@ -300,14 +300,25 @@ float[] sideSnapTargetsV(Connection c) {
 // Pulls a connection onto its face's guides when it is dragged close, so a placed child is
 // exact rather than eyeballed. Returns true when it snapped.
 // Requires the PARENT's globals to be loaded.
+// The pull a DRAG gets: the face's full snap radius, sized so an aimed gesture lands cleanly.
 boolean snapConnection(Connection c) {
+  return snapConnectionWithin(c, connectionSnapRadiusMM(c));
+}
+
+// The same guides, with the catchment given explicitly.
+//
+// A drag and a keypress want very different radii. A drag is imprecise, so it wants a wide
+// pull. An arrow key already says exactly what it means, and on a typical wall the drag
+// radius is several millimetres — wider than the step — so reusing it would swallow the
+// first few presses whole and leave the arrows apparently dead at the centre, which is
+// where every connection starts. The nudge therefore passes a fraction of its own step:
+// enough to land exactly on a guide it has almost reached, never enough to eat a press.
+boolean snapConnectionWithin(Connection c, float r) {
   // Two identical rims meet in exactly one way, so there is nowhere to move to.
   if (connectionNeedsNoCut(c)) {
     c.posLocal.set(0, 0);
     return true;
   }
-
-  float r = connectionSnapRadiusMM(c);
 
   // A lid snaps radially: its guide is a single point, the centre.
   if (c.onLid()) {
@@ -364,6 +375,8 @@ int addConnection(int parentIdx, int childIdx, int faceKind, int faceIndex, PVec
       return -1;
     }
   }
+  // Past every rejection, so a refused join does not cost an undo step.
+  pushConnectionUndo("");
   connections.add(new Connection(parentIdx, childIdx, faceKind, faceIndex, posLocal));
   selectedConnectionIdx = connections.size() - 1;
   println("[Connection] Shape " + childIdx + " -> " + faceName(faceKind, faceIndex) +
@@ -401,6 +414,10 @@ void reindexConnectionsAfterRemoval(int removedIdx) {
   // The face highlight holds a shape index too, so it shifts with everything else.
   if (selectedFaceShapeIdx == removedIdx)     selectedFaceShapeIdx = -1;
   else if (selectedFaceShapeIdx > removedIdx) selectedFaceShapeIdx--;
+
+  // Every stored snapshot names shapes by an index that just moved, and deleting a shape is
+  // not itself undoable — so the history cannot be trusted across it.
+  invalidateConnectionUndo("shape deleted");
 }
 
 // A shape's side-panel connections are addressed by panel index, so cutting the shape down
@@ -408,6 +425,7 @@ void reindexConnectionsAfterRemoval(int removedIdx) {
 // wherever nSides changes.
 void clampConnectionsToPanelCount(int shapeIdx, int nPanels) {
   if (connections == null) return;
+  boolean removedAny = false;
   for (int i = connections.size() - 1; i >= 0; i--) {
     Connection c = connections.get(i);
     if (c.parentShapeIdx != shapeIdx || c.onLid()) continue;
@@ -415,8 +433,13 @@ void clampConnectionsToPanelCount(int shapeIdx, int nPanels) {
       println("[Connection] Shape " + c.childShapeIdx + " detached: side panel " +
               (c.parentFaceIndex + 1) + " no longer exists");
       removeConnection(i);
+      removedAny = true;
     }
   }
+  // This detachment is a consequence of a geometry change, and geometry is outside what the
+  // connection history can put back. Undoing to a state that expects walls the shape no
+  // longer has would be a lie, so the history goes instead.
+  if (removedAny) invalidateConnectionUndo("side count reduced");
 }
 
 // ---------------------------------------------------------------------------
@@ -776,6 +799,7 @@ void disconnectSelected() {
   }
   Connection c = connections.get(selectedConnectionIdx);
   println("[Connection] Disconnected shape " + c.childShapeIdx + " from shape " + c.parentShapeIdx);
+  pushConnectionUndo("");
   removeConnection(selectedConnectionIdx);
 }
 
@@ -783,6 +807,7 @@ void disconnectSelected() {
 // read childFlipped, so they stay in step automatically.
 void flipSelectedConnection() {
   if (connections == null || selectedConnectionIdx < 0 || selectedConnectionIdx >= connections.size()) return;
+  pushConnectionUndo("");
   Connection c = connections.get(selectedConnectionIdx);
   c.childFlipped = !c.childFlipped;
   println("[Connection] Child mates by its " + (c.childFlipped ? "TOP" : "BOTTOM") + " lid");
@@ -814,6 +839,12 @@ void snapConnectionInParentFrame(Connection c) {
   _restoreSelectedGlobals();
 }
 
+void snapConnectionInParentFrame(Connection c, float radiusMM) {
+  if (!_loadParentGlobals(c)) return;
+  snapConnectionWithin(c, radiusMM);
+  _restoreSelectedGlobals();
+}
+
 boolean connectionFitsInParentFrame(Connection c) {
   if (!_loadParentGlobals(c)) return true;
   boolean fits = connectionFits(c);
@@ -825,9 +856,12 @@ boolean connectionFitsInParentFrame(Connection c) {
 // anything else that wants to move it by a known amount.
 void nudgeSelectedConnection(float du, float dv) {
   if (connections == null || selectedConnectionIdx < 0 || selectedConnectionIdx >= connections.size()) return;
+  // Held arrows collapse into one undo step; a pause starts a new one.
+  pushConnectionUndo("nudge:" + selectedConnectionIdx);
   Connection c = connections.get(selectedConnectionIdx);
   c.posLocal.add(du, dv, 0);
-  snapConnectionInParentFrame(c);
+  // A quarter of the step: tidies a near-miss onto a guide without ever eating a press.
+  snapConnectionInParentFrame(c, max(abs(du), abs(dv)) * 0.25);
 }
 
 // Does the selected connection fit its host face?

@@ -248,7 +248,7 @@ void draw() {
         if (shapes.size() > 1 && si == selectedShapeIdx) {
           pushStyle();
           noFill();
-          stroke(255, 160, 0);
+          stroke(SELECTION_ORANGE);
           strokeWeight(2.5 / SCREEN_SCALE);
           rect(bbox.z - 2 / SCREEN_SCALE, bboxTop - 2 / SCREEN_SCALE,
                bbox.x + 4 / SCREEN_SCALE,
@@ -1116,7 +1116,7 @@ void draw3DViewModeButtons() {
              ", mating by its " + (c.childFlipped ? "TOP" : "BOTTOM") + " lid",
              r[0] + r[2], hintY);
         hintY += 16;
-        text("F flips · drag here or on the pattern to move · arrows nudge (Shift = 5mm) · , . spin · Del detaches",
+        text("F flips · drag or arrows move (Shift = 5mm) · , . spin · Del detaches · Ctrl+Z undo",
              r[0] + r[2], hintY);
         hintY += 16;
 

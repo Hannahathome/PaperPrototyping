@@ -88,6 +88,16 @@ All global variables are now centralized in `Param.pde`. This guide shows what l
 ignore the index; `FACE_SIDE` uses it as the side-panel number. `faceIsLid(kind)`,
 `faceIsTopLid(kind)`, `lidFaceKind(isTop)` and `faceName(kind, index)` convert and label.
 
+### ConnectionUndo.pde
+**Connection undo/redo** (connections only — not a general sketch undo):
+- `ArrayList<ConnectionSnapshot> _connUndo`, `_connRedo` - deep copies of the whole
+  connection list; the set is small enough that whole-state snapshots beat a command log
+- `pushConnectionUndo(tag)` - records the state BEFORE an edit. `tag` names the gesture, so
+  a drag or a held key collapses to one step; `""` forces a discrete step
+- `undoConnections()` / `redoConnections()` / `invalidateConnectionUndo(why)`
+- History is cleared whenever shape indices stop meaning what they meant: a shape deleted,
+  a shape imported, or a side count cut below a wall a connection sits on
+
 ### SidePanelFrame.pde
 **Side-panel coordinate frame** (no mutable globals; all derived from the loaded shape):
 - `sidePanelFrameAvailable()` - uniform, non-hollow, non-kresling strips only

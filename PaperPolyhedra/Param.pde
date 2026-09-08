@@ -128,6 +128,9 @@ final float CLAMP_EPSILON = 1e-6;                // Small value for clamping cal
 final float CLAMP_MAX = 0.999999;                // Max value for arc calculations
 
 // UI defaults
+// One orange for "this is the selected shape", shared by the box on the flat pattern and the
+// outline in the 3D view, so the two views cannot drift apart on what selection looks like.
+final color SELECTION_ORANGE = #FFA000;
 final int MIN_SIDES = 3;                         // Minimum polygon sides
 final int DEFAULT_SIDES = 4;                     // Default starting sides
 final float STEP_FINE = 0.5;                     // Fine adjustment step (mm)
