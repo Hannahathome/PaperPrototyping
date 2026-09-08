@@ -159,6 +159,13 @@ A red slit ring, and a warning next to the buttons, mean the child's footprint r
 host face; move it inward before cutting. On a wall this fires 2mm early, because all four
 of a panel's boundaries are fold lines and a cut that reaches one ruins the fold.
 
+**Matching rims cut nothing.** When the child mates by a lid that is the same polygon as the
+host lid — same side count, same edge length — the two rims coincide and there is nothing to
+cut: each form's own lid tabs already land where the other's are, so they tab together at the
+rim. Slits there would run along the host's tab bases and cut them off. Such a joint shows in
+the preview as a dashed outline with a centre cross, is fixed at the centre (two identical
+polygons meet in exactly one way), and puts nothing on the page.
+
 Scope: uniform regular polygons, matching the base plate's own scope. Per-edge, cuboid and
 hollow shapes are refused rather than mis-placed, and so are kresling walls — the strip is
 sheared as a whole, which would shear a slit ring without shearing the child pushing through

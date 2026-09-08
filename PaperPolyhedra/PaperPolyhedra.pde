@@ -1120,9 +1120,14 @@ void draw3DViewModeButtons() {
              r[0] + r[2], hintY);
         hintY += 16;
 
-        // Warn when the footprint runs off the edge of its host face — a slit ring crossing
-        // an outline, or a wall's fold lines, destroys the piece.
-        if (!connectionFitsInParentFrame(c)) {
+        if (connectionNeedsNoCut(c)) {
+          // Say so, or the missing slit ring reads as something having gone wrong.
+          fill(120, 220, 160);
+          text("Rims match — no slits cut; the two tab together at the lid, fixed centred",
+               r[0] + r[2], hintY);
+        } else if (!connectionFitsInParentFrame(c)) {
+          // Warn when the footprint runs off the edge of its host face — a slit ring crossing
+          // an outline, or a wall's fold lines, destroys the piece.
           fill(230, 60, 60);
           text(c.onLid() ? "Footprint overhangs the host lid — move it inward"
                          : "Footprint reaches the panel's fold lines — move it inward",

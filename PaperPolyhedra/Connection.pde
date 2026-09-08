@@ -198,10 +198,40 @@ float childFootprintHalfVMM(Connection c) {
   return m;
 }
 
+// ---------------------------------------------------------------------------
+// Lid-to-lid joints that need no cut at all
+// ---------------------------------------------------------------------------
+//
+// When the child mates by a lid that is the SAME polygon as the host lid -- same side count,
+// same edge length -- the two rims coincide. There is nothing to cut: the child's own lid
+// tabs already land exactly where the host's lid tabs are, so the two forms tab together at
+// the rim like any other lid. Worse than unnecessary, a slit ring drawn there would run
+// straight along the host's own tab bases and cut them off.
+//
+// Position does not enter into it. Two identical polygons meet in exactly one way, so such a
+// connection is pinned to the centre (see snapConnection).
+
+final float LID_MATCH_TOLERANCE_MM = 0.2;   // paper-scale slop on the edge-length match
+
+boolean connectionNeedsNoCut(Connection c) {
+  if (c == null || !c.onLid() || shapes == null) return false;
+  if (c.parentShapeIdx < 0 || c.parentShapeIdx >= shapes.size()) return false;
+  if (c.childShapeIdx  < 0 || c.childShapeIdx  >= shapes.size()) return false;
+  ShapeSpec p = shapes.get(c.parentShapeIdx);
+  int pn = max(3, p.nSides);
+  if (childMateSides(c) != pn) return false;
+  float hostEdgeMM = (c.onTopLid() ? p.cylinder.x : p.cylinder.y) / pn;
+  return abs(childMateEdgeMM(c) - hostEdgeMM) <= LID_MATCH_TOLERANCE_MM;
+}
+
 // Does the child's footprint sit entirely inside the parent's face?
 // A slit ring that crosses an outline or a fold line destroys the piece, so this drives a
 // warning and a red preview. Requires the PARENT's globals to be loaded.
 boolean connectionFits(Connection c) {
+  // Matching lids cut nothing, so nothing can be ruined. Without this the footprint would
+  // sit exactly ON the host outline and the strict inside test would call it an overhang.
+  if (connectionNeedsNoCut(c)) return true;
+
   PVector[] host;
   if (c.onLid()) {
     if (!lidFrameAvailable()) return false;
@@ -271,6 +301,12 @@ float[] sideSnapTargetsV(Connection c) {
 // exact rather than eyeballed. Returns true when it snapped.
 // Requires the PARENT's globals to be loaded.
 boolean snapConnection(Connection c) {
+  // Two identical rims meet in exactly one way, so there is nowhere to move to.
+  if (connectionNeedsNoCut(c)) {
+    c.posLocal.set(0, 0);
+    return true;
+  }
+
   float r = connectionSnapRadiusMM(c);
 
   // A lid snaps radially: its guide is a single point, the centre.
@@ -404,6 +440,33 @@ void drawOneConnectionSlitRing(Connection c, boolean mirror) {
   popMatrix();
 }
 
+// Marks a lid-to-lid joint that needs no cut: the shared rim, dashed, plus a centre cross.
+// Preview only — it must never reach the page, or it would print as a guide line on the lid
+// and be mistaken for a cut. Drawn centred at the current origin.
+void drawNoCutMarker(Connection c, int connIdx) {
+  int n = childMateSides(c);
+  float rPx = (childMateEdgeMM(c) * MM_current / 2.0) / sin(PI / (float)n);
+  if (rPx <= 0) return;
+
+  pushStyle();
+  noFill();
+  boolean sel = (connIdx == selectedConnectionIdx);
+  stroke(sel ? color(255, 0, 0) : color(60, 190, 120));
+  strokeWeight((sel ? 2.0 : 1.5) / SCREEN_SCALE);
+
+  float aI = TWO_PI / n;
+  float start = -HALF_PI - aI / 2.0 + radians(c.spinDeg);
+  float dash = 2.0 * MM_current, gap = 1.5 * MM_current;
+  for (int i = 0; i < n; i++) {
+    float a0 = start + i * aI, a1 = start + (i + 1) * aI;
+    drawDashedLine(cos(a0) * rPx, sin(a0) * rPx, cos(a1) * rPx, sin(a1) * rPx, dash, gap);
+  }
+  float k = rPx * 0.18;
+  line(-k, 0, k, 0);
+  line(0, -k, 0, k);
+  popStyle();
+}
+
 // Preview colouring, shared by the lid and the wall passes.
 void styleConnectionSlits(int connIdx, boolean fits) {
   if (bSavePDF) {
@@ -436,16 +499,26 @@ void drawConnectionSlits(boolean isTop) {
     if (c.parentFaceKind != kind) continue;
     if (shapes == null || c.childShapeIdx < 0 || c.childShapeIdx >= shapes.size()) continue;
 
+    // Matching rims need no cut, and drawing one here would slice through the host's own
+    // tab bases. Nothing at all goes to the page; on screen it gets a marker instead, so the
+    // joint is still visible and selectable.
+    boolean noCut = connectionNeedsNoCut(c);
+    if (noCut && bSavePDF) continue;
+
     PVector at = lidLocalToPiecePx(c.posLocal, isTop);
 
     pushStyle();
-    styleConnectionSlits(i, bSavePDF ? true : connectionFits(c));
     pushMatrix();
     translate(at.x, at.y);
-    // A bottom lid is flipped over when it is folded on, so its printed face presents the
-    // mirror image outward. Mirror the ring to match, or the asymmetric slits (which start
-    // tabInset*2 in from one end) end up handed the wrong way against the child's tabs.
-    drawOneConnectionSlitRing(c, !isTop);
+    if (noCut) {
+      drawNoCutMarker(c, i);
+    } else {
+      styleConnectionSlits(i, bSavePDF ? true : connectionFits(c));
+      // A bottom lid is flipped over when it is folded on, so its printed face presents the
+      // mirror image outward. Mirror the ring to match, or the asymmetric slits (which start
+      // tabInset*2 in from one end) end up handed the wrong way against the child's tabs.
+      drawOneConnectionSlitRing(c, !isTop);
+    }
     popMatrix();
     popStyle();
   }

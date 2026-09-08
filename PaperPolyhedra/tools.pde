@@ -676,11 +676,16 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
     // exactly the translate/rotateX(PI) pair this used to do by hand; the spin is now taken
     // about the face's own normal rather than world y — see applyFaceTransform3D.
     applyFaceTransform3D(pg, fb, c.posLocal, c.spinDeg);
-    // childFlipped means the child mates by its TOP lid, so it is turned over.
-    if (c.childFlipped) pg.rotateX(PI);
-    // The child draws centred on its own origin, so drop it by half its height and its
-    // mating lid lands exactly on the parent's face.
+    // The child draws centred on its own origin, so lift its centre off the face by half its
+    // height and its mating lid lands exactly on the face.
+    //
+    // ORDER MATTERS. This has to happen BEFORE the flip below. rotateX(PI) reverses the
+    // frame's y axis, so translating after it moves the child by half its height INWARD --
+    // burying a flipped child halfway inside its host instead of standing it on the outside.
     pg.translate(0, -childHalfH, 0);
+    // childFlipped means the child mates by its TOP lid, so it is turned over — about its
+    // own centre, which is now where the origin sits.
+    if (c.childFlipped) pg.rotateX(PI);
     drawShapeTree(pg, c.childShapeIdx, depth + 1);
     pg.popMatrix();
 
