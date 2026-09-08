@@ -52,6 +52,8 @@ Connection copyConnection(Connection c) {
                                 c.parentFaceKind, c.parentFaceIndex, c.posLocal);
   n.childFlipped = c.childFlipped;
   n.spinDeg      = c.spinDeg;
+  // Carried across, not reissued: undoing a move must not repaint the pairing marks.
+  n.markId       = c.markId;
   return n;
 }
 

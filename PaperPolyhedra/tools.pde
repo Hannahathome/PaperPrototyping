@@ -655,9 +655,10 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
   setParams(false);
   drawPrismWireframe(pg);
 
-  // Which shape the arrows are currently on. Only worth saying when there is more than one,
-  // matching the flat pattern's selection box.
-  if (idx == selectedShapeIdx && shapes.size() > 1) {
+  // Which shape is selected. Only worth saying when there is more than one, matching the
+  // flat pattern's selection box — and never while connecting, where the face tints are what
+  // a click acts on and a whole-shape outline would compete with them for the same meaning.
+  if (idx == selectedShapeIdx && shapes.size() > 1 && !connectMode) {
     drawSelectedShapeOutline3D(pg);
   }
 

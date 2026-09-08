@@ -54,6 +54,7 @@ class Connection {
   boolean childFlipped;     // false = the child's BOTTOM lid does the attaching (default)
   PVector posLocal;         // mm in the parent face's canonical frame
   float spinDeg;            // child's rotation about the face normal
+  int markId;               // stable; picks the pairing mark's colour and symbol
 
   Connection(int _parent, int _child, int _kind, int _index, PVector _pos) {
     parentShapeIdx  = _parent;
@@ -63,6 +64,7 @@ class Connection {
     childFlipped    = false;
     posLocal        = _pos.copy();
     spinDeg         = 0;
+    markId          = 0;   // assigned by addConnection, or copied by copyConnection
   }
 
   boolean onLid()    { return faceIsLid(parentFaceKind); }
@@ -377,7 +379,9 @@ int addConnection(int parentIdx, int childIdx, int faceKind, int faceIndex, PVec
   }
   // Past every rejection, so a refused join does not cost an undo step.
   pushConnectionUndo("");
-  connections.add(new Connection(parentIdx, childIdx, faceKind, faceIndex, posLocal));
+  Connection nc = new Connection(parentIdx, childIdx, faceKind, faceIndex, posLocal);
+  nc.markId = nextFreeMarkId();
+  connections.add(nc);
   selectedConnectionIdx = connections.size() - 1;
   println("[Connection] Shape " + childIdx + " -> " + faceName(faceKind, faceIndex) +
           " face of shape " + parentIdx + " at (" + nf(posLocal.x, 0, 1) + ", " + nf(posLocal.y, 0, 1) + ") mm");
@@ -490,6 +494,138 @@ void drawNoCutMarker(Connection c, int connIdx) {
   popStyle();
 }
 
+// ---------------------------------------------------------------------------
+// Pairing marks: which piece goes on which
+// ---------------------------------------------------------------------------
+//
+// The same coloured symbol is printed at the centre of the host's slit ring and at the
+// centre of the child lid that pushes through it. On the cut sheet the two pieces can be
+// far apart and look alike, so the mark is what says "this one goes here" while you build.
+//
+// ARTWORK, NOT GEOMETRY. It prints on the PDF and shows on screen, and is kept out of the
+// SVG cut file — a cutter would happily cut it out.
+//
+// Colour AND symbol both change on every connection, so the pairing survives a greyscale
+// print and never rests on telling two colours apart. That is why the counts are 6 and 5:
+// being coprime, the pair only repeats after 30 connections, whereas equal counts would lock
+// the two cues together and leave the symbol constant across the first six -- which is
+// exactly no help to anyone printing in black and white.
+//
+// Colours are the Okabe-Ito set, which stays distinguishable for the common colour-vision
+// deficiencies. Every symbol is mirror-symmetric, so a mark cannot be misread as a different
+// one when seen on the reverse of a lid that folds over. There is no diamond, because at
+// this size it is not tellable from the square.
+
+final color[] CONNECTION_MARK_COLORS = {
+  #D55E00, #0072B2, #009E73, #CC79A7, #E69F00, #56B4E9
+};
+final int CONNECTION_MARK_SYMBOLS = 5;
+
+// The lowest id no live connection is using. A running counter would not do: the undo
+// snapshots copy every connection, so anything incremented on construction races ahead
+// unpredictably and two joints on the same model could end up wearing the same mark. Taking
+// the lowest free id instead makes the first connection mark 0, the second mark 1, and
+// reuses an id once its connection is detached.
+int nextFreeMarkId() {
+  if (connections == null) return 0;
+  for (int id = 0; ; id++) {
+    boolean taken = false;
+    for (Connection c : connections) {
+      if (c.markId == id) { taken = true; break; }
+    }
+    if (!taken) return id;
+  }
+}
+
+color connectionMarkColor(Connection c) {
+  int i = ((c.markId % CONNECTION_MARK_COLORS.length) + CONNECTION_MARK_COLORS.length)
+          % CONNECTION_MARK_COLORS.length;
+  return CONNECTION_MARK_COLORS[i];
+}
+
+int connectionMarkSymbol(Connection c) {
+  return ((c.markId % CONNECTION_MARK_SYMBOLS) + CONNECTION_MARK_SYMBOLS) % CONNECTION_MARK_SYMBOLS;
+}
+
+// Radius (mm) of the mark. Scaled to the child's footprint so it sits comfortably inside the
+// slit ring on any size of shape, then held to a range that stays legible without dominating
+// a small lid.
+float connectionMarkRadiusMM(Connection c) {
+  int n = childMateSides(c);
+  float apothem = (childMateEdgeMM(c) / 2.0) / tan(PI / (float)n);
+  return constrain(apothem * 0.42, 2.0, 6.0);
+}
+
+// Draws the pairing mark centred at the current origin. Both ends of a connection call this,
+// which is what makes them match.
+void drawConnectionPairMark(Connection c) {
+  if (bExportingCutFile) return;   // artwork only — never a cut line
+  float r = connectionMarkRadiusMM(c) * MM_current;
+  if (r <= 0) return;
+
+  pushStyle();
+  color col = connectionMarkColor(c);
+  noStroke();
+  fill(col);
+
+  switch (connectionMarkSymbol(c)) {
+    case 0:   // disc
+      ellipse(0, 0, r * 2, r * 2);
+      break;
+    case 1: { // cross
+      stroke(col);
+      strokeWeight(r * 0.55);
+      strokeCap(SQUARE);
+      line(-r, 0, r, 0);
+      line(0, -r, 0, r);
+      break;
+    }
+    case 2:   // five-pointed star
+      beginShape();
+      for (int i = 0; i < 10; i++) {
+        float a  = -HALF_PI + i * PI / 5.0;
+        float rr = (i % 2 == 0) ? r : r * 0.42;
+        vertex(cos(a) * rr, sin(a) * rr);
+      }
+      endShape(CLOSE);
+      break;
+    case 3: { // square
+      pushStyle();
+      rectMode(CENTER);
+      rect(0, 0, r * 1.7, r * 1.7);
+      popStyle();
+      break;
+    }
+    default:  // triangle
+      triangle(0, -r, r * 0.87, r * 0.5, -r * 0.87, r * 0.5);
+      break;
+  }
+  popStyle();
+}
+
+// The mark on the OTHER end: the centre of the child lid that mates with a host face.
+// Call from drawPlan() inside that lid's matrix, like drawConnectionSlits().
+//
+// A shape has at most one parent, so this draws at most one mark.
+void drawChildMateMarks(boolean isTop) {
+  if (bExportingCutFile) return;
+  if (connections == null || connections.isEmpty()) return;
+  if (_drawingShapeIdx < 0) return;
+  if (!lidFrameAvailable()) return;
+
+  for (Connection c : connections) {
+    if (c.childShapeIdx != _drawingShapeIdx) continue;
+    // childFlipped means the child mates by its TOP lid, so this is the mating lid exactly
+    // when the two agree.
+    if (c.childFlipped != isTop) continue;
+    PVector at = lidLocalToPiecePx(new PVector(0, 0), isTop);
+    pushMatrix();
+    translate(at.x, at.y);
+    drawConnectionPairMark(c);
+    popMatrix();
+  }
+}
+
 // Preview colouring, shared by the lid and the wall passes.
 void styleConnectionSlits(int connIdx, boolean fits) {
   if (bSavePDF) {
@@ -542,6 +678,9 @@ void drawConnectionSlits(boolean isTop) {
       // tabInset*2 in from one end) end up handed the wrong way against the child's tabs.
       drawOneConnectionSlitRing(c, !isTop);
     }
+    // Names the joint, in the middle of the ring it belongs to. Matters most for a matching
+    // rim, where there are no slits to say which piece pairs with which.
+    drawConnectionPairMark(c);
     popMatrix();
     popStyle();
   }
@@ -577,6 +716,7 @@ void drawConnectionSlitsOnPanels() {
     rotate(pose.rotRad);
     translate(c.posLocal.x * MM_current, c.posLocal.y * MM_current);
     drawOneConnectionSlitRing(c, false);
+    drawConnectionPairMark(c);
     popMatrix();
     popStyle();
   }
@@ -1071,6 +1211,11 @@ PVector faceScreenToLocal(FaceHit f, float bx, float by) {
 
 int draggedPanelConnIdx = -1;      // connection being dragged on the page, -1 = none
 PVector panelConnDragGrab = new PVector();
+
+// Click-to-select in the 3D view, outside connect mode. A press on a shape arms it; an orbit
+// disarms it, so only a click that does not move changes the selection.
+int _shapePressIdx = -1;
+boolean _shapePressMoved = false;
 
 // Circumradius (mm) of a connection's footprint — the grab radius on the page.
 float connectionFootprintRadiusMM(Connection c) {

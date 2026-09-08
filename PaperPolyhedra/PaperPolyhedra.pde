@@ -679,6 +679,8 @@ void drawPlan(boolean img) {
     }
     // Mounting slits for any shape connected to this face — cut before the lid outline.
     drawConnectionSlits(false);
+    // If THIS shape is a child, the other half of its pairing mark goes on the lid it mates by.
+    drawChildMateMarks(false);
     drawPolygonLidHollow(nSides, cellBaseL_px, neckDepth_px2, tabInset_bot_px, arrowheadFlare_bot_px, false);
     popMatrix();
     
@@ -694,6 +696,7 @@ void drawPlan(boolean img) {
     }
     // Mounting slits for any shape connected to this face — cut before the lid outline.
     drawConnectionSlits(true);
+    drawChildMateMarks(true);
     drawPolygonLidHollow(nSides, cellTopL_px, neckDepth_px2, tabInset_top_px, arrowheadFlare_top_px, true);
     popMatrix();
 

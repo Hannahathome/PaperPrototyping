@@ -265,6 +265,16 @@ void mousePressed() {
         return;
       }
     }
+
+    // Not connecting: a click picks the shape under it, the same way clicking a shape on the
+    // flat pattern does. Resolved on RELEASE, because a press here also starts a camera
+    // orbit — only a click that does not move should change the selection.
+    if (!connectMode && shapes != null && shapes.size() > 1) {
+      FaceHit f = pickFace(mouseX - LEFT_SIDEBAR_WIDTH, mouseY - TOOLBAR_HEIGHT);
+      _shapePressIdx  = (f != null) ? f.shapeIdx : -1;
+      _shapePressMoved = false;
+      // Deliberately no `return`: the orbit handler still needs this press.
+    }
   }
 
   // Template edit mode - handle thumbnail clicks
@@ -537,6 +547,20 @@ void mouseReleased() {
   _facePressWasSelected = false;
   _connDragMoved = false;
 
+  // Click-to-select in the 3D view: a press that landed on a shape and never turned into an
+  // orbit. Selecting also has to pull the sidebar across, or the panel would keep showing
+  // the shape you just clicked away from.
+  if (_shapePressIdx >= 0 && !_shapePressMoved && !connectMode &&
+      shapes != null && _shapePressIdx < shapes.size() && _shapePressIdx != selectedShapeIdx) {
+    saveGlobalsTo(shapes.get(selectedShapeIdx));
+    selectedShapeIdx = _shapePressIdx;
+    loadGlobalsFrom(shapes.get(selectedShapeIdx));
+    setParams(false);
+    syncUIToSelectedShape();
+  }
+  _shapePressIdx = -1;
+  _shapePressMoved = false;
+
   // Reset assembly piece drag
   asmDragPiece = -1;
   // Reset free placement drag
@@ -738,6 +762,7 @@ void mouseDragged() {
     angleZ -= deltaX * 0.01;
     // Mark as custom view when user manually rotates
     currentViewPreset = "Custom";
+    _shapePressMoved = true;   // an orbit, so the release must not re-select a shape
     return;
   }
   

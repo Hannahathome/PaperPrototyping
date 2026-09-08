@@ -83,6 +83,14 @@ All global variables are now centralized in `Param.pde`. This guide shows what l
 - `int draggedPanelConnIdx`, `PVector panelConnDragGrab` - flat-pattern drag state
 - `int selectedFaceShapeIdx`, `selectedFaceKind`, `selectedFaceIndex` - the highlighted face, -1 = none
 - `boolean _facePressWasSelected`, `_connDragMoved` - click-vs-drag, for the deselect toggle
+- `int _shapePressIdx`, `boolean _shapePressMoved` - click-vs-orbit, for click-to-select in 3D
+
+**Pairing marks**: `Connection.markId` picks the colour and symbol printed at BOTH ends of a
+connection. Assigned by `nextFreeMarkId()` (lowest id no live connection holds) rather than a
+running counter, which the undo snapshots would race ahead of. `CONNECTION_MARK_COLORS` (6)
+against `CONNECTION_MARK_SYMBOLS` (5): coprime, so both cues change every connection and the
+pair only repeats after 30. `drawConnectionPairMark()` is artwork — it returns early when
+`bExportingCutFile`.
 
 **Face addresses**: a face is `(kind, index)`, not a boolean. `FACE_LID_TOP` / `FACE_LID_BOT`
 ignore the index; `FACE_SIDE` uses it as the side-panel number. `faceIsLid(kind)`,

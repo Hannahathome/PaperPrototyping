@@ -151,9 +151,31 @@ A drag or a held arrow key is one step, not one per frame. Because a connection 
 shapes by index, deleting a shape or importing one clears the history rather than let undo
 put back a connection pointing at the wrong shape; adding a shape is safe and keeps it.
 
-The shape you are on is outlined in orange in the 3D view, matching the box the flat pattern
-draws around it, so the `◄ ►` arrows show what they are moving through. The outline draws
-through whatever is in front of it — a shape buried in an assembly still shows as selected.
+**Selecting a shape in 3D.** With Connect off, clicking a shape selects it, the same as
+clicking one on the flat pattern; `◄ ►` step through them too. The selected shape is outlined
+in orange, matching the box the flat pattern draws around it, and the outline draws through
+whatever is in front of it so a shape buried in an assembly still shows as selected. A drag
+still orbits the camera — only a click that does not move changes the selection.
+
+With Connect **on**, neither happens: clicks go to faces, and the face tints are the
+highlight. A whole-shape outline there would compete with them for the same meaning.
+
+## Pairing marks
+
+Each connection prints the same coloured symbol at two places: the middle of the host's slit
+ring, and the middle of the child lid that pushes through it. On the cut sheet those two
+pieces can be far apart and look alike, so the mark is what tells you which goes with which
+while you build.
+
+Colour *and* symbol both change from one connection to the next — six colours against five
+symbols, so a pairing does not repeat until the thirtieth connection and the marks stay
+readable in a black-and-white print. The colours are the Okabe-Ito set, which stays
+distinguishable for the common colour-vision deficiencies, and every symbol is
+mirror-symmetric so it cannot be misread on the reverse of a lid that folds over.
+
+Marks are artwork: they show on screen and print on the PDF, and are deliberately kept out of
+the SVG cut file, which would otherwise cut them out. They matter most on a matching-rim
+joint, where there are no slits to say which piece pairs with which.
 
 **Placing a wall-mounted child.** The 3D view often shows a wall edge-on or hides it behind
 the solid, and a face turned edge-on has no usable drag — so a drag there is ignored rather
