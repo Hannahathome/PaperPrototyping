@@ -503,14 +503,14 @@ class SidebarPanel {
     
     // Draw texture sub-tabs (shifted down by SW_SECTION_H)
     float sy = contentY + SIDEBAR_PADDING + SW_SECTION_H;
-    float tabWidth = (w - 4 * SIDEBAR_PADDING) / 3;
+    float tabWidth = (w - 5 * SIDEBAR_PADDING) / 4;
     float tabHeight = 31;
 
-    // Clear and recreate texture sub-tabs. Tracking sits alongside the two texture modes,
+    // Clear and recreate texture sub-tabs. Tracking sits alongside the three texture modes,
     // the same way the Print tab groups Placement / Cutouts / Base.
     buttons.clear();
-    String[] tabLabels = {"Per Panel", "Strip", "Tracking"};
-    for (int i = 0; i < 3; i++) {
+    String[] tabLabels = {"Per Panel", "Strip", "Wrap", "Tracking"};
+    for (int i = 0; i < 4; i++) {
       SidebarButton tabBtn = new SidebarButton(
         "texture_tab_" + i,
         sx + i * (tabWidth + SIDEBAR_PADDING/2),
@@ -1140,6 +1140,9 @@ class SidebarPanel {
     } else if (activeTextureTab == TEX_TAB_STRIP) {
       text("Upload continuous strip texture", sx + areaWidth/2, sy + 10);
       drawStripUploadButton(sx, sy + 30, areaWidth, areaHeight - 40);
+    } else if (activeTextureTab == TEX_TAB_WRAP) {
+      text("One image over lids and walls", sx + areaWidth/2, sy + 10);
+      drawWrapUploadButton(sx, sy + 30, areaWidth, areaHeight - 40);
     }
 
     popStyle();
@@ -1296,6 +1299,68 @@ class SidebarPanel {
     popStyle();
   }
   
+  // Wrap tab. Same two-button layout as the strip tab — mousePressed() below reads the
+  // identical geometry, so the two must be kept in step.
+  void drawWrapUploadButton(float sx, float sy, float areaWidth, float areaHeight) {
+    float btnHeight = 44;
+    float bx = sx + SIDEBAR_PADDING;
+    float by = sy + 20;
+
+    pushStyle();
+
+    // Restore to Default
+    float fullBtnWidth = areaWidth - 2 * SIDEBAR_PADDING;
+    float restoreBtnHeight = 28;
+    boolean restoreHover = mouseX >= bx && mouseX <= bx + fullBtnWidth &&
+                           mouseY >= by && mouseY <= by + restoreBtnHeight;
+    fill(restoreHover ? color(180, 70, 70) : color(160, 60, 60));
+    noStroke();
+    rect(bx, by, fullBtnWidth, restoreBtnHeight, 4);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    uiText(11);
+    text("Restore to Default", bx + fullBtnWidth/2, by + restoreBtnHeight/2);
+
+    by += restoreBtnHeight + 10;
+
+    // Combined Upload/Edit
+    boolean hasWrap = wrapImg != null;
+    boolean uploadHover = mouseX >= bx && mouseX <= bx + fullBtnWidth &&
+                          mouseY >= by && mouseY <= by + btnHeight;
+    fill(uploadHover ? color(120, 120, 130) : color(100, 100, 110));
+    noStroke();
+    rect(bx, by, fullBtnWidth, btnHeight, 4);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    uiText(13);
+    text(hasWrap ? "Edit Wrap" : "Upload Wrap", bx + fullBtnWidth/2, by + btnHeight/2);
+
+    by += btnHeight + 6;
+
+    // The ideal source aspect, so artwork can be prepared at the right shape rather than
+    // discovered to be stretched after printing.
+    String reason = wrapUnavailableReason();
+    textAlign(CENTER, TOP);
+    if (reason.length() > 0) {
+      fill(170, 60, 60);
+      uiText(10);
+      text(reason + " cannot be wrapped", bx + fullBtnWidth/2, by + 4);
+      fill(120);
+      text("Use Strip or Per Panel instead", bx + fullBtnWidth/2, by + 18);
+    } else {
+      fill(80);
+      uiText(10);
+      if (hasWrap) {
+        text(wrapImg.width + "x" + wrapImg.height + " px", bx + fullBtnWidth/2, by + 4);
+      }
+      fill(120);
+      text("Best fit " + nf(wrapIdealAspect(), 0, 2) + " : 1  (around : over)",
+           bx + fullBtnWidth/2, by + (hasWrap ? 18 : 4));
+    }
+
+    popStyle();
+  }
+
   void drawTextureBleedToggle() {
     float sx = x + SIDEBAR_PADDING;
     float sy = contentY + contentHeight - 145; // Position above lid controls
@@ -1820,8 +1885,31 @@ class SidebarPanel {
       }
     }
 
+    // Check wrap upload and edit buttons — geometry mirrors drawWrapUploadButton()
+    if (activeTextureTab == TEX_TAB_WRAP) {
+      float bx = sx + SIDEBAR_PADDING;
+      float by = sy + 50;
+      float fullBtnWidth = areaWidth - 2 * SIDEBAR_PADDING;
+      float restoreBtnHeight = 28;
+      float btnHeight = 44;
+
+      if (mouseX >= bx && mouseX <= bx + fullBtnWidth &&
+          mouseY >= by && mouseY <= by + restoreBtnHeight) {
+        restoreWrapTextureToDefault();
+        return true;
+      }
+
+      by += restoreBtnHeight + 10;
+
+      if (mouseX >= bx && mouseX <= bx + fullBtnWidth &&
+          mouseY >= by && mouseY <= by + btnHeight) {
+        if (wrapImg != null) editWrapTexture(); else selectWrapTexture();
+        return true;
+      }
+    }
+
     // Check strip upload and edit buttons
-    if (activeTextureTab == 1) {
+    if (activeTextureTab == TEX_TAB_STRIP) {
       float bx = sx + SIDEBAR_PADDING;
       float by = sy + 50;
       float btnWidth = (areaWidth - 2 * SIDEBAR_PADDING - 7) / 2;
@@ -1976,14 +2064,19 @@ class SidebarPanel {
       // Map tab index to texture mode constant
       // Tab 0 = Per-Panel (TEX_PER_PANEL = 1)
       // Tab 1 = Strip (TEX_STRIP_BENT = 2)
-      if (tabIndex == 0) {
+      // Tab 2 = Wrap (TEX_WRAP_FULL = 3)
+      if (tabIndex == TEX_TAB_PER_PANEL) {
         sideTextureMode = TEX_PER_PANEL;
-        uiTextureMode = 1;
-      } else if (tabIndex == 1) {
+        uiTextureMode = TEX_PER_PANEL;
+      } else if (tabIndex == TEX_TAB_STRIP) {
         sideTextureMode = TEX_STRIP_BENT;
-        uiTextureMode = 2;
+        uiTextureMode = TEX_STRIP_BENT;
+      } else if (tabIndex == TEX_TAB_WRAP) {
+        sideTextureMode = TEX_WRAP_FULL;
+        uiTextureMode = TEX_WRAP_FULL;
+        enableLidsForWrap();
       }
-      // Tab 2 = Tracking, which is not a texture mode and leaves sideTextureMode alone.
+      // Tab 3 = Tracking, which is not a texture mode and leaves sideTextureMode alone.
       // The selection is per-shape state, so it has to be written back: loadGlobalsFrom()
       // restores activeTextureTab from the ShapeSpec while drawing, and would otherwise undo
       // this on the next frame. Tabs 0 and 1 got away with it because update() re-derives
@@ -2113,6 +2206,26 @@ class SidebarPanel {
     setStripSource(null, true);
     println("[Sidebar] Strip texture restored to default");
   }
+
+  // A wrap covers both lids as well as the wall, so applying one switches them on. With them
+  // off the image has nowhere to land at either end, and a bare cap against a wrapped wall
+  // reads as a fault rather than a choice. This fires only when wrap is applied — picking the
+  // tab, or loading an image — so a lid deliberately turned off afterwards stays off.
+  void enableLidsForWrap() {
+    topLidEnabled = true;
+    bottomLidEnabled = true;
+  }
+
+  // Restore wrap texture to default (clear)
+  void restoreWrapTextureToDefault() {
+    wrapImg = null;
+    originalWrapImg = null;
+    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+      shapes.get(selectedShapeIdx).wrapImg = null;
+    }
+    saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+    println("[Sidebar] Wrap texture restored to default");
+  }
   
   void update() {
     // Sync sidebar state with global variables
@@ -2122,9 +2235,11 @@ class SidebarPanel {
     // Tracking is not a texture mode, so leave the selection alone while it is showing.
     if (activeTextureTab != TEX_TAB_TRACKING) {
       if (sideTextureMode == TEX_PER_PANEL) {
-        activeTextureTab = 0;
+        activeTextureTab = TEX_TAB_PER_PANEL;
       } else if (sideTextureMode == TEX_STRIP_BENT) {
-        activeTextureTab = 1;
+        activeTextureTab = TEX_TAB_STRIP;
+      } else if (sideTextureMode == TEX_WRAP_FULL) {
+        activeTextureTab = TEX_TAB_WRAP;
       }
     }
     
@@ -2273,6 +2388,54 @@ void stripTextureSelected(File selection) {
     }
     redraw();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Whole-surface wrap (TEX_WRAP_FULL) — see WrapFrame.pde
+// ---------------------------------------------------------------------------
+
+void selectWrapTexture() {
+  println("[Sidebar] Upload wrap texture");
+  selectInput("Select wrap texture image", "wrapTextureSelected");
+}
+
+void wrapTextureSelected(File selection) {
+  if (selection == null) {
+    println("[Sidebar] Wrap texture selection cancelled");
+    return;
+  }
+  println("[Sidebar] Wrap texture: " + selection.getAbsolutePath());
+  wrapImg = loadImage(selection.getAbsolutePath());
+  if (wrapImg == null) {
+    println("[Sidebar] WARNING: failed to load wrap texture");
+    return;
+  }
+  println("[Sidebar] Wrap texture loaded: " + wrapImg.width + "x" + wrapImg.height);
+
+  sideTextureMode = TEX_WRAP_FULL;
+  uiTextureMode   = TEX_WRAP_FULL;
+  if (sTextureMode != null) sTextureMode.setValue(TEX_WRAP_FULL);
+  if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+    shapes.get(selectedShapeIdx).wrapImg = wrapImg;
+  }
+  if (sidebar != null) sidebar.enableLidsForWrap();
+  saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+
+  // Straight into the cropper, so the image can be trimmed to the wrap's aspect before it
+  // is ever printed stretched.
+  originalWrapImg = wrapImg.get();
+  imageCropper.open(CROP_MODE_WRAP, -1, wrapImg);
+  redraw();
+}
+
+void editWrapTexture() {
+  if (wrapImg == null) {
+    println("[Sidebar] Cannot edit wrap texture - no texture loaded");
+    return;
+  }
+  println("[Sidebar] Edit wrap texture");
+  if (originalWrapImg == null) originalWrapImg = wrapImg.get();
+  imageCropper.open(CROP_MODE_WRAP, -1, wrapImg);
 }
 
 void selectLidTexture(boolean isTop) {

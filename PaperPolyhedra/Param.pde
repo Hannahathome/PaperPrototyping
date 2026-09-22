@@ -200,7 +200,8 @@ final int MIN_WIN_H = 700;
 // the Print tab groups Placement / Cutouts / Base.
 final int TEX_TAB_PER_PANEL = 0;
 final int TEX_TAB_STRIP     = 1;
-final int TEX_TAB_TRACKING  = 2;
+final int TEX_TAB_WRAP      = 2;
+final int TEX_TAB_TRACKING  = 3;
 
 final int SIDEBAR_PADDING = 12;                  // Internal sidebar padding
 final float SIDEBAR_TOP_SECTION_RATIO = 0.25;    // Top 1/3 for shape controls
@@ -305,6 +306,10 @@ void setParams(boolean cut) {
       println("[setParams] WARNING: Failed to load strip image 'ruler.png'");
     }
   }
+
+  // Whole-surface wrap image — same treatment as the strip, so the Wrap tab has something
+  // to show the moment it is opened.
+  if (wrapImg == null) wrapImg = loadImage("wrap.jpg");   // in data/
 
   float MM_I = (cut? MM_V: MM);
   MM_current = MM_I;  // Update current MM for correct lid offset scaling

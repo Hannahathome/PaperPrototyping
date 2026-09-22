@@ -21,7 +21,8 @@ texture path has something to load — see [data/README.md](data/README.md).
 - Base plates, cutouts and internal bar assemblies
 - Connected shapes — mount one form on another's lid **or side wall**, with the mounting slits cut automatically
 - Automatic tab and flap generation for assembly
-- Texture mapping: per-panel, or one strip bent across the whole perimeter
+- Texture mapping: per-panel, one strip bent across the whole perimeter, or one image
+  wrapped over the **entire surface** — both lids and the wall, continuous across the rims
 - ArUco fiducial markers for tracked prototypes
 - JSON shape import (from [DataPhysicalisation](../DataPhysicalisation/))
 - Print-and-cut export with calibration marks
@@ -73,6 +74,8 @@ Print the calibration SVG first to verify alignment before committing material.
 | `ConnectionUndo.pde` | Undo/redo for connection editing |
 | `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
+| `WrapFrame.pde` | Canonical surface frame for the whole-surface wrap |
+| `textures_wrap.pde` | Drawing the wrap — flat pattern, export and 3D |
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
 | `PrintNCut.pde` | PDF/SVG export and calibration marks |
@@ -210,6 +213,50 @@ exists.
 Connections live for the session only, like cutouts and marker placements — the sketch has
 no shape-export format to persist them into.
 
+## Whole-surface wrap
+
+The **Wrap** tab in Texture puts a single image over a shape's entire outer surface — bottom
+lid, wall, top lid — so artwork that crosses a rim stays continuous once the piece is folded.
+Strip mode can only clothe the wall; the lids are separate images, and nothing makes the
+three agree at the fold.
+
+Every point on the surface gets a coordinate. **s** runs once around the perimeter, allocated
+per panel by average width, with `s = 0` on panel 0's left fold — the edge that already
+carries the glue tab, so the seam lands where the join is anyway. **t** runs along the
+surface, measured on the paper: 0 at the bottom lid's centre, up the wall, 1 at the top
+lid's centre. The wall therefore occupies the middle band of the image and each lid gets one
+end of it, mapped radially.
+
+Applying a wrap — picking the tab, or loading an image — switches both lid textures on,
+since the image has nowhere to land at either end without them. Turning a lid off afterwards
+still works; the wall simply keeps its band and that cap goes unprinted.
+
+The lid's share of `t` is its apothem, which makes `t` constant along the whole rim — the
+join is exact — at the cost of a little radial stretch towards the corners. The sidebar shows
+the source aspect that maps without stretching (perimeter : total run), and the cropper opens
+with that as its guide box.
+
+The top of the image lands on the top of the model. Note this is the opposite of strip mode,
+which maps image row 0 onto the model's *bottom* rim in both the pattern and the 3D view —
+long-standing, and left alone rather than flip everyone's existing strip artwork.
+
+At `t = 0` and `t = 1` a whole image row collapses to a point, so detail at the very top and
+bottom disappears — the bargain any map projection makes at its poles. Keep the extremes of
+the artwork quiet.
+
+Scope is uniform regular prisms and frustums, the same line `LidFrame.pde` draws. Hollow is
+refused because a donut lid has no centre to reach, kresling because the strip is sheared as
+a whole, and per-edge and cuboid because their lids are not the regular polygons the cap mesh
+walks; the tab says which of these is in the way rather than mis-mapping quietly. Split strip
+works — it only changes where the halves sit on the page.
+
+On the printed sheet the wall artwork appears upside down. That is the layout, not a fault:
+the strip is drawn with the model's bottom rim along the top of the page.
+
+`data/wrap.jpg` is generated on first run as a calibration sheet — hue around, brightness up,
+a percentage grid, a red seam line down both edges and the two poles captioned. Print it and
+fold it: the grid lines say where each rim and fold landed, and the two red edges must meet.
+
 ## Strip texture rotation
 
 With the side texture in **strip** mode, *Strip Texture Rotation* in the View tab turns the
@@ -229,3 +276,5 @@ Cropping a strip texture resets its rotation, since the crop is taken from what 
 | Export fails | Check `output/` exists and the console for errors |
 | Print and cut misaligned | Print with no scaling ("actual size"); check the cutter uses mm |
 | Textures look wrong | Delete the generated placeholders in `data/` and re-run to regenerate |
+| Wrap artwork stretched | Crop it to the aspect the Wrap tab names, or re-export the source at that shape |
+| Wrap tab refuses the shape | Hollow, kresling, cuboid and per-edge are out of scope — use Strip or Per Panel |

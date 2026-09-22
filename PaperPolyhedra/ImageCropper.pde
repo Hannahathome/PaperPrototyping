@@ -7,6 +7,7 @@
 final int CROP_MODE_PANEL = 0;
 final int CROP_MODE_STRIP = 1;
 final int CROP_MODE_LID = 2;
+final int CROP_MODE_WRAP = 3;   // whole-surface wrap — see WrapFrame.pde
 
 // Global cropper instance and state
 ImageCropper imageCropper;
@@ -146,6 +147,13 @@ class ImageCropper {
         cropPhysicalWidthMm = stripWidth / MM;
         break;
         
+      case CROP_MODE_WRAP:
+        // Perimeter across, bottom apothem + slant height + top apothem down. The whole
+        // surface, so the guide box is the shape the artwork has to be to avoid stretching.
+        cropAspectRatio = wrapIdealAspect();
+        cropPhysicalWidthMm = wrapPerimeterPx() / MM;
+        break;
+
       case CROP_MODE_LID:
         // Square aspect ratio for lids (1:1)
         cropAspectRatio = 1.0;
@@ -292,6 +300,8 @@ class ImageCropper {
       label = "Panel " + (cropperPanelIndex + 1) + " • ";
     } else if (cropperMode == CROP_MODE_STRIP) {
       label = "Strip • ";
+    } else if (cropperMode == CROP_MODE_WRAP) {
+      label = "Wrap • ";
     } else if (cropperMode == CROP_MODE_LID) {
       label = "Lid • ";
     }
@@ -655,6 +665,8 @@ class ImageCropper {
       workingImage = originalPanelTextures[cropperPanelIndex].get();
     } else if (cropperMode == CROP_MODE_STRIP && originalStripImg != null) {
       workingImage = originalStripImg.get();
+    } else if (cropperMode == CROP_MODE_WRAP && originalWrapImg != null) {
+      workingImage = originalWrapImg.get();
     } else if (cropperMode == CROP_MODE_LID) {
       if (cropperPanelIndex == 0 && originalLidImgTop != null) {
         workingImage = originalLidImgTop.get();
@@ -715,6 +727,14 @@ class ImageCropper {
           // The crop is taken from what the user sees, so it becomes the new unrotated
           // source and the angle starts over — otherwise the rotation would be applied twice.
           setStripSource(croppedImg, true);
+          break;
+
+        case CROP_MODE_WRAP:
+          wrapImg = croppedImg;
+          if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
+            shapes.get(selectedShapeIdx).wrapImg = wrapImg;
+            saveGlobalsTo(shapes.get(selectedShapeIdx));
+          }
           break;
           
         case CROP_MODE_LID:
@@ -798,6 +818,10 @@ class ImageCropper {
         
       case CROP_MODE_STRIP:
         selectStripTexture();
+        break;
+
+      case CROP_MODE_WRAP:
+        selectWrapTexture();
         break;
         
       case CROP_MODE_LID:

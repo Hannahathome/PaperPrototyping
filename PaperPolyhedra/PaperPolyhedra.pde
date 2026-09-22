@@ -118,6 +118,8 @@ void setup() {
 }
 
 void draw() {
+
+
   // One buffer rebuild per frame at most, however many resize events arrived.
   ensureView3DBuffer();
 
@@ -281,7 +283,9 @@ void draw() {
         
         // Draw textured lids for preview (if any lid textures are enabled)
         if (sidebar != null && (_s.topLidEnabled || _s.bottomLidEnabled)) {
-          if ((perEdgeMode || cuboidMode) && edgeTop_px != null && edgeBot_px != null) {
+          if (sideTextureMode == TEX_WRAP_FULL) {
+            drawWrapLidsOnPlan(g);   // one image over both caps — see WrapFrame.pde
+          } else if ((perEdgeMode || cuboidMode) && edgeTop_px != null && edgeBot_px != null) {
             texturedLidsForPrint_PerEdge(g);
           } else {
             texturedLidsForPrint_Uniform(g);
@@ -592,7 +596,9 @@ void drawPlan(boolean img) {
       if (fillColorEnabled && !bExportingCutFile) {
         drawSolidColorPanels_Range(shapeColor, 0, splitAt);
       }
-      if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
+      if (sideTextureMode == TEX_WRAP_FULL) {
+        drawWrapWall_Range(g, 0, splitAt);
+      } else if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
         drawTriangleStripTexture_Uniform_Range(g, stripImg, 0, splitAt);
       } else if (sideTextureMode == TEX_PER_PANEL) {
         drawPerPanelTexturesUniform_Range(g, 0, splitAt);
@@ -609,7 +615,9 @@ void drawPlan(boolean img) {
       if (fillColorEnabled && !bExportingCutFile) {
         drawSolidColorPanels_Range(shapeColor, splitAt, nSides);
       }
-      if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
+      if (sideTextureMode == TEX_WRAP_FULL) {
+        drawWrapWall_Range(g, splitAt, nSides);
+      } else if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
         drawTriangleStripTexture_Uniform_Range(g, stripImg, splitAt, nSides);
       } else if (sideTextureMode == TEX_PER_PANEL) {
         drawPerPanelTexturesUniform_Range(g, splitAt, nSides);
@@ -633,7 +641,9 @@ void drawPlan(boolean img) {
         drawSolidColorPanels(shapeColor);
       }
       // Draw textured side panels based on mode
-      if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
+      if (sideTextureMode == TEX_WRAP_FULL) {
+        drawWrapWall(g);
+      } else if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
         drawTriangleStripTexture_Uniform(g, stripImg);
       } else if (sideTextureMode == TEX_PER_PANEL) {
         drawPerPanelTexturesUniform(g);

@@ -122,7 +122,16 @@ void drawTriangleStripTexture_PerEdge(PGraphics pg, PImage img) {
 }
 
 // -------- UNIFORM triangle strip ----------
+// vFrom / vTo select which horizontal band of the image the wall gets, as 0..1 fractions of
+// image height: (0, 1) is the whole image, which is what strip mode passes. Wrap mode hands
+// in the band between the two rims instead, and hands it in DESCENDING (vFrom > vTo)
+// because the strip's own row 0 is the model's bottom edge while the wrap puts the top of
+// the image on the top of the model. See WrapFrame.pde, IMAGE ORIENTATION.
 void drawTriangleStripTexture_Uniform(PGraphics pg, PImage img) {
+  drawTriangleStripTexture_Uniform(pg, img, 0, 1);
+}
+
+void drawTriangleStripTexture_Uniform(PGraphics pg, PImage img, float vFrom, float vTo) {
   println("[drawTriangleStripTexture_Uniform] Called - img=" + (img!=null));
   if (img == null) return;
 
@@ -190,8 +199,8 @@ void drawTriangleStripTexture_Uniform(PGraphics pg, PImage img) {
         // UV coordinates (continuous across strip)
         float uvX0 = lerp(u0px, u1px, localU0);
         float uvX1 = lerp(u0px, u1px, localU1);
-        float uvY0 = v0 * img.height;
-        float uvY1 = v1 * img.height;
+        float uvY0 = lerp(vFrom, vTo, v0) * img.height;
+        float uvY1 = lerp(vFrom, vTo, v1) * img.height;
         
         // Two triangles
         pg.vertex(p00.x, p00.y, uvX0, uvY0);
@@ -325,6 +334,12 @@ void drawTriangleStripTexture_PerEdge_Range(PGraphics pg, PImage img, int panelS
 
 // -------- RANGE: UNIFORM triangle strip (panels [panelStart..panelEnd)) ----------
 void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelStart, int panelEnd) {
+  drawTriangleStripTexture_Uniform_Range(pg, img, panelStart, panelEnd, 0, 1);
+}
+
+// vFrom / vTo as in drawTriangleStripTexture_Uniform above.
+void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelStart, int panelEnd,
+                                            float vFrom, float vTo) {
   if (img == null) return;
   final int totalN = max(3, (rows - 1));
   final float h = cylinderH_px;
@@ -389,8 +404,8 @@ void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelS
 
         float uvX0 = lerp(u0px, u1px, localU0);
         float uvX1 = lerp(u0px, u1px, localU1);
-        float uvY0 = v0 * img.height;
-        float uvY1 = v1 * img.height;
+        float uvY0 = lerp(vFrom, vTo, v0) * img.height;
+        float uvY1 = lerp(vFrom, vTo, v1) * img.height;
 
         pg.vertex(p00.x, p00.y, uvX0, uvY0);
         pg.vertex(p10.x, p10.y, uvX1, uvY0);

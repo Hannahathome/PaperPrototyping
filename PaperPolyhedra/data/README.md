@@ -20,6 +20,7 @@ data to work with. Nothing is ever overwritten: drop in your own file and it win
 | `top.jpg` | Top lid texture |
 | `bottom.jpg` | Bottom lid texture |
 | `strip.jpg` | Strip texture bent across the full perimeter |
+| `wrap.jpg` | Whole-surface wrap — both lids and the wall from one image |
 | `panels/edge_<N>.png` | Per-edge panel textures, `N` = 0–11 |
 
 The placeholders are diagnostic rather than decorative — they carry an index, an

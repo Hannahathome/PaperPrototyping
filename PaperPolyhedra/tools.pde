@@ -955,7 +955,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw outer textured side panels
   if (!wireframeMode) {
-    if (sideTextureMode != TEX_NONE) {
+    if (wrapActive()) {
+      drawWrapPrismFaces3D(pg, topVerts, botVerts);
+    } else if (sideTextureMode != TEX_NONE) {
       drawTexturedPrismFaces(pg, topVerts, botVerts, false);  // false = outer wall
     } else {
       // Draw faces: use solid fill color if enabled, otherwise gray
@@ -998,7 +1000,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw top lid (donut shape if hollow)
   if (!wireframeMode) {
-  if (sidebar != null && sidebar.topLidEnabled && lidImgTop != null) {
+  if (wrapActive() && sidebar != null && sidebar.topLidEnabled) {
+    drawWrapCap3D(pg, topVerts, true);
+  } else if (sidebar != null && sidebar.topLidEnabled && lidImgTop != null) {
     if (hollowMode && topVertsInner != null) {
       drawTexturedLidDonut(pg, topVerts, topVertsInner, lidImgTop, false);
     } else {
@@ -1052,7 +1056,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw bottom lid (donut shape if hollow)
   if (!wireframeMode) {
-  if (sidebar != null && sidebar.bottomLidEnabled && lidImgBot != null) {
+  if (wrapActive() && sidebar != null && sidebar.bottomLidEnabled) {
+    drawWrapCap3D(pg, botVerts, false);
+  } else if (sidebar != null && sidebar.bottomLidEnabled && lidImgBot != null) {
     if (hollowMode && botVertsInner != null) {
       drawTexturedLidDonut(pg, botVerts, botVertsInner, lidImgBot, true);
     } else {
