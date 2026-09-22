@@ -250,7 +250,7 @@ Textfield tfExportFilename;
 String uiExportFilename = "output";
 Button btnExportMain;
 
-int uiTextureMode = 0;        // 0=none, 1=per-panel, 2=strip
+int uiTextureMode = 0;        // 0=none, 1=per-panel, 2=strip, 3=wrap
 Slider sTextureMode;
 
 int uiEdgeIdx = 0;            // selected edge index
@@ -285,8 +285,8 @@ void initShapeUI() {
     .setSize(250, h)
     .setLabel("Texture Mode")
     .setColorLabel(0)
-    .setRange(0, 2)
-    .setNumberOfTickMarks(3)
+    .setRange(0, 3)
+    .setNumberOfTickMarks(4)
     .setSliderMode(Slider.FLEXIBLE)
     .snapToTickMarks(true)
     .setDecimalPrecision(0)
@@ -2755,8 +2755,10 @@ void controlEvent(ControlEvent e) {
       sideTextureMode = TEX_NONE;  // No texture
     } else if (uiTextureMode == 1) {
       sideTextureMode = TEX_PER_PANEL;  // Per-panel
-    } else {
+    } else if (uiTextureMode == 2) {
       sideTextureMode = TEX_STRIP_BENT;  // Strip
+    } else {
+      sideTextureMode = TEX_WRAP_FULL;  // Whole-surface wrap
     }
     redraw();
     return;
@@ -3582,7 +3584,12 @@ boolean isMouseOver(float x, float y, float w, float h) {
 
 void applyToModel() {
   nSides = max(3, uiSides);
-  
+
+  // Wall connections are addressed by panel index, so cutting the shape down to fewer sides
+  // would leave some of them pointing at panels that no longer exist. Detach those rather
+  // than let them drift onto a different wall.
+  clampConnectionsToPanelCount(selectedShapeIdx, nSides);
+
   // === ENFORCE TOP/BOTTOM LOCK ===
   // Read lock state directly from the toggle button (ground truth),
   // not from the global which may be stale after a loadGlobalsFrom call.

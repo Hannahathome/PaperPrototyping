@@ -19,9 +19,10 @@ texture path has something to load — see [data/README.md](data/README.md).
 - Frustums — independent top and bottom perimeters
 - Kresling fold patterns, including haptic button variants
 - Base plates, cutouts and internal bar assemblies
-- Connected shapes — mount one form on another's lid, with the mounting slits cut automatically
+- Connected shapes — mount one form on another's lid **or side wall**, with the mounting slits cut automatically
 - Automatic tab and flap generation for assembly
-- Texture mapping: per-panel, or one strip bent across the whole perimeter
+- Texture mapping: per-panel, one strip bent across the whole perimeter, or one image
+  wrapped over the **entire surface** — both lids and the wall, continuous across the rims
 - ArUco fiducial markers for tracked prototypes
 - JSON shape import (from [DataPhysicalisation](../DataPhysicalisation/))
 - Print-and-cut export with calibration marks
@@ -68,9 +69,13 @@ Print the calibration SVG first to verify alignment before committing material.
 | `KreslingPattern.pde`, `KreslingHaptics.pde` | Kresling folds and haptic buttons |
 | `BasePlate.pde`, `Cutout.pde`, `BarAssembly.pde` | Base plates, cutouts, assemblies |
 | `LidFrame.pde` | Canonical lid coordinate frame shared by the pattern and the 3D view |
+| `SidePanelFrame.pde` | The same, for one panel of the side strip |
 | `Connection.pde` | Connected shapes — model, mounting slits, 3D face picking |
+| `ConnectionUndo.pde` | Undo/redo for connection editing |
 | `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
+| `WrapFrame.pde` | Canonical surface frame for the whole-surface wrap |
+| `textures_wrap.pde` | Drawing the wrap — flat pattern, export and 3D |
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
 | `PrintNCut.pde` | PDF/SVG export and calibration marks |
@@ -105,46 +110,152 @@ by binary search such that `Σ 2·arcsin(s[i]/(2R)) = 2π`, guaranteeing closure
 positions come from bilinear interpolation of the corners, UVs map linearly.
 Raise the density to 16 if texture seams appear.
 
-**Connections.** A connection mounts one shape on a lid of another. In the 3D preview the
-child is posed on the host face; in the flat pattern a ring of tab-through slits is cut into
-the host's lid, so the child's bottom-lid tabs push through and lock — the same joint the
-base plate uses. Both come from one shared coordinate frame (`LidFrame.pde`), so the preview
-and the cut file cannot disagree about where a connection sits.
+**Connections.** A connection mounts one shape on a **face** of another — either lid, or any
+panel of the side strip. In the 3D preview the child is posed on the host face; in the flat
+pattern a ring of tab-through slits is cut into that face, so the child's bottom-lid tabs
+push through and lock — the same joint the base plate uses. Each kind of face has one
+canonical coordinate frame, `LidFrame.pde` for the lids and `SidePanelFrame.pde` for the
+walls, and the preview and the cut file both read it, so they cannot disagree about where a
+connection sits.
 
 ## Connecting two shapes
 
 1. Press `G` for the 3D view, then click **Connect**.
-2. Click a face on the shape you want to attach. It lights up blue — this is the child's
+2. Click a **lid** on the shape you want to attach. It lights up blue — this is the child's
    **mating lid**.
-3. Click a face on another shape. The two are joined, and the child lands centred.
+3. Click any face on another shape — a lid or a side wall. The two are joined, and the child
+   lands centred on that face.
 
-Because step 2 picks the child's own face, picking its **top** face gives a top-to-top
+Because step 2 picks the child's own face, picking its **top** lid gives a top-to-top
 joint: the child is turned over, and the slit ring is sized to its top lid rather than its
 bottom. `F` flips an existing connection between the two.
 
+Step 2 only accepts a lid, because a child always mates by one of its own lids. A wall can
+*host* a shape but cannot be the face that attaches; clicking one selects it (and whatever
+is mounted on it) instead of starting a join.
+
 | Action | Result |
 |---|---|
-| Click a face | Pick it (or join it to an already-picked face) |
+| Click a face | Pick it (or join it to an already-picked lid) |
 | Click the same face again | Deselect it |
-| Drag on a face | Move the child; snaps to centre near the middle |
+| Drag on a face | Move the child; snaps to the face's guides |
+| Drag the ring on the flat pattern | Move a wall-mounted child, exactly |
+| Arrows (`Shift` = 5mm) | Nudge the child 1mm across its face |
 | `,` / `.` | Spin the child on its face |
 | `F` | Flip which lid of the child mates |
 | `Del` or **Disconnect** | Detach the child — it becomes free-standing again |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo the last connection edit |
 
 Dragging never deselects: the toggle only fires on a click that does not move.
+
+**Undo** covers connection editing — joining, detaching, moving, spinning, flipping — in
+either view, and nothing else: sliders, textures, cutouts and markers are not on the history.
+A drag or a held arrow key is one step, not one per frame. Because a connection names its
+shapes by index, deleting a shape or importing one clears the history rather than let undo
+put back a connection pointing at the wrong shape; adding a shape is safe and keeps it.
+
+**Selecting a shape in 3D.** With Connect off, clicking a shape selects it, the same as
+clicking one on the flat pattern; `◄ ►` step through them too. The selected shape is outlined
+in orange, matching the box the flat pattern draws around it, and the outline draws through
+whatever is in front of it so a shape buried in an assembly still shows as selected. A drag
+still orbits the camera — only a click that does not move changes the selection.
+
+With Connect **on**, neither happens: clicks go to faces, and the face tints are the
+highlight. A whole-shape outline there would compete with them for the same meaning.
+
+## Pairing marks
+
+Each connection prints the same coloured symbol at two places: the middle of the host's slit
+ring, and the middle of the child lid that pushes through it. On the cut sheet those two
+pieces can be far apart and look alike, so the mark is what tells you which goes with which
+while you build.
+
+Colour *and* symbol both change from one connection to the next — six colours against five
+symbols, so a pairing does not repeat until the thirtieth connection and the marks stay
+readable in a black-and-white print. The colours are the Okabe-Ito set, which stays
+distinguishable for the common colour-vision deficiencies, and every symbol is
+mirror-symmetric so it cannot be misread on the reverse of a lid that folds over.
+
+Marks are artwork: they show on screen and print on the PDF, and are deliberately kept out of
+the SVG cut file, which would otherwise cut them out. They matter most on a matching-rim
+joint, where there are no slits to say which piece pairs with which.
+
+**Placing a wall-mounted child.** The 3D view often shows a wall edge-on or hides it behind
+the solid, and a face turned edge-on has no usable drag — so a drag there is ignored rather
+than throwing the child across the panel. The arrow keys always work, and the slit ring can
+be dragged directly on the flat pattern, which is the most precise way to place it.
+
+A lid snaps to its centre. A wall snaps to three lines: its vertical midline, its horizontal
+midline, and **flush against each fold line** — which is how you mount something right at the
+rim. The guides are drawn on the face while you drag.
 
 The 3D view shows **all** shapes by default; **Selected** narrows it to the assembly the
 selected shape belongs to.
 
-A red slit ring, and a warning next to the buttons, mean the child's footprint runs off the
-edge of the host lid; move it inward before cutting.
+A red slit ring, and a warning next to the buttons, mean the child's footprint runs off its
+host face; move it inward before cutting. On a wall this fires 2mm early, because all four
+of a panel's boundaries are fold lines and a cut that reaches one ruins the fold.
+
+**Matching rims cut nothing.** When the child mates by a lid that is the same polygon as the
+host lid — same side count, same edge length — the two rims coincide and there is nothing to
+cut: each form's own lid tabs already land where the other's are, so they tab together at the
+rim. Slits there would run along the host's tab bases and cut them off. Such a joint shows in
+the preview as a dashed outline with a centre cross, is fixed at the centre (two identical
+polygons meet in exactly one way), and puts nothing on the page.
 
 Scope: uniform regular polygons, matching the base plate's own scope. Per-edge, cuboid and
-hollow lids are refused rather than mis-placed. A shape can host many children and chains
-nest up to 8 deep, but a shape can only hang off one parent.
+hollow shapes are refused rather than mis-placed, and so are kresling walls — the strip is
+sheared as a whole, which would shear a slit ring without shearing the child pushing through
+it. A shape can host many children and chains nest up to 8 deep, but a shape can only hang
+off one parent. Giving a shape fewer sides detaches anything mounted on a wall that no longer
+exists.
 
 Connections live for the session only, like cutouts and marker placements — the sketch has
 no shape-export format to persist them into.
+
+## Whole-surface wrap
+
+The **Wrap** tab in Texture puts a single image over a shape's entire outer surface — bottom
+lid, wall, top lid — so artwork that crosses a rim stays continuous once the piece is folded.
+Strip mode can only clothe the wall; the lids are separate images, and nothing makes the
+three agree at the fold.
+
+Every point on the surface gets a coordinate. **s** runs once around the perimeter, allocated
+per panel by average width, with `s = 0` on panel 0's left fold — the edge that already
+carries the glue tab, so the seam lands where the join is anyway. **t** runs along the
+surface, measured on the paper: 0 at the bottom lid's centre, up the wall, 1 at the top
+lid's centre. The wall therefore occupies the middle band of the image and each lid gets one
+end of it, mapped radially.
+
+Applying a wrap — picking the tab, or loading an image — switches both lid textures on,
+since the image has nowhere to land at either end without them. Turning a lid off afterwards
+still works; the wall simply keeps its band and that cap goes unprinted.
+
+The lid's share of `t` is its apothem, which makes `t` constant along the whole rim — the
+join is exact — at the cost of a little radial stretch towards the corners. The sidebar shows
+the source aspect that maps without stretching (perimeter : total run), and the cropper opens
+with that as its guide box.
+
+The top of the image lands on the top of the model. Note this is the opposite of strip mode,
+which maps image row 0 onto the model's *bottom* rim in both the pattern and the 3D view —
+long-standing, and left alone rather than flip everyone's existing strip artwork.
+
+At `t = 0` and `t = 1` a whole image row collapses to a point, so detail at the very top and
+bottom disappears — the bargain any map projection makes at its poles. Keep the extremes of
+the artwork quiet.
+
+Scope is uniform regular prisms and frustums, the same line `LidFrame.pde` draws. Hollow is
+refused because a donut lid has no centre to reach, kresling because the strip is sheared as
+a whole, and per-edge and cuboid because their lids are not the regular polygons the cap mesh
+walks; the tab says which of these is in the way rather than mis-mapping quietly. Split strip
+works — it only changes where the halves sit on the page.
+
+On the printed sheet the wall artwork appears upside down. That is the layout, not a fault:
+the strip is drawn with the model's bottom rim along the top of the page.
+
+`data/wrap.jpg` is generated on first run as a calibration sheet — hue around, brightness up,
+a percentage grid, a red seam line down both edges and the two poles captioned. Print it and
+fold it: the grid lines say where each rim and fold landed, and the two red edges must meet.
 
 ## Strip texture rotation
 
@@ -165,3 +276,5 @@ Cropping a strip texture resets its rotation, since the crop is taken from what 
 | Export fails | Check `output/` exists and the console for errors |
 | Print and cut misaligned | Print with no scaling ("actual size"); check the cutter uses mm |
 | Textures look wrong | Delete the generated placeholders in `data/` and re-run to regenerate |
+| Wrap artwork stretched | Crop it to the aspect the Wrap tab names, or re-export the source at that shape |
+| Wrap tab refuses the shape | Hollow, kresling, cuboid and per-edge are out of scope — use Strip or Per Panel |

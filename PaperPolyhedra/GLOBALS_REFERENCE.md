@@ -76,12 +76,44 @@ All global variables are now centralized in `Param.pde`. This guide shows what l
 - `ArrayList<Connection> connections` - all parent/child attachments (a relation, so NOT stored per-ShapeSpec)
 - `int selectedConnectionIdx` - selected connection, -1 = none
 - `boolean connectMode` - 3D view: clicks attach/drag instead of orbiting
-- `int _drawingShapeIdx` - which shape `drawPlan()` is rendering, so slits know whose lid it is
-- `ArrayList<FaceHit> faceHits` - per-frame screen projections of pickable lid faces
+- `int _drawingShapeIdx` - which shape `drawPlan()` is rendering, so slits know whose face it is
+- `ArrayList<FaceHit> faceHits` - per-frame screen projections of pickable faces
 - `boolean _captureFaces` - only the main 3D view records pickable faces
-- `int draggedConnectionIdx`, `FaceHit draggedFace`, `PVector connDragGrab` - drag state
-- `int selectedFaceShapeIdx`, `boolean selectedFaceIsTop` - the highlighted face, -1 = none
+- `int draggedConnectionIdx`, `FaceHit draggedFace`, `PVector connDragGrab` - 3D drag state
+- `int draggedPanelConnIdx`, `PVector panelConnDragGrab` - flat-pattern drag state
+- `int selectedFaceShapeIdx`, `selectedFaceKind`, `selectedFaceIndex` - the highlighted face, -1 = none
 - `boolean _facePressWasSelected`, `_connDragMoved` - click-vs-drag, for the deselect toggle
+- `int _shapePressIdx`, `boolean _shapePressMoved` - click-vs-orbit, for click-to-select in 3D
+
+**Pairing marks**: `Connection.markId` picks the colour and symbol printed at BOTH ends of a
+connection. Assigned by `nextFreeMarkId()` (lowest id no live connection holds) rather than a
+running counter, which the undo snapshots would race ahead of. `CONNECTION_MARK_COLORS` (6)
+against `CONNECTION_MARK_SYMBOLS` (5): coprime, so both cues change every connection and the
+pair only repeats after 30. `drawConnectionPairMark()` is artwork — it returns early when
+`bExportingCutFile`.
+
+**Face addresses**: a face is `(kind, index)`, not a boolean. `FACE_LID_TOP` / `FACE_LID_BOT`
+ignore the index; `FACE_SIDE` uses it as the side-panel number. `faceIsLid(kind)`,
+`faceIsTopLid(kind)`, `lidFaceKind(isTop)` and `faceName(kind, index)` convert and label.
+
+### ConnectionUndo.pde
+**Connection undo/redo** (connections only — not a general sketch undo):
+- `ArrayList<ConnectionSnapshot> _connUndo`, `_connRedo` - deep copies of the whole
+  connection list; the set is small enough that whole-state snapshots beat a command log
+- `pushConnectionUndo(tag)` - records the state BEFORE an edit. `tag` names the gesture, so
+  a drag or a held key collapses to one step; `""` forces a discrete step
+- `undoConnections()` / `redoConnections()` / `invalidateConnectionUndo(why)`
+- History is cleared whenever shape indices stop meaning what they meant: a shape deleted,
+  a shape imported, or a side count cut below a wall a connection sits on
+
+### SidePanelFrame.pde
+**Side-panel coordinate frame** (no mutable globals; all derived from the loaded shape):
+- `sidePanelFrameAvailable()` - uniform, non-hollow, non-kresling strips only
+- `sidePanelLocalToPanelPx(mm)` / `sidePanelPolygonLocalMM([clearance])` - the flat projection
+- `sidePanelPosesPx()` - replays the `drawTrapezoids()` walk, giving every panel's origin and
+  rotation on the page. Shared by the slit drawing and the flat-pattern pick, which is what
+  keeps them in agreement
+- `sidePanelBasis3D(...)` / `sidePanelLocalTo3D(...)` - the 3D projection
 
 ### StripRotation.pde
 **Bent-strip texture rotation** (per shape, mirrored via ShapeSpec):

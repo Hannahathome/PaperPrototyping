@@ -84,6 +84,7 @@ import processing.opengl.*;
 static final int TEX_NONE       = 0;     // no texture (gray fill)
 static final int TEX_PER_PANEL  = 1;     // old per-edge/per-panel images
 static final int TEX_STRIP_BENT = 2;     // new single bent strip
+static final int TEX_WRAP_FULL  = 3;     // one image over the whole surface — see WrapFrame.pde
 int sideTextureMode = TEX_NONE;          // default: no texture
 
 
@@ -368,7 +369,28 @@ void drawTexturesForPrinting(PGraphics pg) {
 
   boolean isPerEdge = (perEdgeMode || cuboidMode) && edgeTop_px != null && edgeBot_px != null;
 
-  if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
+  if (sideTextureMode == TEX_WRAP_FULL) {
+    // ---------- WHOLE-SURFACE WRAP ----------
+    // Uniform only (wrapFrameAvailable() enforces it), so there is no per-edge branch here.
+    if (splitStrip && nSides >= 4) {
+      int splitAt = (int)ceil(nSides / 2.0);
+      float stripHeight = getStripHeight();
+      float splitSpacing = stripHeight + tabDepth_px * 2 + 10 * MM_current;
+      pg.pushMatrix();
+      pg.translate(uiSplitHalf1OffsetX * MM_current, uiSplitHalf1OffsetY * MM_current);
+      pg.rotate(radians(uiSplitHalf1Rotation));
+      drawWrapWall_Range(pg, 0, splitAt);
+      pg.popMatrix();
+      pg.pushMatrix();
+      pg.translate(uiSplitHalf2OffsetX * MM_current, splitSpacing + uiSplitHalf2OffsetY * MM_current);
+      pg.rotate(radians(uiSplitHalf2Rotation));
+      drawWrapWall_Range(pg, splitAt, nSides);
+      pg.popMatrix();
+    } else {
+      drawWrapWall(pg);
+    }
+    drawWrapLidsOnPlan(pg);
+  } else if (sideTextureMode == TEX_STRIP_BENT && stripImg != null) {
     // ---------- STRIP BENT ----------
     if (isPerEdge) {
       int nEdges = min(edgeTop_px.length, edgeBot_px.length);

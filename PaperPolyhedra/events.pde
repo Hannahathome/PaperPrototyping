@@ -58,6 +58,25 @@ void mousePressed() {
     }
   }
 
+  // Wall-connection drag pick — grab the slit ring of a child mounted on a side panel and
+  // move it on the page. The 3D view can only offer this when the wall happens to be facing
+  // you; here it is always available, and exact.
+  if (!view3DMode && connections != null && !connections.isEmpty()) {
+    PVector mMM = screenToPatternMM(mouseX, mouseY);
+    int picked = pickPanelConnectionAt(mMM.x, mMM.y);
+    if (picked >= 0) {
+      Connection pc = connections.get(picked);
+      PVector local = panelConnectionLocalAt(pc, mMM.x, mMM.y);
+      if (local != null) {
+        selectedConnectionIdx = picked;
+        draggedPanelConnIdx   = picked;
+        panelConnDragGrab.set(local.x - pc.posLocal.x, local.y - pc.posLocal.y);
+        pushConnectionUndo("");   // once per grab, as with the 3D drag
+        return;
+      }
+    }
+  }
+
   // Base slit (mounting cutout) drag pick — move each shape's slit pattern within the base
   if (baseSlitFreePlace && (baseEnabled || baseOnly) && _baseDrawnValid && !view3DMode) {
     PVector mMM = screenToPatternMM(mouseX, mouseY);
@@ -195,43 +214,66 @@ void mousePressed() {
 
         // Precedence on a face click:
         //   1. a connection under the pointer  -> grab it (drag / select for Del)
-        //   2. a face already picked on ANOTHER shape -> join them
+        //   2. a LID already picked on ANOTHER shape -> join them
         //   3. otherwise -> make this the picked face
         int hit = pickConnectionOnFace(f, local);
 
-        if (hit < 0 && selectedFaceShapeIdx >= 0 && selectedFaceShapeIdx != f.shapeIdx) {
+        // A child always mates by one of its own LIDS, so only a lid can start a join. A
+        // wall can host one, and can be selected to reach the child sitting on it, but it
+        // cannot be the face that attaches.
+        boolean canStartJoin = selectedFaceShapeIdx >= 0 &&
+                               selectedFaceShapeIdx != f.shapeIdx &&
+                               faceIsLid(selectedFaceKind);
+
+        if (hit < 0 && canStartJoin) {
           // Two-click connect. The FIRST face picked is the child's mating lid, so picking
           // the child's top face gives a top-to-top joint and the child is turned over —
           // that is what childFlipped means to the 3D pose and to the slit ring.
           int childIdx = selectedFaceShapeIdx;
-          boolean childUsesTop = selectedFaceIsTop;
-          hit = addConnection(f.shapeIdx, childIdx, f.isTop, new PVector(0, 0));
+          boolean childUsesTop = faceIsTopLid(selectedFaceKind);
+          hit = addConnection(f.shapeIdx, childIdx, f.kind, f.index, new PVector(0, 0));
           if (hit >= 0) {
             connections.get(hit).childFlipped = childUsesTop;
             println("[Connection] " + (childUsesTop ? "top" : "bottom") + " of shape " + childIdx +
-                    " -> " + (f.isTop ? "top" : "bottom") + " of shape " + f.shapeIdx);
+                    " -> " + f.name() + " of shape " + f.shapeIdx);
           }
           _facePressWasSelected = false;
-          selectFace(f.shapeIdx, f.isTop);   // host face stays lit, ready for the next join
+          selectFace(f.shapeIdx, f.kind, f.index);   // host face stays lit for the next join
         } else {
           // Remember whether it was already picked; mouseReleased turns that into a
           // deselect if the pointer never moved.
-          _facePressWasSelected = isFaceSelected(f.shapeIdx, f.isTop);
-          selectFace(f.shapeIdx, f.isTop);
+          _facePressWasSelected = isFaceSelected(f.shapeIdx, f.kind, f.index);
+          selectFace(f.shapeIdx, f.kind, f.index);
           // Clicking a face that hosts a child, but missing its footprint, still selects
           // that child — otherwise it could not be disconnected.
           if (hit < 0) hit = nearestConnectionOnFace(f, local);
         }
 
         selectedConnectionIdx = hit;   // -1 when the face holds nothing
-        if (hit >= 0) {
+        // A wall turns edge-on far more readily than a lid, and there the face's two screen
+        // axes collapse onto one line. Select it, but do not arm a drag that could only
+        // fling the child somewhere arbitrary — the arrow keys and the flat pattern still
+        // move it.
+        if (hit >= 0 && faceMappingUsable(f)) {
           draggedConnectionIdx = hit;
           draggedFace          = f;
           Connection c = connections.get(hit);
           connDragGrab.set(local.x - c.posLocal.x, local.y - c.posLocal.y);
+          // Once per grab, not once per frame — mouseDragged must not push.
+          pushConnectionUndo("");
         }
         return;
       }
+    }
+
+    // Not connecting: a click picks the shape under it, the same way clicking a shape on the
+    // flat pattern does. Resolved on RELEASE, because a press here also starts a camera
+    // orbit — only a click that does not move should change the selection.
+    if (!connectMode && shapes != null && shapes.size() > 1) {
+      FaceHit f = pickFace(mouseX - LEFT_SIDEBAR_WIDTH, mouseY - TOOLBAR_HEIGHT);
+      _shapePressIdx  = (f != null) ? f.shapeIdx : -1;
+      _shapePressMoved = false;
+      // Deliberately no `return`: the orbit handler still needs this press.
     }
   }
 
@@ -301,6 +343,18 @@ void keyPressed() {
       + "  pixelDensity=" + pixelDensity
       + "  displayDensity=" + displayDensity());
     return;
+  }
+
+  // Undo / redo for connection editing. Deliberately ahead of every mode-specific handler,
+  // and not gated on connectMode: a join can be made in the 3D view and then moved on the
+  // flat pattern, so the two would otherwise disagree about whether it can be taken back.
+  // Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes. See ConnectionUndo.pde for what is covered.
+  // keyCode, not key: with Ctrl held, Java delivers Ctrl+Z as the control character 26
+  // rather than 'z', so testing `key` would never match. keyCode stays 'Z' (90).
+  if (keyEvent != null && (keyEvent.isControlDown() || keyEvent.isMetaDown())) {
+    if (keyCode == 'Z' && keyEvent.isShiftDown()) { redoConnections(); return; }
+    if (keyCode == 'Z')                           { undoConnections(); return; }
+    if (keyCode == 'Y')                           { redoConnections(); return; }
   }
 
   if (key == 'e' || key == 'E') {
@@ -388,9 +442,13 @@ void keyPressed() {
     return; // Block other controls when in edit mode
   }
   
-  // Connect mode: DELETE removes the selected connection, , / . spin the child on its face
+  // Connect mode: DELETE removes the selected connection, , / . spin the child on its face,
+  // the arrows nudge it across the face. The arrows matter most on a wall, which the 3D view
+  // often shows edge-on or hides altogether — there they are the only way to place it
+  // without going to the flat pattern.
   if (connectMode && connections != null &&
       selectedConnectionIdx >= 0 && selectedConnectionIdx < connections.size()) {
+    Connection selConn = connections.get(selectedConnectionIdx);
     if (key == DELETE || key == BACKSPACE) {
       disconnectSelected();
       return;
@@ -399,13 +457,21 @@ void keyPressed() {
       flipSelectedConnection();   // swap which lid of the child mates with the host face
       return;
     }
-    if (key == ',' || key == '<') {
-      connections.get(selectedConnectionIdx).spinDeg -= 5;
+    if (key == ',' || key == '<' || key == '.' || key == '>') {
+      pushConnectionUndo("spin:" + selectedConnectionIdx);   // a held key is one step
+      selConn.spinDeg += (key == ',' || key == '<') ? -5 : 5;
+      // Spinning changes how far the footprint reaches, so a child sitting flush against a
+      // fold line has to be re-settled or it creeps over the edge.
+      snapConnectionInParentFrame(selConn);
       return;
     }
-    if (key == '.' || key == '>') {
-      connections.get(selectedConnectionIdx).spinDeg += 5;
-      return;
+    if (key == CODED) {
+      float stepMM = (keyEvent != null && keyEvent.isShiftDown()) ? CONNECTION_NUDGE_COARSE_MM
+                                                                  : CONNECTION_NUDGE_FINE_MM;
+      if (keyCode == LEFT)  { nudgeSelectedConnection(-stepMM, 0); return; }
+      if (keyCode == RIGHT) { nudgeSelectedConnection( stepMM, 0); return; }
+      if (keyCode == UP)    { nudgeSelectedConnection(0, -stepMM); return; }
+      if (keyCode == DOWN)  { nudgeSelectedConnection(0,  stepMM); return; }
     }
   }
 
@@ -481,6 +547,20 @@ void mouseReleased() {
   _facePressWasSelected = false;
   _connDragMoved = false;
 
+  // Click-to-select in the 3D view: a press that landed on a shape and never turned into an
+  // orbit. Selecting also has to pull the sidebar across, or the panel would keep showing
+  // the shape you just clicked away from.
+  if (_shapePressIdx >= 0 && !_shapePressMoved && !connectMode &&
+      shapes != null && _shapePressIdx < shapes.size() && _shapePressIdx != selectedShapeIdx) {
+    saveGlobalsTo(shapes.get(selectedShapeIdx));
+    selectedShapeIdx = _shapePressIdx;
+    loadGlobalsFrom(shapes.get(selectedShapeIdx));
+    setParams(false);
+    syncUIToSelectedShape();
+  }
+  _shapePressIdx = -1;
+  _shapePressMoved = false;
+
   // Reset assembly piece drag
   asmDragPiece = -1;
   // Reset free placement drag
@@ -497,6 +577,7 @@ void mouseReleased() {
   // Reset connection drag
   draggedConnectionIdx = -1;
   draggedFace = null;
+  draggedPanelConnIdx = -1;
 
   // Check cropper first
   if (cropperActive && imageCropper != null) {
@@ -572,6 +653,19 @@ void mouseDragged() {
   }
   
   // Base slit (mounting cutout) drag
+  // Wall-connection drag on the page. Both this and the slit drawing go through
+  // sidePanelPosesPx(), so the ring under the pointer is the ring that gets cut.
+  if (draggedPanelConnIdx >= 0 && connections != null && draggedPanelConnIdx < connections.size()) {
+    PVector mMM = screenToPatternMM(mouseX, mouseY);
+    Connection c = connections.get(draggedPanelConnIdx);
+    PVector local = panelConnectionLocalAt(c, mMM.x, mMM.y);
+    if (local != null) {
+      c.posLocal.set(local.x - panelConnDragGrab.x, local.y - panelConnDragGrab.y);
+      snapConnection(c);   // the parent IS the selected shape here, so its globals are loaded
+    }
+    return;
+  }
+
   if (draggedSlitIdx >= 0 && draggedSlitIdx < baseSlitOffsets.size()) {
     PVector mMM = screenToPatternMM(mouseX, mouseY);
     float bcx = _baseBBoxX + _baseBBoxW / 2.0;
@@ -643,12 +737,15 @@ void mouseDragged() {
   // or dragging a connection would spin the view instead of moving it.
   if (connectMode && draggedConnectionIdx >= 0 && draggedFace != null &&
       connections != null && draggedConnectionIdx < connections.size()) {
+    // The face can turn edge-on mid-drag, at which point its screen axes stop being
+    // invertible. Hold the child still rather than throwing it across the panel.
+    if (!faceMappingUsable(draggedFace)) return;
     float bx = mouseX - LEFT_SIDEBAR_WIDTH;
     float by = mouseY - TOOLBAR_HEIGHT;
     PVector local = faceScreenToLocal(draggedFace, bx, by);
     Connection c = connections.get(draggedConnectionIdx);
     c.posLocal.set(local.x - connDragGrab.x, local.y - connDragGrab.y);
-    snapConnectionToCentre(c);   // magnetic pull back to the middle of the face
+    snapConnectionInParentFrame(c);   // magnetic pull onto the face's guides
     _connDragMoved = true;       // a real drag, so the release must not toggle the selection
     return;
   }
@@ -665,6 +762,7 @@ void mouseDragged() {
     angleZ -= deltaX * 0.01;
     // Mark as custom view when user manually rotates
     currentViewPreset = "Custom";
+    _shapePressMoved = true;   // an orbit, so the release must not re-select a shape
     return;
   }
   

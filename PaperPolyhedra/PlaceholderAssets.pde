@@ -21,6 +21,8 @@ final int PLACEHOLDER_LID_SIZE    = 512;   // px, square lid textures
 final int PLACEHOLDER_PANEL_SIZE  = 512;   // px, square per-edge panel textures
 final int PLACEHOLDER_STRIP_W     = 2048;  // px, wide strip that bends across panels
 final int PLACEHOLDER_STRIP_H     = 256;   // px
+final int PLACEHOLDER_WRAP_W      = 2048;  // px, whole-surface wrap (perimeter across)
+final int PLACEHOLDER_WRAP_H      = 1200;  // px, bottom centre -> wall -> top centre
 final int PLACEHOLDER_PANEL_COUNT = 12;    // matches the 3..12 sides the UI allows
 
 // Call once from setup(), before setParams() tries to loadImage() any of these.
@@ -33,6 +35,7 @@ void ensurePlaceholderAssets() {
   if (makeLidPlaceholder("top.jpg", "TOP LID", color(38, 132, 196))) madeAny = true;
   if (makeLidPlaceholder("bottom.jpg", "BOTTOM LID", color(196, 84, 38))) madeAny = true;
   if (makeStripPlaceholder("strip.jpg")) madeAny = true;
+  if (makeWrapPlaceholder("wrap.jpg")) madeAny = true;
 
   for (int i = 0; i < PLACEHOLDER_PANEL_COUNT; i++) {
     if (makePanelPlaceholder(i)) madeAny = true;
@@ -120,6 +123,80 @@ boolean makeStripPlaceholder(String filename) {
   g.textFont(createFont("Arial", 20));
   g.text("STRIP PLACEHOLDER  -  replace with data/strip.jpg",
          PLACEHOLDER_STRIP_W / 2, PLACEHOLDER_STRIP_H * 0.90);
+  g.endDraw();
+
+  g.save(dataPath(filename));
+  return true;
+}
+
+// The wrap texture covers the WHOLE surface, so its placeholder is a calibration sheet:
+// horizontal rules say where a rim landed, vertical rules say where a fold landed, and the
+// TOP / BOTTOM captions make the vertical orientation impossible to misread. Where the two
+// rims fall depends on the shape's own proportions, so the rules are a plain percentage
+// grid rather than marks baked at particular heights. See WrapFrame.pde.
+boolean makeWrapPlaceholder(String filename) {
+  if (assetExists(filename)) return false;
+
+  PGraphics g = createGraphics(PLACEHOLDER_WRAP_W, PLACEHOLDER_WRAP_H);
+  g.beginDraw();
+
+  // Hue around the perimeter, value up the surface: a break at the seam shows as a colour
+  // jump, a break at a rim shows as a step in brightness.
+  g.colorMode(HSB, 360, 100, 100);
+  g.noStroke();
+  for (int x = 0; x < PLACEHOLDER_WRAP_W; x += 8) {
+    float hue = map(x, 0, PLACEHOLDER_WRAP_W, 0, 340);
+    for (int y = 0; y < PLACEHOLDER_WRAP_H; y += 8) {
+      g.fill(hue, 26, map(y, 0, PLACEHOLDER_WRAP_H, 100, 74));
+      g.rect(x, y, 8, 8);
+    }
+  }
+  g.colorMode(RGB, 255);
+
+  // Percentage grid. Horizontals every 10%, verticals every 1/12 - twelve being the most
+  // sides the UI allows, so every panel count lands on a line or a clean fraction of one.
+  g.textFont(createFont("Arial", 20));
+  for (int i = 1; i < 10; i++) {
+    float y = PLACEHOLDER_WRAP_H * i / 10.0;
+    g.stroke(60, 90);
+    g.strokeWeight(i == 5 ? 3 : 1);
+    g.line(0, y, PLACEHOLDER_WRAP_W, y);
+    g.noStroke();
+    g.fill(40);
+    g.textAlign(LEFT, CENTER);
+    g.text((100 - i * 10) + "%", 12, y - 14);
+  }
+  for (int i = 1; i < 12; i++) {
+    float x = PLACEHOLDER_WRAP_W * i / 12.0;
+    g.stroke(60, 60);
+    g.strokeWeight(1);
+    g.line(x, 0, x, PLACEHOLDER_WRAP_H);
+    g.noStroke();
+    g.fill(40);
+    g.textAlign(CENTER, TOP);
+    g.text(i + "/12", x, PLACEHOLDER_WRAP_H * 0.5 + 6);
+  }
+
+  // The seam. s = 0 and s = 1 meet here, so these two edges must line up on the folded form.
+  g.stroke(200, 40, 40);
+  g.strokeWeight(8);
+  g.line(4, 0, 4, PLACEHOLDER_WRAP_H);
+  g.line(PLACEHOLDER_WRAP_W - 4, 0, PLACEHOLDER_WRAP_W - 4, PLACEHOLDER_WRAP_H);
+
+  // Which way is up. The top row of the image collapses onto the top lid's centre.
+  g.noStroke();
+  g.textAlign(CENTER, TOP);
+  g.textFont(createFont("Arial", 54));
+  g.fill(30);
+  g.text("TOP LID CENTRE", PLACEHOLDER_WRAP_W / 2, 18);
+  g.textAlign(CENTER, BOTTOM);
+  g.text("BOTTOM LID CENTRE", PLACEHOLDER_WRAP_W / 2, PLACEHOLDER_WRAP_H - 18);
+
+  g.textAlign(CENTER, CENTER);
+  g.textFont(createFont("Arial", 26));
+  g.fill(70);
+  g.text("WRAP PLACEHOLDER  -  replace with data/wrap.jpg",
+         PLACEHOLDER_WRAP_W / 2, PLACEHOLDER_WRAP_H * 0.5 - 30);
   g.endDraw();
 
   g.save(dataPath(filename));

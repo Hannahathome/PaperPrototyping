@@ -52,6 +52,7 @@ class ShapeSpec {
   PImage stripImg;
   PImage stripImgSrc;       // unrotated original behind stripImg
   float  stripRotation;     // degrees applied to stripImgSrc to make stripImg
+  PImage wrapImg;           // TEX_WRAP_FULL: one image over the whole surface
   PImage lidImgTop, lidImgBot;
   boolean lidKeepAspect;
   int activeTextureTab; // sidebar texture sub-tab state
@@ -130,6 +131,7 @@ class ShapeSpec {
     stripImg         = null;
     stripImgSrc      = null;
     stripRotation    = 0;
+    wrapImg          = null;
     lidImgTop        = null;
     lidImgBot        = null;
     lidKeepAspect    = true;
@@ -232,6 +234,7 @@ void saveGlobalsTo(ShapeSpec s) {
   s.stripImg         = stripImg;
   s.stripImgSrc      = stripImgSrc;
   s.stripRotation    = uiStripRotation;
+  s.wrapImg          = wrapImg;
   s.lidImgTop        = lidImgTop;
   s.lidImgBot        = lidImgBot;
   s.lidKeepAspect    = lidKeepAspect;
@@ -331,6 +334,7 @@ void loadGlobalsFrom(ShapeSpec s) {
   stripImg         = s.stripImg;
   stripImgSrc      = s.stripImgSrc;
   uiStripRotation  = s.stripRotation;
+  wrapImg          = s.wrapImg;
   lidImgTop        = s.lidImgTop;
   lidImgBot        = s.lidImgBot;
   lidKeepAspect    = s.lidKeepAspect;

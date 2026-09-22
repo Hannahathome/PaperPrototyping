@@ -655,31 +655,44 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
   setParams(false);
   drawPrismWireframe(pg);
 
+  // Which shape is selected. Only worth saying when there is more than one, matching the
+  // flat pattern's selection box — and never while connecting, where the face tints are what
+  // a click acts on and a whole-shape outline would compete with them for the same meaning.
+  if (idx == selectedShapeIdx && shapes.size() > 1 && !connectMode) {
+    drawSelectedShapeOutline3D(pg);
+  }
+
   // Record where this shape's faces landed on screen, while its transform is still applied.
   if (_captureFaces) {
-    captureFaceHit(pg, idx, true);
-    captureFaceHit(pg, idx, false);
+    captureAllFaceHits(pg, idx);
   }
 
   for (Connection c : childrenOf(idx)) {
     if (c.childShapeIdx < 0 || c.childShapeIdx >= shapes.size()) continue;
 
-    // Attach point, computed while the PARENT's globals are still loaded.
-    PVector p = lidLocalTo3D(c.posLocal, c.parentFaceIsTop);
+    // The host face's frame, built while the PARENT's globals are still loaded. Null when
+    // the face has no frame — a per-edge lid, say, or a wall on a shape that has since been
+    // given fewer sides. Skip rather than guess.
+    FaceBasis3D fb = faceBasis3D(c.parentFaceKind, c.parentFaceIndex);
+    if (fb == null) continue;
     float childHalfH = (shapes.get(c.childShapeIdx).cylinder.z * MM_current) / 2.0;
 
     pg.pushMatrix();
-    pg.translate(p.x, p.y, p.z);
-    pg.rotateY(radians(c.spinDeg));
-    // P3D is y-down: the top face is at -halfH and a child grows upward off it. Off the
-    // bottom face the child hangs downward instead — a half-turn about x. childFlipped
-    // means the child mates by its top lid, which is another half-turn; on a bottom face
-    // the two cancel and the child hangs the right way up.
-    if (!c.parentFaceIsTop) pg.rotateX(PI);
-    if (c.childFlipped)     pg.rotateX(PI);
-    // The child draws centred on its own origin, so drop it by half its height and its
-    // mating lid lands exactly on the parent's face.
+    // Stands the child on the face: its own +x along the face's +u, and the direction it
+    // grows out of its bottom lid along the outward normal. For the two lids the basis is
+    // exactly the translate/rotateX(PI) pair this used to do by hand; the spin is now taken
+    // about the face's own normal rather than world y — see applyFaceTransform3D.
+    applyFaceTransform3D(pg, fb, c.posLocal, c.spinDeg);
+    // The child draws centred on its own origin, so lift its centre off the face by half its
+    // height and its mating lid lands exactly on the face.
+    //
+    // ORDER MATTERS. This has to happen BEFORE the flip below. rotateX(PI) reverses the
+    // frame's y axis, so translating after it moves the child by half its height INWARD --
+    // burying a flipped child halfway inside its host instead of standing it on the outside.
     pg.translate(0, -childHalfH, 0);
+    // childFlipped means the child mates by its TOP lid, so it is turned over — about its
+    // own centre, which is now where the origin sits.
+    if (c.childFlipped) pg.rotateX(PI);
     drawShapeTree(pg, c.childShapeIdx, depth + 1);
     pg.popMatrix();
 
@@ -692,18 +705,27 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
 // Rough extent (px) of a connected assembly, for the 3D auto-zoom: the deepest stack of
 // heights against the widest cross-section anywhere in the tree. Perimeter stands in for
 // width, matching the proxy the single-shape auto-zoom already used.
+//
+// A child on a LID stacks upward, so it adds to the height. A child on a WALL sticks out
+// sideways, so it adds to the width instead — without that the wall-mounted child is simply
+// framed out of the view.
 float treeSpanPx(int idx, int depth) {
   if (shapes == null || idx < 0 || idx >= shapes.size() || depth > CONNECTION_MAX_DEPTH) return 0;
   ShapeSpec s = shapes.get(idx);
   float ownW = max(s.cylinder.x, s.cylinder.y) * MM_current;
   float ownH = s.cylinder.z * MM_current;
+  float sideW = 0;    // widest thing hanging off a wall, plus the body it hangs off
   float childW = 0;
   float childH = 0;
   for (Connection c : childrenOf(idx)) {
     childW = max(childW, treeSpanPx(c.childShapeIdx, depth + 1));
-    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    if (c.onLid()) {
+      childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    } else {
+      sideW = max(sideW, ownW + 2 * treeStackHeightPx(c.childShapeIdx, depth + 1));
+    }
   }
-  return max(max(ownW, childW), ownH + childH);
+  return max(max(max(ownW, childW), sideW), ownH + childH);
 }
 
 float treeStackHeightPx(int idx, int depth) {
@@ -711,7 +733,8 @@ float treeStackHeightPx(int idx, int depth) {
   float h = shapes.get(idx).cylinder.z * MM_current;
   float childH = 0;
   for (Connection c : childrenOf(idx)) {
-    childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
+    // Only a lid-mounted grandchild extends the stack along this shape's own axis.
+    if (c.onLid()) childH = max(childH, treeStackHeightPx(c.childShapeIdx, depth + 1));
   }
   return h + childH;
 }
@@ -879,6 +902,44 @@ void drawMini3DViewInSidebar() {
 
 
 
+// Traces the selected shape's edges in the 3D view, so scrolling through shapes with the
+// arrows shows which one you are on — the same job the orange box does on the flat pattern,
+// and the same orange, so the two views agree about what "selected" looks like.
+//
+// Drawn with the depth test off. That is not a way round z-fighting with the black edges
+// underneath (though it settles that too): a shape deep in an assembly, or behind another in
+// All view, would otherwise be highlighted invisibly. A selection marker that can be hidden
+// by the thing it is marking is no use.
+void drawSelectedShapeOutline3D(PGraphics pg) {
+  PVector[] topVerts = getPolygonVertices(true);
+  PVector[] botVerts = getPolygonVertices(false);
+  if (topVerts == null || botVerts == null) return;
+  int n = min(topVerts.length, botVerts.length);
+  if (n < 3) return;
+
+  pg.pushStyle();
+  pg.hint(DISABLE_DEPTH_TEST);
+  pg.noFill();
+  pg.stroke(SELECTION_ORANGE);
+  pg.strokeWeight(3.5);
+
+  pg.beginShape();
+  for (int i = 0; i < n; i++) pg.vertex(topVerts[i].x, topVerts[i].y, topVerts[i].z);
+  pg.endShape(CLOSE);
+
+  pg.beginShape();
+  for (int i = 0; i < n; i++) pg.vertex(botVerts[i].x, botVerts[i].y, botVerts[i].z);
+  pg.endShape(CLOSE);
+
+  for (int i = 0; i < n; i++) {
+    pg.line(topVerts[i].x, topVerts[i].y, topVerts[i].z,
+            botVerts[i].x, botVerts[i].y, botVerts[i].z);
+  }
+
+  pg.hint(ENABLE_DEPTH_TEST);
+  pg.popStyle();
+}
+
 void drawPrismWireframe(PGraphics pg) {
   // Calculate polygon vertices for top and bottom (outer walls)
   PVector[] topVerts = getPolygonVertices(true);   // top
@@ -894,7 +955,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw outer textured side panels
   if (!wireframeMode) {
-    if (sideTextureMode != TEX_NONE) {
+    if (wrapActive()) {
+      drawWrapPrismFaces3D(pg, topVerts, botVerts);
+    } else if (sideTextureMode != TEX_NONE) {
       drawTexturedPrismFaces(pg, topVerts, botVerts, false);  // false = outer wall
     } else {
       // Draw faces: use solid fill color if enabled, otherwise gray
@@ -937,7 +1000,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw top lid (donut shape if hollow)
   if (!wireframeMode) {
-  if (sidebar != null && sidebar.topLidEnabled && lidImgTop != null) {
+  if (wrapActive() && sidebar != null && sidebar.topLidEnabled) {
+    drawWrapCap3D(pg, topVerts, true);
+  } else if (sidebar != null && sidebar.topLidEnabled && lidImgTop != null) {
     if (hollowMode && topVertsInner != null) {
       drawTexturedLidDonut(pg, topVerts, topVertsInner, lidImgTop, false);
     } else {
@@ -991,7 +1056,9 @@ void drawPrismWireframe(PGraphics pg) {
   
   // Draw bottom lid (donut shape if hollow)
   if (!wireframeMode) {
-  if (sidebar != null && sidebar.bottomLidEnabled && lidImgBot != null) {
+  if (wrapActive() && sidebar != null && sidebar.bottomLidEnabled) {
+    drawWrapCap3D(pg, botVerts, false);
+  } else if (sidebar != null && sidebar.bottomLidEnabled && lidImgBot != null) {
     if (hollowMode && botVertsInner != null) {
       drawTexturedLidDonut(pg, botVerts, botVertsInner, lidImgBot, true);
     } else {

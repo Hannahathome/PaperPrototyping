@@ -128,6 +128,9 @@ final float CLAMP_EPSILON = 1e-6;                // Small value for clamping cal
 final float CLAMP_MAX = 0.999999;                // Max value for arc calculations
 
 // UI defaults
+// One orange for "this is the selected shape", shared by the box on the flat pattern and the
+// outline in the 3D view, so the two views cannot drift apart on what selection looks like.
+final color SELECTION_ORANGE = #FFA000;
 final int MIN_SIDES = 3;                         // Minimum polygon sides
 final int DEFAULT_SIDES = 4;                     // Default starting sides
 final float STEP_FINE = 0.5;                     // Fine adjustment step (mm)
@@ -197,7 +200,8 @@ final int MIN_WIN_H = 700;
 // the Print tab groups Placement / Cutouts / Base.
 final int TEX_TAB_PER_PANEL = 0;
 final int TEX_TAB_STRIP     = 1;
-final int TEX_TAB_TRACKING  = 2;
+final int TEX_TAB_WRAP      = 2;
+final int TEX_TAB_TRACKING  = 3;
 
 final int SIDEBAR_PADDING = 12;                  // Internal sidebar padding
 final float SIDEBAR_TOP_SECTION_RATIO = 0.25;    // Top 1/3 for shape controls
@@ -302,6 +306,10 @@ void setParams(boolean cut) {
       println("[setParams] WARNING: Failed to load strip image 'ruler.png'");
     }
   }
+
+  // Whole-surface wrap image — same treatment as the strip, so the Wrap tab has something
+  // to show the moment it is opened.
+  if (wrapImg == null) wrapImg = loadImage("wrap.jpg");   // in data/
 
   float MM_I = (cut? MM_V: MM);
   MM_current = MM_I;  // Update current MM for correct lid offset scaling
