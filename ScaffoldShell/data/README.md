@@ -1,6 +1,6 @@
 # data/
 
-Runtime assets for PaperPolyhedraFrames.
+Runtime assets for ScaffoldShell.
 
 ## Artwork is not committed
 

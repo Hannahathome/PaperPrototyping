@@ -103,7 +103,7 @@ boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, St
 
   PrintWriter out = createWriter(path);
 
-  out.println("// Internal support frame, exported from PaperPolyhedraFrames.");
+  out.println("// Internal support frame, exported from ScaffoldShell.");
   out.println("// Render with F6, export STL, print. Dimensions are millimetres.");
   out.println("//");
   out.println("// Shell it goes inside: " + scadInt(d.n) + " sides"

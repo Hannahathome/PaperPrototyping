@@ -1,11 +1,11 @@
-# PaperPolyhedraFrames
+# ScaffoldShell
 
-[PaperPolyhedra](../PaperPolyhedra/) and [FrustumSupport](../FrustumSupport/), merged into
-one tool. It converts 3D polygon specifications into flat 2D cutting patterns that fold
-into 3D shapes **and** generates the 3D-printable support frame that goes inside them —
-so one program produces both halves of a prototype.
+Both halves of a prototype from one program: the **shell** — a foldable paper net, cut from
+a 3D polygon specification — and the **scaffold** that goes inside it, a 3D-printable strut
+frame carrying the electronics.
 
-The paper shell leaves as PDF and SVG, as before. The frame leaves as OpenSCAD.
+[PaperPolyhedra](../PaperPolyhedra/) and [FrustumSupport](../FrustumSupport/), merged.
+The shell leaves as PDF and SVG, as before. The scaffold leaves as OpenSCAD.
 
 Formerly developed as `PaperVoxels` / `kresling_dev_polyhdrea_V10`, plus
 `FrustumSupportGenerator_GUI_v3Toggle`.
@@ -23,7 +23,7 @@ thickness, clearance, and the component rigs inside it.
 
 ## Running
 
-Open `PaperPolyhedraFrames.pde` in Processing 4.3+ and press Run.
+Open `ScaffoldShell.pde` in Processing 4.3+ and press Run.
 Requires the **ControlP5** library. Rendering an exported frame needs
 [OpenSCAD](https://openscad.org/).
 
@@ -80,7 +80,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 
 | File | Role |
 |---|---|
-| `PaperPolyhedraFrames.pde` | Main sketch — setup, draw, export orchestration |
+| `ScaffoldShell.pde` | Main sketch — setup, draw, export orchestration |
 | `Param.pde` | Global state, constants, mm/px conversion |
 | `UI.pde`, `SidebarPanel.pde`, `Toolbar.pde` | ControlP5 interface |
 | `events.pde` | Mouse and keyboard handling |

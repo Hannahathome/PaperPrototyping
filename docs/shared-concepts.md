@@ -48,7 +48,7 @@ modules put *vertex zero* at 0°. Both describe the same polygon, rotated differ
 frame built without correcting for it has its wall struts in the middle of the facets
 instead of in the shell's folded corners — invisible at `n = 4`, tens of millimetres out
 at `n = 3` and `n = 5`. The correction is `−90 − 180/n` degrees; see
-`PaperPolyhedraFrames/Frame.pde`.
+`ScaffoldShell/Frame.pde`.
 
 Paper thickness is a third. A folded shell does not land on nominal, so a frame sized to
 the nominal shell is a press fit at best. Allow for it explicitly rather than by shaving

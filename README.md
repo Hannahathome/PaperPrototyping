@@ -8,7 +8,7 @@ Each tool is a self-contained Processing sketch in its own top-level folder. Mos
 share a common print-and-cut workflow and can hand files to one another, but any
 one of them can be opened and run on its own. FrustumSupport is the exception —
 it exports OpenSCAD for the 3D-printed frame that goes *inside* a folded shell.
-PaperPolyhedraFrames merges that tool into PaperPolyhedra and exports both.
+ScaffoldShell merges the two and exports both.
 
 ---
 
@@ -17,10 +17,10 @@ PaperPolyhedraFrames merges that tool into PaperPolyhedra and exports both.
 | Tool | Status | What it does |
 |---|---|---|
 | **[PaperPolyhedra](PaperPolyhedra/)** | Active | The main tool. Turns 3D polygon/prism specs into printable, foldable nets with tabs, flaps, lids, Kresling patterns and fiducial markers. |
-| **[PaperPolyhedraFrames](PaperPolyhedraFrames/)** | In progress | PaperPolyhedra and FrustumSupport merged: the same nets, plus the 3D-printed internal frame, sized from the shell rather than typed in. Exports PDF, SVG **and** OpenSCAD. |
+| **[ScaffoldShell](ScaffoldShell/)** | In progress | PaperPolyhedra and FrustumSupport merged. The foldable shell plus the 3D-printed scaffold that goes inside it, sized from the shell rather than typed in. Exports PDF, SVG **and** OpenSCAD. |
 | **[PaperPhicons](PaperPhicons/)** | Active | The voxel cutter. Generates cut files for physical icon blocks (cuboids) with ArUco markers for tracking. |
 | **[DataPhysicalisation](DataPhysicalisation/)** | Active | Maps CSV columns onto physical dimensions (height, diameter, sides, colour), previews the result in 3D, and exports JSON that PaperPolyhedra imports. |
-| **[FrustumSupport](FrustumSupport/)** | Active | Internal support-structure generator for frustum-shaped shells. Superseded by PaperPolyhedraFrames; kept until that has been validated against a printed frame. |
+| **[FrustumSupport](FrustumSupport/)** | Active | Internal support-structure generator for frustum-shaped shells. Superseded by ScaffoldShell; kept until that has been validated against a printed frame. |
 | **[WidgetGenerator](WidgetGenerator/)** | To Be Uploaded  | Standalone generator for button/widget templates used inside PaperPolyhedra. |
 | **[PaperBlox](PaperBlox/)** | To Be Uploaded  | A stripped-down PaperPolyhedra for quick blocks and teaching contexts. |
 
@@ -35,7 +35,7 @@ expected to come from. They contain no implementation yet.
 - Libraries via *Sketch → Import Library → Manage Libraries*:
   - **ControlP5** (all tools)
   - **PeasyCam** (DataPhysicalisation only)
-- [OpenSCAD](https://openscad.org/) — FrustumSupport and PaperPolyhedraFrames, to turn
+- [OpenSCAD](https://openscad.org/) — FrustumSupport and ScaffoldShell, to turn
   an exported `.scad` into a printable mesh
 
 **Running a tool**
