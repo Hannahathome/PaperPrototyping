@@ -14,6 +14,10 @@ output/
 # FrustumSupport writes .scad next to the sketch rather than into output/, and
 # those get rendered to .stl for printing. Both are generated, never source.
 # The OpenSCAD module libraries it reads are data/template_*.txt, not .scad.
+#
+# PaperPolyhedraFrames writes its .scad into output/ instead, so it is already
+# covered above. Once FrustumSupport is retired these two blanket rules can be
+# narrowed to *.stl alone.
 *.scad
 *.stl
 

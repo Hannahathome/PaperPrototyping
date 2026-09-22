@@ -42,6 +42,18 @@ perimeter = 2 · n · R · sin(π/n)        // n-sided polygon, circumradius R
 R         = perimeter / (2 · n · sin(π/n))
 ```
 
+There is a second, less obvious mismatch between the same two tools: **rotational phase**.
+PaperPolyhedra's polygon walk puts *edge zero's midpoint* at −90°, while the OpenSCAD
+modules put *vertex zero* at 0°. Both describe the same polygon, rotated differently. A
+frame built without correcting for it has its wall struts in the middle of the facets
+instead of in the shell's folded corners — invisible at `n = 4`, tens of millimetres out
+at `n = 3` and `n = 5`. The correction is `−90 − 180/n` degrees; see
+`PaperPolyhedraFrames/Frame.pde`.
+
+Paper thickness is a third. A folded shell does not land on nominal, so a frame sized to
+the nominal shell is a press fit at best. Allow for it explicitly rather than by shaving
+the input numbers.
+
 ## The print-and-cut workflow
 
 Print and cut are separate machines, so every export ships three files:
