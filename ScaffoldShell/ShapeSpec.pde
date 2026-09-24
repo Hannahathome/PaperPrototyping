@@ -75,6 +75,15 @@ class ShapeSpec {
   int nRep;
   PVector[] repPositions; // mm, relative to patX/patY; null = use auto-grid
 
+  // --- Strip rotation cache (StripRotation.pde) ---
+  // Derived from stripImgSrc + stripRotation, and rebuilt only when one of those changes.
+  // Deliberately absent from saveGlobalsTo/loadGlobalsFrom: the cache belongs to the shape,
+  // not to the draw-time globals, and copying it through them is what let the rotated
+  // bitmap be rebuilt from scratch on every frame.
+  PImage _stripRotOut;      // the image last written into stripImg
+  float  _stripRotApplied;  // the angle that produced it
+  PImage _stripRotSrcUsed;  // the source it was produced from
+
   // --- Internal support frame (Frame.pde) ---
   // Held by REFERENCE, and deliberately absent from saveGlobalsTo/loadGlobalsFrom. Those
   // copy scalars and share object references, so pushing a mutable ArrayList<Rig> through
@@ -155,6 +164,9 @@ class ShapeSpec {
 
     nRep             = 1;
     repPositions     = null;
+    _stripRotOut     = null;
+    _stripRotApplied = -1;
+    _stripRotSrcUsed = null;
     frame            = new FrameSpec();   // every shape owns one; disabled until asked for
     cachedBBox       = null;
   }

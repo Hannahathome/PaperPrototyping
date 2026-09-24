@@ -726,7 +726,9 @@ class ImageCropper {
         case CROP_MODE_STRIP:
           // The crop is taken from what the user sees, so it becomes the new unrotated
           // source and the angle starts over — otherwise the rotation would be applied twice.
-          setStripSource(croppedImg, true);
+          // applyStripEdit, not setStripSource: the globals are reloaded from the ShapeSpec
+          // on the next frame, so a crop written only to them is reverted before it is seen.
+          applyStripEdit(croppedImg, true);
           break;
 
         case CROP_MODE_WRAP:

@@ -2215,7 +2215,7 @@ class SidebarPanel {
   
   // Restore strip texture to default (clear)
   void restoreStripTextureToDefault() {
-    setStripSource(null, true);
+    applyStripEdit(null, true);
     println("[Sidebar] Strip texture restored to default");
   }
 
@@ -2382,17 +2382,15 @@ void stripTextureSelected(File selection) {
     println("[Sidebar] Strip texture selection cancelled");
   } else {
     println("[Sidebar] Strip texture: " + selection.getAbsolutePath());
-    setStripSource(loadImage(selection.getAbsolutePath()), true);
+    applyStripEdit(loadImage(selection.getAbsolutePath()), true);
     if (stripImg != null) {
       println("[Sidebar] Strip texture loaded: " + stripImg.width + "x" + stripImg.height);
-      // Switch to strip mode and persist everything
+      // Switch to strip mode. applyStripEdit() has already persisted the artwork itself;
+      // this saves the mode change with it. (Assigning stripImg to the ShapeSpec by hand
+      // here is what used to leave stripImgSrc pointing at the previous image.)
       sideTextureMode = TEX_STRIP_BENT;
       uiTextureMode = TEX_STRIP_BENT;
       if (sTextureMode != null) sTextureMode.setValue(TEX_STRIP_BENT);
-      // Persist to selected ShapeSpec
-      if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-        shapes.get(selectedShapeIdx).stripImg = stripImg;
-      }
       saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
       // Open cropper so user can select the region to use
       originalStripImg = stripImg.get();

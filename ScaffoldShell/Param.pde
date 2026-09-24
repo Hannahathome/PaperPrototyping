@@ -304,18 +304,28 @@ void fitPageToCanvas() {
   heightA4_display = heightA4 * SCREEN_SCALE;
 }
 
+// One-shot guard for the default strip artwork — see setParams().
+boolean _defaultStripTried = false;
+
 void setParams(boolean cut) {
   //-------------------set the image you want to use---------------------------------- 
   if (lidImgTop == null) lidImgTop = loadImage("top.jpg");      // in data/lids/top.png
   if (lidImgBot == null) lidImgBot = loadImage("bottom.jpg");   // in data/lids/bottom.png
   
-  // Load strip image if not already loaded
-  if (stripImg == null && stripImgSrc == null) {
+  // Default strip artwork, loaded ONCE.
+  //
+  // setParams() runs for every shape on every frame, so an unguarded "load it if it is
+  // null" here re-read strip.jpg from disk continuously, and made clearing the strip
+  // impossible: the next setParams() put it straight back. The guard is a one-shot rather
+  // than a null test, because "no strip texture" is a state the user can legitimately ask
+  // for and it looks identical to "not loaded yet".
+  if (!_defaultStripTried) {
+    _defaultStripTried = true;
     setStripSource(loadImage("strip.jpg"), false); // place in data/
     if (stripImg != null) {
       println("[setParams] Strip image loaded: " + stripImg.width + "x" + stripImg.height);
     } else {
-      println("[setParams] WARNING: Failed to load strip image 'ruler.png'");
+      println("[setParams] WARNING: failed to load default strip image 'strip.jpg'");
     }
   }
 

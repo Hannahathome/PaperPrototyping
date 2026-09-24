@@ -110,6 +110,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `FrameSCAD.pde` | OpenSCAD export |
 | `FrameSidebar.pde` | The Frame tab |
 | `FrameSelfTest.pde` | Frame geometry regression checks (`FRAME_SELFTEST`) |
+| `TextureSelfTest.pde` | Per-shape texture state regression checks (`TEXTURE_SELFTEST`) |
 | `data/template_frame.txt` | `frustumCage()` / `rigSupport()` OpenSCAD modules |
 | `data/template_helper.txt` | `_local_draw_edge` / `_local_draw_half_edge` primitives |
 
@@ -297,6 +298,24 @@ multiples of 90 leave transparent corners, which show as gaps on the strip.
 
 Cropping a strip texture resets its rotation, since the crop is taken from what you see.
 
+**The whole image always covers the whole strip.** That is the design, not a bug: the strip
+stretches whatever bitmap it is given across the full perimeter. So "zooming in" on a strip
+means giving it a *smaller* bitmap — crop to the region you want and that region fills the
+strip. There is no separate zoom or pan.
+
+### A note for anyone editing the texture code
+
+`stripImg`, `stripImgSrc` and `uiStripRotation` are draw-time **globals**, and `draw()`
+reloads them from a `ShapeSpec` for every shape on every frame. A global is a scratch
+register with a lifetime of one shape, not somewhere an edit can be kept — anything written
+only there is reverted on the next frame, silently, looking exactly like the edit having
+done nothing.
+
+Every UI path that changes the artwork must therefore go through `applyStripEdit()`, which
+writes through to the selected shape. `setStripSource()` touches globals only and exists
+for one caller: the default-texture load in `setParams()`, which runs with another shape's
+globals loaded. `TextureSelfTest.pde` guards this by simulating a frame.
+
 ## Internal support frames
 
 A tall frustum folded from paper cannot hold its own profile or carry electronics. The
@@ -378,6 +397,8 @@ machine it would emit `19,1` and produce a file OpenSCAD cannot parse. `scadNum(
 | Export fails | Check `output/` exists and the console for errors |
 | Print and cut misaligned | Print with no scaling ("actual size"); check the cutter uses mm |
 | Textures look wrong | Delete the generated placeholders in `data/` and re-run to regenerate |
+| Strip edits seem to do nothing | Fixed — edits must go through `applyStripEdit()`; run `TEXTURE_SELFTEST` |
+| Strip shows the whole image however you crop | By design: crop smaller, the crop fills the strip |
 | Frame will not drop into the shell | Increase *Clearance*; measure a folded shell rather than guessing |
 | Frame rattles inside the shell | Decrease *Clearance* |
 | Struts sit mid-facet, not in the corners | `phase` has been edited out of `data/template_frame.txt` |

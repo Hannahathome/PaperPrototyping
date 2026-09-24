@@ -116,6 +116,7 @@ void setup() {
 
   if (AUDIT_MODE) auditInit();  // TEMP: layout measurement harness, see LayoutAudit.pde
   if (FRAME_SELFTEST) frameSelfTestRun();  // frame geometry checks, see FrameSelfTest.pde
+  if (TEXTURE_SELFTEST) textureSelfTestRun();  // texture state checks, see TextureSelfTest.pde
 }
 
 void draw() {
