@@ -205,26 +205,9 @@ Numberbox m_idNumbox;
 Numberbox m_sizeNumbox;
 Numberbox m_gridNumbox;   // NxN marker grid count
 
-// Texture > Tracking sub-tab: mirrors of the three marker settings people change most.
-// They write the same globals as the bottom-bar controls above.
-Toggle    sbEnableMarkers;
-Numberbox sbMarkerID;
-Numberbox sbMarkerSize;
-Toggle    sbAutoMarkerIDs;
-
-// setValue() fires controlEvent(), so pushing a value into a mirror would call straight back
-// into this. The guard makes the second hop a no-op.
-boolean _syncingTracking = false;
-
-void syncTrackingTabControls() {
-  if (_syncingTracking) return;
-  _syncingTracking = true;
-  if (sbMarkerID      != null && int(sbMarkerID.getValue())   != Start_Index) sbMarkerID.setValue(Start_Index);
-  if (sbMarkerSize    != null && int(sbMarkerSize.getValue()) != Marker_Size) sbMarkerSize.setValue(Marker_Size);
-  if (sbAutoMarkerIDs != null && sbAutoMarkerIDs.getState()   != autoMarkerIDs) sbAutoMarkerIDs.setValue(autoMarkerIDs ? 1 : 0);
-  if (sbEnableMarkers != null && sbEnableMarkers.getState()   != markersEnabled) sbEnableMarkers.setValue(markersEnabled ? 1 : 0);
-  _syncingTracking = false;
-}
+// The marker controls themselves live on Texture > Tracking. There is ONE set of them: they
+// used to be duplicated between the bottom bar and that tab, with a sync function keeping
+// the two copies in step, which is a drift bug waiting to happen for no benefit.
 Numberbox nRepNumbox;   // Repeat count numberbox
 Textfield tfNRep;       // Typable field for repeat count
 Toggle tFreePlacement;      // Free placement drag toggle
@@ -1437,14 +1420,24 @@ void initShapeUI() {
   lblBotRout = cp5__prism.addTextlabel("lbl_bot_rout").setPosition(-1000, -1000).setColorValue(0).setVisible(false);
   //------------------------------------------------------------------------------------
   
-  //--RH-- Fiducial Marker UI Controls (in bottom bar next to 3D/Mesh buttons)
-  float markerControlX = LEFT_SIDEBAR_WIDTH + 240;
-  float markerControlY = exportBarY + 8;
-  
+  //--RH-- Fiducial marker controls. They live on Texture > Tracking and are positioned
+  // there by updateSidebarControlsVisibility(); built off-screen so they never flash in
+  // the bottom bar, where they used to live, before the first layout pass.
+  //
+  // ControlP5 broadcasts a value change from setRange(), BEFORE the chained setValue() is
+  // reached. The broadcast runs controlEvent(), which writes the range's minimum into the
+  // global -- and the setValue(global) that follows then stores that minimum straight back.
+  // The declared defaults (ID 48, size 20mm) were therefore never reached: markers came out
+  // at ID 0 and 5mm, and the first ShapeSpec captured those too. Snapshot the intended
+  // values here and put them back once all three boxes exist.
+  int wantStartIndex = Start_Index;
+  int wantMarkerSize = Marker_Size;
+  int wantMarkerGrid = markerGrid;
+
   tEnableMarkers = cp5__prism.addToggle("enable_markers_toggle")
-    .setPosition(markerControlX - 30, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(22, 22)
-    .setLabel("ENABLE MARKERS")
+    .setLabel("Enable markers")
     .setColorLabel(color(0))
     .setValue(false);
   tEnableMarkers.getCaptionLabel()
@@ -1452,87 +1445,30 @@ void initShapeUI() {
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(31);
   
-  // --- Texture > Tracking sub-tab: a simplified shortcut for the three settings people
-  // change most. The full marker controls stay in the bottom bar; these mirror the same
-  // globals and are kept in step by syncTrackingTabControls().
-  sbEnableMarkers = cp5__prism.addToggle("tr_enable_markers")
-    .setPosition(-1000, -1000)
-    .setSize(22, 22)
-    .setColorLabel(color(0))
-    .setValue(markersEnabled ? 1 : 0)
-    .setLabel("ENABLE MARKERS");
-  sbEnableMarkers.getCaptionLabel()
-    .setFont(uiFont(12))
-    .align(ControlP5.LEFT, ControlP5.CENTER)
-    .setPaddingX(31);
-
-  sbMarkerID = cp5__prism.addNumberbox("tr_marker_id")
-    .setPosition(-1000, -1000)
-    .setSize(120, 24)
-    .setColorLabel(color(0))
-    .setRange(0, 255)
-    .setValue(Start_Index)
-    .setDecimalPrecision(0)
-    .setLabel("MARKER ID");
-  sbMarkerID.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingY(4);
-
-  sbMarkerSize = cp5__prism.addNumberbox("tr_marker_size")
-    .setPosition(-1000, -1000)
-    .setSize(120, 24)
-    .setColorLabel(color(0))
-    .setRange(5, 50)
-    .setValue(Marker_Size)
-    .setDecimalPrecision(0)
-    .setLabel("MARKER SIZE (MM)");
-  sbMarkerSize.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingY(4);
-
-  sbAutoMarkerIDs = cp5__prism.addToggle("tr_auto_marker_ids")
-    .setPosition(-1000, -1000)
-    .setSize(22, 22)
-    .setColorLabel(color(0))
-    .setValue(autoMarkerIDs ? 1 : 0)
-    .setLabel("AUTO IDs");
-  sbAutoMarkerIDs.getCaptionLabel()
-    .setFont(uiFont(12))
-    .align(ControlP5.LEFT, ControlP5.CENTER)
-    .setPaddingX(31);
-
   m_idNumbox = cp5__prism.addNumberbox("marker_id_start")
-    .setPosition(markerControlX, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(70, 22)
     .setColorLabel(color(0))
     .setRange(0, 255)
     .setValue(Start_Index)
     .setDecimalPrecision(0)
-    .setLabel("ID");
-  m_idNumbox.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
-    .setPaddingY(2);
+    .setLabel("");
+  m_idNumbox.getCaptionLabel().setVisible(false);
   
   m_sizeNumbox = cp5__prism.addNumberbox("marker_size")
-    .setPosition(markerControlX + 95, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(70, 22)
     .setColorLabel(color(0))
     .setRange(5, 50)
     .setValue(Marker_Size)
     .setDecimalPrecision(0)
-    .setLabel("Size");
-  m_sizeNumbox.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
-    .setPaddingY(2);
+    .setLabel("");
+  m_sizeNumbox.getCaptionLabel().setVisible(false);
   
   // Textfield for Marker ID (next to numberbox)
   tfMarkerID = cp5__prism.addTextfield("tf_marker_id")
-    .setPosition(markerControlX + 73, markerControlY)
-    .setSize(20, 18)
+    .setPosition(-1000, -1000)
+    .setSize(40, 20)
     .setLabel("")
     .setColorBackground(color(255))
     .setColorForeground(color(200))
@@ -1546,8 +1482,8 @@ void initShapeUI() {
   
   // Textfield for Marker Size (next to numberbox)
   tfMarkerSize = cp5__prism.addTextfield("tf_marker_size")
-    .setPosition(markerControlX + 168, markerControlY)
-    .setSize(20, 18)
+    .setPosition(-1000, -1000)
+    .setSize(40, 20)
     .setLabel("")
     .setColorBackground(color(255))
     .setColorForeground(color(200))
@@ -1561,9 +1497,9 @@ void initShapeUI() {
   
   // Auto marker ID toggle — assigns unique sequential IDs across all shapes
   tAutoMarkerIDs = cp5__prism.addToggle("auto_marker_ids_toggle")
-    .setPosition(markerControlX + 195, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(22, 22)
-    .setLabel("AUTO IDs")
+    .setLabel("Auto IDs")
     .setColorLabel(color(0))
     .setValue(false);
   tAutoMarkerIDs.getCaptionLabel()
@@ -1573,28 +1509,36 @@ void initShapeUI() {
 
   // NxN marker grid (tile multiple markers onto large lids)
   m_gridNumbox = cp5__prism.addNumberbox("marker_grid")
-    .setPosition(markerControlX + 285, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(50, 22)
     .setColorLabel(color(0))
     .setRange(1, 5)
     .setValue(markerGrid)
     .setDecimalPrecision(0)
-    .setLabel("Grid");
-  m_gridNumbox.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE)
-    .setPaddingY(2);
+    .setLabel("");
+  m_gridNumbox.getCaptionLabel().setVisible(false);
 
   tMarkerFreePlace = cp5__prism.addToggle("marker_free_place_toggle")
-    .setPosition(markerControlX + 345, markerControlY)
+    .setPosition(-1000, -1000)
     .setSize(22, 22)
-    .setLabel("FREE")
+    .setLabel("Drag to place")
     .setColorLabel(color(0))
     .setValue(markerFreePlace ? 1 : 0);
   tMarkerFreePlace.getCaptionLabel()
     .setFont(uiFont(11))
     .align(ControlP5.LEFT, ControlP5.CENTER)
     .setPaddingX(28);
+
+  // Restore the defaults the setRange() broadcasts trampled (see the note above). Assign the
+  // globals after the boxes, because each setValue() broadcasts once more on its way through.
+  m_idNumbox.setValue(wantStartIndex);
+  m_sizeNumbox.setValue(wantMarkerSize);
+  m_gridNumbox.setValue(wantMarkerGrid);
+  Start_Index = wantStartIndex;
+  Marker_Size = wantMarkerSize;
+  markerGrid  = wantMarkerGrid;
+  if (tfMarkerID   != null) tfMarkerID.setText(str(Start_Index));
+  if (tfMarkerSize != null) tfMarkerSize.setText(str(Marker_Size));
 
   nRepNumbox = cp5__prism.addNumberbox("n_repeat")
     .setPosition(-1000, -1000)
@@ -2141,28 +2085,25 @@ void updateSidebarControlsVisibility() {
   }
 
   // --- Texture > Tracking sub-tab ---
+  // Every ArUco control lives here, and only here. Off-tab they are parked off-screen as
+  // well as hidden, because a ControlP5 controller that is merely invisible still answers
+  // to setValue() from elsewhere and still occupies its hit rectangle in some versions.
+  //
+  // The stack is: enable, then the three numbers, then the two placement toggles. Numberbox
+  // captions sit above their box (TOP_OUTSIDE), so each numeric row costs label + box.
   boolean trackVisible = (activeTab == MAIN_TAB_TEXTURE && sidebar != null && sidebar.activeTextureTab == TEX_TAB_TRACKING);
   {
-    float tx = SIDEBAR_PADDING;
-    // Below the swatch-free header: sub-tab row + section heading + note.
-    float ty = (sidebar != null ? sidebar.contentY : TOOLBAR_HEIGHT) + SIDEBAR_PADDING + 44 + 31 + SIDEBAR_PADDING + 66;
-    if (sbEnableMarkers != null) {
-      sbEnableMarkers.setVisible(trackVisible);
-      sbEnableMarkers.setPosition(trackVisible ? tx : -1000, trackVisible ? ty - 36 : -1000);
-    }
-    if (sbMarkerID != null) {
-      sbMarkerID.setVisible(trackVisible);
-      sbMarkerID.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 16 : -1000);
-    }
-    if (sbMarkerSize != null) {
-      sbMarkerSize.setVisible(trackVisible);
-      sbMarkerSize.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 68 : -1000);
-    }
-    if (sbAutoMarkerIDs != null) {
-      sbAutoMarkerIDs.setVisible(trackVisible);
-      sbAutoMarkerIDs.setPosition(trackVisible ? tx : -1000, trackVisible ? ty + 120 : -1000);
-    }
-    if (trackVisible) syncTrackingTabControls();
+    float tx   = SIDEBAR_PADDING;
+    float ty   = trackBaseY();
+    float numX = tx + TRACK_LABEL_W;          // numbers align in a column, labels to their left
+    trackPlace(tEnableMarkers,   trackVisible, tx,        ty + TRACK_ROW_ENABLE);
+    trackPlace(m_idNumbox,       trackVisible, numX,      ty + TRACK_ROW_ID);
+    trackPlace(tfMarkerID,       trackVisible, numX + 78, ty + TRACK_ROW_ID + 2);
+    trackPlace(m_sizeNumbox,     trackVisible, numX,      ty + TRACK_ROW_SIZE);
+    trackPlace(tfMarkerSize,     trackVisible, numX + 78, ty + TRACK_ROW_SIZE + 2);
+    trackPlace(m_gridNumbox,     trackVisible, numX,      ty + TRACK_ROW_GRID);
+    trackPlace(tAutoMarkerIDs,   trackVisible, tx,        ty + TRACK_ROW_AUTO);
+    trackPlace(tMarkerFreePlace, trackVisible, tx,        ty + TRACK_ROW_FREE);
   }
 
   // The advanced group's slider stack depends on the visibility flags set above, so lay it
@@ -2927,7 +2868,6 @@ void controlEvent(ControlEvent e) {
       // Lazy load markers when first enabled
       initMarkers("aruco1024_px.png");
     }
-    syncTrackingTabControls();
     redraw();
     return;
   }
@@ -2943,33 +2883,15 @@ void controlEvent(ControlEvent e) {
   }
   if (e.isFrom(tAutoMarkerIDs)) {
     autoMarkerIDs = tAutoMarkerIDs.getState();
-    syncTrackingTabControls();
-    redraw();
-    return;
-  }
-
-  if (e.isFrom(sbEnableMarkers)) {
-    markersEnabled = sbEnableMarkers.getState();
-    if (markersEnabled && m == null) {
-      initMarkers("aruco1024_px.png");   // lazy load, same as the bottom-bar toggle
-    }
-    if (tEnableMarkers != null) tEnableMarkers.setValue(markersEnabled ? 1 : 0);
-    redraw();
-    return;
-  }
-
-  if (e.isFrom(sbAutoMarkerIDs)) {
-    autoMarkerIDs = sbAutoMarkerIDs.getState();
-    if (tAutoMarkerIDs != null) tAutoMarkerIDs.setValue(autoMarkerIDs ? 1 : 0);
     redraw();
     return;
   }
   
   if (e.isController()) {
     String name = e.getController().getName();
-    if (name.equals("marker_size") || name.equals("tr_marker_size")) {
+    if (name.equals("marker_size")) {
       Marker_Size = int(e.getValue());
-      syncTrackingTabControls();
+      if (tfMarkerSize != null) tfMarkerSize.setText(str(Marker_Size));
       redraw();
       return;
     }
@@ -2978,9 +2900,8 @@ void controlEvent(ControlEvent e) {
       redraw();
       return;
     }
-    if (name.equals("marker_id_start") || name.equals("tr_marker_id")) {
+    if (name.equals("marker_id_start")) {
       Start_Index = int(e.getValue());
-      syncTrackingTabControls();
       if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size())
         shapes.get(selectedShapeIdx).markerStartIndex = Start_Index;
       if (tfMarkerID != null) {
@@ -3189,6 +3110,33 @@ void setAdvancedVisible(boolean visible) {
 //
 // The lid-offset sliders are deliberately NOT placed here: they belong to the sidebar, and
 // updateSidebarControlsVisibility() already positions and sizes them.
+// --- Texture > Tracking sub-tab geometry -----------------------------------------------
+// The numeric rows have their label drawn to the LEFT by drawTrackingContent(), while the
+// control itself is positioned by updateSidebarControlsVisibility(). Two files, one layout,
+// so every offset lives here and both read it. Hard-coding either side is how a label ends
+// up next to the wrong box after a font change.
+final float TRACK_LABEL_W  = 150;   // label column width
+final float TRACK_ROW_ENABLE = 0;
+final float TRACK_ROW_ID     = 44;
+final float TRACK_ROW_SIZE   = 88;
+final float TRACK_ROW_GRID   = 132;
+final float TRACK_ROW_AUTO   = 186;
+final float TRACK_ROW_FREE   = 228;
+
+// Top of the Tracking control stack: below the header, the sub-tab row, the section heading
+// and its note.
+float trackBaseY() {
+  return (sidebar != null ? sidebar.contentY : TOOLBAR_HEIGHT)
+       + SIDEBAR_PADDING + 44 + 31 + SIDEBAR_PADDING + 44;
+}
+
+// Show a Tracking control at (x, y), or park it off-screen when the tab is not open.
+void trackPlace(controlP5.Controller<?> c, boolean visible, float x, float y) {
+  if (c == null) return;
+  c.setVisible(visible);
+  c.setPosition(visible ? x : -1000, visible ? y : -1000);
+}
+
 final int EXPORT_GAP       = 10;   // between controls
 final int EXPORT_GAP_TIGHT = 3;    // numberbox -> its unit textfield
 final int EXPORT_GAP_GROUP = 24;   // between logical groups
@@ -3196,19 +3144,17 @@ final int EXPORT_RIGHT_W   = 320;  // filename field + Export button + right mar
 final int EXPORT_ROW_H     = 34;
 
 // The bar's left half, in order, with the gap that follows each control.
+//
+// Everything here is a VIEW switch — it changes what you are looking at, not what will be
+// cut. Distances sits next to the 2D/3D toggle for that reason: it is a measuring aid you
+// turn on to check the drawing, in the same breath as turning the model over.
+//
+// The ArUco marker controls used to live here as a second row. They are settings that go
+// into the export, not view switches, and they now live together on Texture > Tracking.
 controlP5.Controller<?>[] exportRow1() {
-  return new controlP5.Controller<?>[] { tView3D, tShowTessellationMesh };
+  return new controlP5.Controller<?>[] { tView3D, tShowDistances, tShowTessellationMesh };
 }
-controlP5.Controller<?>[] exportRow2() {
-  return new controlP5.Controller<?>[] {
-    tEnableMarkers, m_idNumbox, tfMarkerID, m_sizeNumbox, tfMarkerSize,
-    tAutoMarkerIDs, m_gridNumbox, tMarkerFreePlace, tShowDistances };
-}
-int[] exportRow1Gaps() { return new int[] { EXPORT_GAP, EXPORT_GAP }; }
-int[] exportRow2Gaps() {
-  return new int[] { EXPORT_GAP, EXPORT_GAP_TIGHT, EXPORT_GAP, EXPORT_GAP_TIGHT, EXPORT_GAP,
-                     EXPORT_GAP, EXPORT_GAP, EXPORT_GAP_GROUP, 0 };
-}
+int[] exportRow1Gaps() { return new int[] { EXPORT_GAP, EXPORT_GAP, EXPORT_GAP }; }
 
 // Space a control actually occupies. getWidth() covers only the widget box, so a 22px toggle
 // whose caption is drawn to its right measures 22 while occupying ~120 - which is how the
@@ -3281,8 +3227,8 @@ int exportBarHeightFor(int rows) {
   return max(EXPORT_H_1ROW, 18 + rows * EXPORT_ROW_H + (rows - 1) * 6 + 18);
 }
 
-// Narrowest window this bar can lay out without losing a control off the right edge. Only the
-// first row has to fit beside the filename group; the rest wraps.
+// Narrowest window this bar can lay out without losing a control off the right edge: the
+// view switches have to fit beside the filename group.
 float exportBarMinWidth() {
   float leftStart = LEFT_SIDEBAR_WIDTH + 20;
   float w1 = exportRunWidth(exportRow1(), exportRow1Gaps());
@@ -3317,19 +3263,15 @@ void updateExportControlPositions() {
   if (tfExportFilename == null || btnExportMain == null) return;
 
   controlP5.Controller<?>[] r1 = exportRow1();
-  controlP5.Controller<?>[] r2 = exportRow2();
-  int[] g1 = exportRow1Gaps(), g2 = exportRow2Gaps();
+  int[] g1 = exportRow1Gaps();
 
   float leftStart = LEFT_SIDEBAR_WIDTH + 20;
   float rightX    = width - EXPORT_RIGHT_W;
-  float w1 = exportRunWidth(r1, g1);
-  float w2 = exportRunWidth(r2, g2);
 
-  // The marker run shares row 1 when there is room beside the filename group; otherwise it
-  // gets rows of its own, wrapping as many times as the window width demands.
-  boolean sameRow = (leftStart + w1 + EXPORT_GAP_GROUP + w2 <= rightX);
-  int rows = sameRow ? 1
-                     : 1 + exportPlaceRunWrapped(r2, g2, leftStart, 0, width - 10, false);
+  // Three view switches fit on one row at any window this layout supports, so the bar no
+  // longer wraps. exportPlaceRunWrapped() is kept: it is what stops a control being placed
+  // off the right edge if anything is ever added back here.
+  int rows = exportPlaceRunWrapped(r1, g1, leftStart, 0, rightX - EXPORT_GAP_GROUP, false);
   BOTTOM_EXPORT_HEIGHT = exportBarHeightFor(rows);
 
   float rowY = height - BOTTOM_EXPORT_HEIGHT + 18;
@@ -3337,9 +3279,7 @@ void updateExportControlPositions() {
   tfExportFilename.setPosition(rightX, rowY);
   btnExportMain.setPosition(rightX + 190, rowY);
 
-  float cx = exportPlaceRun(r1, g1, leftStart, rowY);
-  if (sameRow) exportPlaceRun(r2, g2, cx + EXPORT_GAP_GROUP, rowY);
-  else         exportPlaceRunWrapped(r2, g2, leftStart, rowY + EXPORT_ROW_H + 6, width - 10, true);
+  exportPlaceRunWrapped(r1, g1, leftStart, rowY, rightX - EXPORT_GAP_GROUP, true);
 }
 
 // Update lid positions when buttons are held down

@@ -553,6 +553,9 @@ class SidebarPanel {
 
   // Texture > Tracking. A shortcut for the three marker settings that get changed most; the
   // full set (enable, grid, free placement) stays in the bottom bar.
+  // The ControlP5 widgets on this tab are positioned by updateSidebarControlsVisibility();
+  // this draws the headings and the left-hand label column that go with them. Both sides
+  // read the TRACK_* geometry in UI.pde, so the labels cannot drift off their controls.
   void drawTrackingContent(float sx, float sy) {
     pushStyle();
     fill(60);
@@ -562,7 +565,26 @@ class SidebarPanel {
 
     fill(120);
     uiText(10);
-    text("Placement and the marker grid stay in the bottom bar.", sx, sy + 16);
+    text("Fiducial markers for tracked prototypes. Printed size has to be exact —", sx, sy + 15);
+    text("never scale the artwork independently of the shape.", sx, sy + 27);
+
+    // Labels for the numeric rows, vertically centred on their 22px-high controls.
+    float ty = trackBaseY();
+    fill(60);
+    textAlign(LEFT, CENTER);
+    uiText(12);
+    text("Start ID",         sx, ty + TRACK_ROW_ID   + 11);
+    text("Marker size (mm)", sx, ty + TRACK_ROW_SIZE + 11);
+    text("Markers per side", sx, ty + TRACK_ROW_GRID + 11);
+
+    fill(140);
+    uiText(10);
+    textAlign(LEFT, TOP);
+    text("first ID of the selected shape", sx, ty + TRACK_ROW_ID   + 25);
+    text("printed exactly at this size", sx, ty + TRACK_ROW_SIZE + 25);
+    text("N x N markers tiled onto each lid", sx, ty + TRACK_ROW_GRID + 25);
+    text("numbers every shape and copy in sequence", sx + 30, ty + TRACK_ROW_AUTO + 24);
+    text("drag markers on the pattern instead of auto-placing", sx + 30, ty + TRACK_ROW_FREE + 24);
 
     popStyle();
   }

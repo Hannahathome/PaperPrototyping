@@ -316,6 +316,30 @@ writes through to the selected shape. `setStripSource()` touches globals only an
 for one caller: the default-texture load in `setParams()`, which runs with another shape's
 globals loaded. `TextureSelfTest.pde` guards this by simulating a frame.
 
+## Fiducial markers
+
+ArUco markers for tracked prototypes. Everything that controls them is on
+**Texture > Tracking**.
+
+| Setting | What it does |
+|---|---|
+| Enable markers | Turns marker placement on. The marker atlas is loaded the first time this is switched on, not at startup. |
+| Start ID | First ArUco ID for the selected shape. Stored per shape. |
+| Marker size (mm) | Printed size. Detection depends on this being dimensionally accurate — never scale the artwork separately. |
+| Markers per side | Tiles an N x N grid onto each lid, for shapes large enough that one marker is small in frame. |
+| Auto IDs | Numbers every shape and every repeat in sequence, instead of each shape starting at its own Start ID. |
+| Drag to place | Place markers by hand on the flat pattern instead of auto-placing them. |
+
+These used to be split between the bottom bar and this tab, as two sets of controls kept in
+step by a sync function. There is now one set, here.
+
+**Defaults changed.** Start ID and marker size are declared as 48 and 20 mm, but never
+reached those values: ControlP5 broadcasts a change from `setRange()` *before* the chained
+`setValue()` runs, so the event handler wrote the range minimum into the global and the
+`setValue(global)` that followed stored the minimum back. Markers came out at ID 0 and 5 mm.
+They are now 48 and 20 mm as intended — if you have artwork calibrated against the old 5 mm
+markers, set the size back by hand.
+
 ## Internal scaffolds
 
 A tall frustum folded from paper cannot hold its own profile or carry electronics. The
@@ -397,6 +421,7 @@ machine it would emit `19,1` and produce a file OpenSCAD cannot parse. `scadNum(
 | Export fails | Check `output/` exists and the console for errors |
 | Print and cut misaligned | Print with no scaling ("actual size"); check the cutter uses mm |
 | Textures look wrong | Delete the generated placeholders in `data/` and re-run to regenerate |
+| Markers suddenly bigger than before | Intended — they were 5mm through a bug; set the size on Texture > Tracking |
 | Strip edits seem to do nothing | Fixed — edits must go through `applyStripEdit()`; run `TEXTURE_SELFTEST` |
 | Strip shows the whole image however you crop | By design: crop smaller, the crop fills the strip |
 | Scaffold will not drop into the shell | Increase *Clearance*; measure a folded shell rather than guessing |

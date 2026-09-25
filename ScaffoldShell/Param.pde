@@ -190,8 +190,9 @@ final int TOOLBAR_SEPARATOR = 12;                // Space between button groups
 final int LEFT_SIDEBAR_WIDTH = 420;              // Width of left control sidebar
 // Height of the bottom export area. Not final: the bar wraps onto a second row when the
 // window is too narrow to fit its controls in one, and relayout() sets this accordingly.
+// The height of a wrapped bar is computed by exportBarHeightFor(), not taken from a
+// constant, so the one-row minimum below is all that is fixed.
 final int EXPORT_H_1ROW = 90;
-final int EXPORT_H_2ROW = 130;
 int BOTTOM_EXPORT_HEIGHT = EXPORT_H_1ROW;
 // Smallest window the layout is designed to hold. windowResized() clamps to these.
 final int MIN_WIN_W = 1000;
