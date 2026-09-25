@@ -1,0 +1,12 @@
+cube|Cube_20mm|20.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 20mm voor lasersnijden
+cube|Cube_30mm|30.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 30mm voor lasersnijden
+cube|Cube_40mm|40.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 40mm voor lasersnijden
+cube|Cube_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 50mm voor lasersnijden
+cube|Cube_60mm|60.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 60mm voor lasersnijden
+cube|Cube_80mm|80.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 80mm voor lasersnijden
+cube|Cube_100mm|100.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Productie kubus 100mm voor lasersnijden
+tetrahedron|Standard_tetrahedron_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Standaard 50mm set
+cube|Standard_cube_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Standaard 50mm set
+octahedron|Standard_octahedron_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Standaard 50mm set
+dodecahedron|Standard_dodecahedron_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Standaard 50mm set
+icosahedron|Standard_icosahedron_50mm|50.0|0.0|1.0|0|15.0|0.25|0.8|0.0|0.0|0.0|Standaard 50mm set
