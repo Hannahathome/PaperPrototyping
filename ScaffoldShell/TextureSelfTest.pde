@@ -21,6 +21,7 @@ int _ttChecks = 0, _ttFails = 0;
 void textureSelfTestRun() {
   println("[TEXTURE SELFTEST]");
   textureTestStripPersistence();
+  textureTestCropperEndToEnd();
   println("[TEXTURE SELFTEST] " + (_ttChecks - _ttFails) + "/" + _ttChecks + " passed"
         + (_ttFails == 0 ? "" : "   <-- " + _ttFails + " FAILED"));
   exit();
@@ -121,4 +122,73 @@ void textureTestStripPersistence() {
   ttSimulateFrame();
   ttCheck("clearing the strip survives", stripImg == null,
           stripImg == null ? "" : "still " + stripImg.width + "x" + stripImg.height);
+}
+
+// The real path a user takes: open the cropper, zoom, apply. The checks above drive
+// applyStripEdit() directly, which would still pass if the cropper stopped calling it --
+// which is exactly the bug that was there. This one goes through ImageCropper itself.
+void textureTestCropperEndToEnd() {
+  println(" crop through the cropper, not the helper");
+  if (imageCropper == null) { ttCheck("cropper ready", false, ""); return; }
+
+  selectedShapeIdx = 0;
+  ShapeSpec s0 = shapes.get(0);
+  loadGlobalsFrom(s0);
+  setParams(false);
+
+  // Four distinct quadrants, so a zoomed crop cannot accidentally match the original.
+  PGraphics g = createGraphics(400, 400, P2D);
+  g.beginDraw();
+  color[] quad = { color(255, 0, 0), color(0, 0, 255), color(0, 255, 0), color(255, 255, 0) };
+  g.noStroke();
+  for (int i = 0; i < 4; i++) { g.fill(quad[i]); g.rect((i % 2) * 200, (i / 2) * 200, 200, 200); }
+  g.endDraw();
+  PImage source = g.get();
+
+  applyStripEdit(source, true);
+  sideTextureMode = TEX_STRIP_BENT;
+  saveGlobalsTo(s0);
+  ttSimulateFrame();
+
+  imageCropper.open(CROP_MODE_STRIP, -1, stripImg);
+  ttCheck("cropper opened on the strip", cropperActive, "");
+
+  // Zoom in, the way the scroll wheel does. Only part of the source can now reach the crop.
+  imageCropper.imgScale *= 3.0;
+  int wantW = int(imageCropper.cropWidth), wantH = int(imageCropper.cropHeight);
+  imageCropper.applyAndClose();
+
+  ttCheck("cropper closed", !cropperActive, "");
+  ttSimulateFrame();
+
+  ttCheck("the strip is the cropper's output, not the original",
+          stripImg != null && stripImg.width == wantW && stripImg.height == wantH,
+          stripImg == null ? "null"
+            : stripImg.width + "x" + stripImg.height + ", wanted " + wantW + "x" + wantH
+              + (stripImg.width == 400 ? "  <-- still the uncropped source" : ""));
+
+  ttCheck("the source image itself is untouched", source.width == 400 && source.height == 400,
+          source.width + "x" + source.height);
+
+  // A zoomed crop of a four-colour image shows fewer colours than the whole of it.
+  ttCheck("zooming changed what the strip shows",
+          stripImg != null && ttDistinctColours(stripImg) < ttDistinctColours(source),
+          stripImg == null ? "null"
+            : ttDistinctColours(stripImg) + " colours in the crop vs "
+              + ttDistinctColours(source) + " in the source");
+}
+
+// Rough count of distinct strong colours, sampled on a grid.
+int ttDistinctColours(PImage img) {
+  img.loadPixels();
+  java.util.HashSet<Integer> seen = new java.util.HashSet<Integer>();
+  for (int y = 2; y < img.height - 2; y += max(1, img.height / 24)) {
+    for (int x = 2; x < img.width - 2; x += max(1, img.width / 24)) {
+      color c = img.pixels[y * img.width + x];
+      if (alpha(c) < 200) continue;
+      // Quantise hard, so anti-aliased seams do not read as extra colours.
+      seen.add((int(red(c) / 128) << 4) | (int(green(c) / 128) << 2) | int(blue(c) / 128));
+    }
+  }
+  return seen.size();
 }

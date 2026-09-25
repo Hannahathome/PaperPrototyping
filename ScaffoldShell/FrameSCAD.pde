@@ -74,7 +74,7 @@ ArrayList<String> exportFrameSCAD(String baseName, String stamp) {
   String[] mainLines   = loadStrings(FRAME_TEMPLATE_MAIN);
   String[] helperLines = loadStrings(FRAME_TEMPLATE_HELPER);
   if (mainLines == null || helperLines == null) {
-    println("[Frame] ERROR: missing OpenSCAD module library in data/ ("
+    println("[Scaffold] ERROR: missing OpenSCAD module library in data/ ("
           + FRAME_TEMPLATE_MAIN + " / " + FRAME_TEMPLATE_HELPER + "). No .scad written.");
     return written;
   }
@@ -93,7 +93,7 @@ ArrayList<String> exportFrameSCAD(String baseName, String stamp) {
 boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, String[] helperLines) {
   FrameScadParams p = frameScadParamsFor(s);
   if (!p.valid) {
-    println("[Frame] skipped " + frameShapeSlug(idx) + ": " + p.problem);
+    println("[Scaffold] skipped " + frameShapeSlug(idx) + ": " + p.problem);
     return false;
   }
 
@@ -103,7 +103,7 @@ boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, St
 
   PrintWriter out = createWriter(path);
 
-  out.println("// Internal support frame, exported from ScaffoldShell.");
+  out.println("// Internal support scaffold, exported from ScaffoldShell.");
   out.println("// Render with F6, export STL, print. Dimensions are millimetres.");
   out.println("//");
   out.println("// Shell it goes inside: " + scadInt(d.n) + " sides"
@@ -163,7 +163,7 @@ boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, St
 
   out.flush();
   out.close();
-  println("[Frame] wrote " + path);
+  println("[Scaffold] wrote " + path);
   return true;
 }
 

@@ -2,7 +2,7 @@
 
 Both halves of a prototype from one program: the **shell** — a foldable paper net, cut from
 a 3D polygon specification — and the **scaffold** that goes inside it, a 3D-printable strut
-frame carrying the electronics.
+cage carrying the electronics.
 
 [PaperPolyhedra](../PaperPolyhedra/) and [FrustumSupport](../FrustumSupport/), merged.
 The shell leaves as PDF and SVG, as before. The scaffold leaves as OpenSCAD.
@@ -18,13 +18,13 @@ not seat."* Nothing enforced it, and the two tools measured the same object in d
 quantities — perimeters here, radii there.
 
 In the merged tool the frustum is **derived** from the shape you already drew, so the two
-cannot disagree. What is left to choose is what is genuinely about the frame: strut
+cannot disagree. What is left to choose is what is genuinely about the scaffold: strut
 thickness, clearance, and the component rigs inside it.
 
 ## Running
 
 Open `ScaffoldShell.pde` in Processing 4.3+ and press Run.
-Requires the **ControlP5** library. Rendering an exported frame needs
+Requires the **ControlP5** library. Rendering an exported scaffold needs
 [OpenSCAD](https://openscad.org/).
 
 On first run the sketch generates placeholder textures into `data/` so every
@@ -43,7 +43,7 @@ texture path has something to load — see [data/README.md](data/README.md).
 - ArUco fiducial markers for tracked prototypes
 - JSON shape import (from [DataPhysicalisation](../DataPhysicalisation/))
 - Print-and-cut export with calibration marks
-- **Internal support frames** — a 3D-printable strut cage with component mounts, sized
+- **Internal scaffolds** — a 3D-printable strut cage with component mounts, sized
   automatically from the shell it goes inside, exported as OpenSCAD
 
 ## Export
@@ -55,7 +55,7 @@ Press `E`. Writes a timestamped set into `output/` (gitignored):
 | `<name>_<stamp>.pdf` | Print layer — artwork and fills |
 | `<name>_fold_<stamp>.svg` | Cut and fold lines for the cutter |
 | `<name>_calib_<stamp>.svg` | Registration marks for print/cut alignment |
-| `<name>_<stamp>_frame_<shape>.scad` | Internal support frame — one per frame-enabled shape |
+| `<name>_<stamp>_frame_<shape>.scad` | Internal scaffold — one per scaffold-enabled shape |
 
 Print the calibration SVG first to verify alignment before committing material.
 
@@ -108,7 +108,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `Frame.pde` | Internal support frame — model, the shell→frustum bridge, geometry |
 | `FrameView.pde` | Drawing the frame in the 3D preview |
 | `FrameSCAD.pde` | OpenSCAD export |
-| `FrameSidebar.pde` | The Frame tab |
+| `FrameSidebar.pde` | The Scaffold tab |
 | `FrameSelfTest.pde` | Frame geometry regression checks (`FRAME_SELFTEST`) |
 | `TextureSelfTest.pde` | Per-shape texture state regression checks (`TEXTURE_SELFTEST`) |
 | `data/template_frame.txt` | `frustumCage()` / `rigSupport()` OpenSCAD modules |
@@ -316,13 +316,13 @@ writes through to the selected shape. `setStripSource()` touches globals only an
 for one caller: the default-texture load in `setParams()`, which runs with another shape's
 globals loaded. `TextureSelfTest.pde` guards this by simulating a frame.
 
-## Internal support frames
+## Internal scaffolds
 
 A tall frustum folded from paper cannot hold its own profile or carry electronics. The
-frame is the rigid wireframe that goes inside it: a strut cage following the shell's own
+scaffold is the rigid wireframe that goes inside it: a strut cage following the shell's own
 edges, plus cuboid rigs for mounting components. It is 3D printed, not cut.
 
-Open the **Frame** tab, turn on *Build a frame for this shape*, and add rigs. The frustum
+Open the **Scaffold** tab, turn on *Build a scaffold for this shape*, and add rigs. The frustum
 itself is not on the tab — it is read off the shape, and the tab shows you what it read:
 
 ```
@@ -337,7 +337,7 @@ merge, so there is deliberately no way to type them.
 | Setting | What it does |
 |---|---|
 | Strut radius | Thickness of every printed strut. Also the radius of the vertex spheres. |
-| Clearance | Gap between the shell and the frame — see below. |
+| Clearance | Gap between the shell and the scaffold — see below. |
 | Wall flap length | The wedge taper at the top of each wall strut. Tweakable in OpenSCAD afterwards. |
 | Two posts per face | Two support posts on each side of a rig instead of one, spread by *Post spacing*. |
 
@@ -368,18 +368,18 @@ This is invisible at `n = 4` and obvious at `n = 3` and `n = 5`. If you edit
 
 ### Scope
 
-Frames are built as uniform regular frustums — the same scope base plates and lid
+Scaffolds are built as uniform regular frustums — the same scope base plates and lid
 connections take. Per-edge, cuboid and hollow shapes are refused with a note on the tab
-rather than given a frame that cannot seat.
+rather than given a scaffold that cannot seat.
 
-A shape connected to another gets its own frame, posed correctly in the preview, and its
-own `.scad`. Frames of connected shapes are not joined into one print.
+A shape connected to another gets its own scaffold, posed correctly in the preview, and its
+own `.scad`. Scaffolds of connected shapes are not joined into one print.
 
 ### Checking the geometry
 
 `FrameSelfTest.pde` holds the regression checks: the perimeter↔radius round trip, the
 strut ring against the shell's own 3D polygon at seven vertex counts, parity with
-FrustumSupport's defaults, the written `.scad` itself, and the Frame tab's click targets
+FrustumSupport's defaults, the written `.scad` itself, and the Scaffold tab's click targets
 against the rows it drew. Flip `FRAME_SELFTEST` to `true` and run the sketch; it prints a
 pass/fail table and exits. 67 checks at the time of writing.
 
@@ -399,10 +399,10 @@ machine it would emit `19,1` and produce a file OpenSCAD cannot parse. `scadNum(
 | Textures look wrong | Delete the generated placeholders in `data/` and re-run to regenerate |
 | Strip edits seem to do nothing | Fixed — edits must go through `applyStripEdit()`; run `TEXTURE_SELFTEST` |
 | Strip shows the whole image however you crop | By design: crop smaller, the crop fills the strip |
-| Frame will not drop into the shell | Increase *Clearance*; measure a folded shell rather than guessing |
-| Frame rattles inside the shell | Decrease *Clearance* |
+| Scaffold will not drop into the shell | Increase *Clearance*; measure a folded shell rather than guessing |
+| Scaffold rattles inside the shell | Decrease *Clearance* |
 | Struts sit mid-facet, not in the corners | `phase` has been edited out of `data/template_frame.txt` |
-| No `.scad` in `output/` | The shape is out of scope, or *Build a frame* is off — check the Frame tab for the reason |
+| No `.scad` in `output/` | The shape is out of scope, or *Build a scaffold* is off — check the Scaffold tab for the reason |
 | OpenSCAD reports a parse error | Check for decimal commas; run `FRAME_SELFTEST` |
 | Wrap artwork stretched | Crop it to the aspect the Wrap tab names, or re-export the source at that shape |
 | Wrap tab refuses the shape | Hollow, kresling, cuboid and per-edge are out of scope — use Strip or Per Panel |

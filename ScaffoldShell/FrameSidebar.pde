@@ -61,19 +61,19 @@ ArrayList<FrameRow> frameRows() {
   // deriving these is that the user can no longer type them -- so they have to be able to
   // read them, and see them move when they change the shape.
   if (!frameAvailable(s)) {
-    rows.add(new FrameRow(FROW_HEADER, "", "FRAME  —  " + shapeName));
+    rows.add(new FrameRow(FROW_HEADER, "", "SCAFFOLD  —  " + shapeName));
     rows.add(new FrameRow(FROW_NOTE, "", "")
-      .txt("No frame for this shape: " + frameUnavailableReason(s) + ".")
+      .txt("No scaffold for this shape: " + frameUnavailableReason(s) + ".")
       .colored(color(180, 90, 40)));
     rows.add(new FrameRow(FROW_NOTE, "", "")
-      .txt("A frame is built as a uniform regular frustum, matching the scope of "
+      .txt("A scaffold is built as a uniform regular frustum, matching the scope of "
          + "base plates and lid connections."));
     layoutFrameRows(rows);
     return rows;
   }
 
   FrameDims d = frameDimsFor(s);
-  rows.add(new FrameRow(FROW_HEADER, "", "FRAME  —  " + shapeName));
+  rows.add(new FrameRow(FROW_HEADER, "", "SCAFFOLD  —  " + shapeName));
   rows.add(new FrameRow(FROW_NOTE, "", "")
     .txt(d.n + " sides   ·   R bottom " + nf(d.botR, 0, 1) + "   ·   R top " + nf(d.topR, 0, 1)
        + "   ·   H " + nf(d.height, 0, 1) + " mm")
@@ -82,7 +82,7 @@ ArrayList<FrameRow> frameRows() {
     .txt("Derived from the shape's perimeters — edit them on the Shape tab.")
     .colored(color(140)));
 
-  rows.add(new FrameRow(FROW_TOGGLE, "frame_enabled", "Build a frame for this shape")
+  rows.add(new FrameRow(FROW_TOGGLE, "frame_enabled", "Build a scaffold for this shape")
     .toggled(f.enabled));
 
   if (!f.enabled) {
@@ -138,17 +138,17 @@ ArrayList<FrameRow> frameRows() {
     if (g.valid && g.highestRigTop > g.zTop + 0.01) {
       rows.add(new FrameRow(FROW_NOTE, "", "")
         .txt("A rig reaches " + nf(g.highestRigTop - g.zTop, 0, 1)
-           + " mm above the shell's top — lower it, or the frame will not fit inside.")
+           + " mm above the shell's top — lower it, or the scaffold will not fit inside.")
         .colored(color(200, 120, 30)));
     }
   }
 
   rows.add(new FrameRow(FROW_HEADER, "", "EXPORT"));
-  rows.add(new FrameRow(FROW_TOGGLE, "show_frame", "Show frames in the 3D view")
+  rows.add(new FrameRow(FROW_TOGGLE, "show_frame", "Show scaffolds in the 3D view")
     .toggled(showFrame3D));
-  rows.add(new FrameRow(FROW_BUTTON, "frame_export", "Export this frame (.scad)"));
+  rows.add(new FrameRow(FROW_BUTTON, "frame_export", "Export this scaffold (.scad)"));
   rows.add(new FrameRow(FROW_NOTE, "", "")
-    .txt("Frames are also written by the main Export, one file per frame-enabled shape. "
+    .txt("Scaffolds are also written by the main Export, one file per scaffold-enabled shape. "
        + "Open the .scad in OpenSCAD, render with F6, export STL.")
     .colored(color(140)));
 
@@ -536,13 +536,13 @@ void applyFrameSelect(FrameSpec f, FrameRow row, int dir) {
 // iterated on without regenerating the whole print-and-cut set.
 void exportSingleFrame(ShapeSpec s) {
   if (s.frame == null || !s.frame.enabled || !frameAvailable(s)) {
-    println("[Frame] nothing to export for this shape.");
+    println("[Scaffold] nothing to export for this shape.");
     return;
   }
   String[] mainLines   = loadStrings(FRAME_TEMPLATE_MAIN);
   String[] helperLines = loadStrings(FRAME_TEMPLATE_HELPER);
   if (mainLines == null || helperLines == null) {
-    println("[Frame] ERROR: missing OpenSCAD module library in data/. Nothing written.");
+    println("[Scaffold] ERROR: missing OpenSCAD module library in data/. Nothing written.");
     return;
   }
   String baseName = (uiExportFilename != null && !uiExportFilename.trim().isEmpty())

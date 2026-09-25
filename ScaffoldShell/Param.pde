@@ -204,7 +204,7 @@ final int MAIN_TAB_TEXTURE = 1;
 final int MAIN_TAB_PRINT   = 2;
 final int MAIN_TAB_FRAME   = 3;
 final int MAIN_TAB_ASSEM   = 4;
-String[] MAIN_TAB_LABELS = {"Shape", "Texture", "Print", "Frame", "Assem"};
+String[] MAIN_TAB_LABELS = {"Shape", "Texture", "Print", "Scaffold", "Assem"};
 
 int mainTabCount() { return assemblyMode ? 5 : 4; }
 
