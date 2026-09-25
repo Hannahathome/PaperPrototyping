@@ -869,8 +869,10 @@ void initShapeUI() {
     .alignX(CENTER)
     .alignY(CENTER);
 
+  // Still built when hidden, so every reference to it stays valid; it is simply never
+  // shown or placed. See FEATURE_DISTANCE_OVERLAY in DistanceOverlay.pde.
   tShowDistances = cp5__prism.addToggle("toggle_distances")
-    .setPosition(bottomControlX + 640, bottomControlY)
+    .setPosition(-1000, -1000)
     .setSize(80, 34)
     .setLabel("Distances")
     .setColorLabel(color(255))
@@ -879,6 +881,7 @@ void initShapeUI() {
     .setColorActive(color(100, 100, 255))
     .setValue(showDistances ? 1 : 0);
   tShowDistances.getCaptionLabel().setFont(uiFont(12)).alignX(CENTER).alignY(CENTER);
+  tShowDistances.setVisible(FEATURE_DISTANCE_OVERLAY);
   
   /* View preset buttons (commented out for now - future reference)
   // View preset buttons (right after 3D toggle)
@@ -2877,7 +2880,7 @@ void controlEvent(ControlEvent e) {
     return;
   }
   if (e.isFrom(tShowDistances)) {
-    showDistances = tShowDistances.getState();
+    showDistances = FEATURE_DISTANCE_OVERLAY && tShowDistances.getState();
     redraw();
     return;
   }
@@ -3146,13 +3149,16 @@ final int EXPORT_ROW_H     = 34;
 // The bar's left half, in order, with the gap that follows each control.
 //
 // Everything here is a VIEW switch — it changes what you are looking at, not what will be
-// cut. Distances sits next to the 2D/3D toggle for that reason: it is a measuring aid you
-// turn on to check the drawing, in the same breath as turning the model over.
+// cut. Distances belongs next to the 2D/3D toggle for that reason, and goes back there when
+// FEATURE_DISTANCE_OVERLAY is turned on: it is a measuring aid you reach for to check the
+// drawing, in the same breath as turning the model over.
 //
 // The ArUco marker controls used to live here as a second row. They are settings that go
 // into the export, not view switches, and they now live together on Texture > Tracking.
 controlP5.Controller<?>[] exportRow1() {
-  return new controlP5.Controller<?>[] { tView3D, tShowDistances, tShowTessellationMesh };
+  return FEATURE_DISTANCE_OVERLAY
+    ? new controlP5.Controller<?>[] { tView3D, tShowDistances, tShowTessellationMesh }
+    : new controlP5.Controller<?>[] { tView3D, tShowTessellationMesh };
 }
 int[] exportRow1Gaps() { return new int[] { EXPORT_GAP, EXPORT_GAP, EXPORT_GAP }; }
 

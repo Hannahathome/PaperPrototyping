@@ -3,7 +3,15 @@
 // Draws light dimension annotations over the pattern: each main piece's bounding box +
 // size, the gaps between stacked pieces, and — for the base — each mounting cutout's
 // distance to the base edges and to the other cutout. Never drawn into the export.
+//
+// HIDDEN — the measurements are not trustworthy yet, so the tool is kept out of the
+// interface rather than shipped half-working. The code is left intact and complete; only
+// its way in is closed off. Flip FEATURE_DISTANCE_OVERLAY to true to bring it back, which
+// restores the bottom-bar toggle, the overlay itself and the layout check that covers it.
+// Nothing else needs changing.
 //----------------------------------------------------------------------------------
+
+final boolean FEATURE_DISTANCE_OVERLAY = false;
 
 boolean showDistances = false;
 
@@ -74,7 +82,7 @@ void _vGap(float[] a, float[] b) {
 }
 
 void drawDistanceOverlay() {
-  if (!showDistances) return;
+  if (!FEATURE_DISTANCE_OVERLAY || !showDistances) return;
   pushStyle();
   rectMode(CORNER);
   float s = MM_current;

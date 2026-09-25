@@ -98,17 +98,22 @@ void clickTestTick() {
 
   // The bottom bar is the case that broke when the window was maximised: ControlP5 clamps its
   // hit-testing to the size it was built at, so controls below that height stopped responding.
-  if (tShowDistances != null) {
-    float[] p = tShowDistances.getPosition();
-    float cx = p[0] + tShowDistances.getWidth() / 2;
-    float cy = p[1] + tShowDistances.getHeight() / 2;
-    if (clickTestFrame == 30) { cp5Before = tShowDistances.getState();
+  // Aimed at the LAST control in the bar, as the one furthest from the origin and so the
+  // first to fall outside a stale hit rectangle. That was Distances until it was hidden
+  // behind FEATURE_DISTANCE_OVERLAY; clicking a hidden control would prove nothing.
+  controlP5.Toggle barEnd = FEATURE_DISTANCE_OVERLAY ? tShowDistances : tShowTessellationMesh;
+  if (barEnd != null) {
+    float[] p = barEnd.getPosition();
+    float cx = p[0] + barEnd.getWidth() / 2;
+    float cy = p[1] + barEnd.getHeight() / 2;
+    if (clickTestFrame == 30) { cp5Before = barEnd.getState();
                                 cp5PostMouse(processing.event.MouseEvent.MOVE, cx, cy);    return; }
     if (clickTestFrame == 33) { cp5PostMouse(processing.event.MouseEvent.PRESS, cx, cy);   return; }
     if (clickTestFrame == 36) { cp5PostMouse(processing.event.MouseEvent.RELEASE, cx, cy); return; }
     if (clickTestFrame == 39) {
-      clickExpect("bottom bar DISTANCES toggle (ControlP5)", tShowDistances.getState() != cp5Before);
-      tShowDistances.setValue(cp5Before ? 1 : 0);
+      clickExpect("last bottom-bar toggle responds (ControlP5 hit-test)",
+                  barEnd.getState() != cp5Before);
+      barEnd.setValue(cp5Before ? 1 : 0);
       return;
     }
   }

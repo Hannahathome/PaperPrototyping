@@ -104,7 +104,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `PrintNCut.pde` | PDF/SVG export and calibration marks |
 | `json_import.pde` | Shape import from DataPhysicalisation |
 | `PlaceholderAssets.pde` | Generates placeholder textures on first run |
-| `DistanceOverlay.pde` | On-canvas measurement overlay |
+| `DistanceOverlay.pde` | On-canvas measurement overlay — hidden, see below |
 | `Frame.pde` | Internal support frame — model, the shell→frustum bridge, geometry |
 | `FrameView.pde` | Drawing the frame in the 3D preview |
 | `FrameSCAD.pde` | OpenSCAD export |
@@ -123,6 +123,14 @@ Carried over from the old repository and safe to delete once confirmed unused:
 - `zz_old_tesselation.pde` — superseded tessellation code
 - `FoldingAnimationWindow.pde` — empty file
 - `snippet.pde` — scratch code, though it holds the `platonic_templates_production.txt` writer
+
+### Hidden behind a flag
+
+- `DistanceOverlay.pde` — the on-canvas measurement overlay. Its numbers are not
+  trustworthy yet, so it is kept out of the interface rather than shipped half-working.
+  The code is intact; `FEATURE_DISTANCE_OVERLAY` at the top of that file is the only
+  switch. Turning it on restores the *Distances* toggle to the bottom bar beside the
+  2D/3D switch, the overlay itself, and the layout check that covers the toggle.
 
 ## Concepts
 
