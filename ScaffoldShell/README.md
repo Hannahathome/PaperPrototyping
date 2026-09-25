@@ -109,6 +109,8 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `FrameView.pde` | Drawing the frame in the 3D preview |
 | `FrameSCAD.pde` | OpenSCAD export |
 | `FrameSidebar.pde` | The Scaffold tab |
+| `RigCutout.pde` | Paper cutouts placed by the scaffold's rigs |
+| `View3DStyle.pde` | The 3D view's Textured / Overlay / Scaffold / Wireframe switch |
 | `FrameSelfTest.pde` | Frame geometry regression checks (`FRAME_SELFTEST`) |
 | `TextureSelfTest.pde` | Per-shape texture state regression checks (`TEXTURE_SELFTEST`) |
 | `data/template_frame.txt` | `frustumCage()` / `rigSupport()` OpenSCAD modules |
@@ -131,6 +133,8 @@ Carried over from the old repository and safe to delete once confirmed unused:
   The code is intact; `FEATURE_DISTANCE_OVERLAY` at the top of that file is the only
   switch. Turning it on restores the *Distances* toggle to the bottom bar beside the
   2D/3D switch, the overlay itself, and the layout check that covers the toggle.
+- The *Mesh* toggle (tessellation mesh overlay) — `FEATURE_MESH_TOGGLE` in `UI.pde`.
+  Turning it on puts the toggle back in the bottom bar.
 
 ## Concepts
 
@@ -298,11 +302,11 @@ fold it: the grid lines say where each rim and fold landed, and the two red edge
 
 ## Strip texture rotation
 
-With the side texture in **strip** mode, *Strip Texture Rotation* in the View tab turns the
-artwork on the strip. It rotates the source bitmap rather than the texture coordinates, so
-the strip re-fits to the new aspect automatically and quarter turns stay pixel-exact —
-useful when artwork is the wrong way round for a long, short strip. Angles that are not
-multiples of 90 leave transparent corners, which show as gaps on the strip.
+`StripRotation.pde` can turn the artwork on a bent strip (`ShapeSpec.stripRotation`). It
+rotates the source bitmap rather than the texture coordinates, so the strip re-fits to the
+new aspect automatically and quarter turns stay pixel-exact. Angles that are not multiples
+of 90 leave transparent corners, which show as gaps on the strip. There is no UI control
+for it; it stays at 0 unless code sets it.
 
 Cropping a strip texture resets its rotation, since the crop is taken from what you see.
 
@@ -377,6 +381,41 @@ Each rig has a width, depth and height, an X/Y/Z offset from the frustum's axis 
 and a yaw about its own offset point. The *Component* selector fills the first three from a
 preset: M5Atom, M5Core and M5Core+Ext, standing or lying.
 
+### Paper cutouts from rigs
+
+*Paper cutout* on a rig picks one of its faces — Top, Front (+Y), Back (−Y), Right (+X) or
+Left (−X) — to cut a window in the shell, so the component's screen or button shows through.
+
+- **Top** cuts into the top lid, at the rig's X/Y offset and turned with it, if the rig's
+  top comes up to the lid.
+- **A side face** cuts into the wall panel that face looks at, if it comes up to that wall.
+  The face has to look at the wall roughly square-on (within 35°).
+
+"Comes up to" means within one strut radius + 1 mm (2 mm at the default strut radius).
+The tab always shows the face's distance to the paper under *Cutout size*, whether it cuts
+or not; a negative distance means the rig pokes through.
+
+The hole is a preset square, 16 or 50 mm. *Auto* takes the larger one when the face is at
+least 50 mm across, else the smaller. On the flat pattern the cutout is blue with its rig's
+number, and red when it runs over a fold line or the lid's edge — it is still cut, so move
+the rig or pick the smaller size. Rig cutouts are placed automatically and cannot be dragged;
+move the rig instead. In the 3D view they show in every style — as holes in the **Scaffold**
+style, as dark openings on the textured casing.
+
+### Seeing it in 3D
+
+The switch in the 3D view's bottom-right corner picks what you see:
+
+| Style | Shows |
+|---|---|
+| Textured | The casing as it will look, with fills and textures. Rig cutouts show as dark openings. No scaffold. |
+| Overlay | The textured casing with the scaffold drawn through it. |
+| Scaffold | The casing as see-through plain paper, the rig cutouts as holes, and the scaffold inside. |
+| Wireframe | Edges only, to see how the shapes sit together. Rig cutouts show as outlines. |
+
+Turning on *Build a scaffold* switches to Scaffold; the *Show scaffolds in the 3D view*
+toggle on the Scaffold tab is the same switch. Wireframe used to be a button in the top bar.
+
 ### Clearance
 
 **Set this from your own measurements before you print anything.** It is the one number the
@@ -413,7 +452,8 @@ own `.scad`. Scaffolds of connected shapes are not joined into one print.
 strut ring against the shell's own 3D polygon at seven vertex counts, parity with
 FrustumSupport's defaults, the written `.scad` itself, and the Scaffold tab's click targets
 against the rows it drew. Flip `FRAME_SELFTEST` to `true` and run the sketch; it prints a
-pass/fail table and exits. 67 checks at the time of writing.
+pass/fail table and exits. 87 checks at the time of writing, including rig cutouts
+projected through the lid and wall frames onto the rig's own face.
 
 The `.scad` check includes an assertion that no number was written with a decimal comma.
 Processing's `nf()` formats through the machine's locale, so on a Dutch, German or French

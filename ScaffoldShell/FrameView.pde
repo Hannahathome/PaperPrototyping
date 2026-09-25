@@ -8,10 +8,9 @@
 // connected to another shape is posed correctly for free: the parent's transform is still
 // applied when the child's frame is drawn.
 
-// The frame lives inside an opaque shell, so depth-testing it against the shell would hide
-// exactly the thing the user turned on. It is drawn through the walls instead, which is the
-// same treatment FrustumSupport gave its translucent reference boxes.
-boolean showFrame3D = true;
+// Shown only in the 3D view's Scaffold style (View3DStyle.pde). It is drawn through the walls
+// rather than depth-tested against them, the same treatment FrustumSupport gave its
+// translucent reference boxes.
 
 // Strut cylinders are drawn per segment, every frame, for every shape on screen. 8 sides
 // reads as round at preview scale and costs half what FrustumSupport's 16 did.
@@ -34,7 +33,7 @@ final color FRAME_COL_BOX_SEL   = #FFD282;
 // Draws shape `idx`'s frame in the shape's own local space. The caller must already have
 // loaded that shape's globals (drawShapeTree does), because the projection reads MM_current.
 void drawFrameWireframe(PGraphics pg, int idx) {
-  if (!showFrame3D) return;
+  if (!scaffoldVisible3D()) return;
   if (shapes == null || idx < 0 || idx >= shapes.size()) return;
 
   ShapeSpec s = shapes.get(idx);

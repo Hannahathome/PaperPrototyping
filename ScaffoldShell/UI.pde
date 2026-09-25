@@ -47,7 +47,6 @@ Slider sDash;
 Slider sPatX;
 Slider sPatY;
 Slider sPatRotation;
-Slider sStripRotation;
 Slider sTessDensity;
 
 // Hollow mode controls
@@ -149,6 +148,9 @@ int placementBaseY() {
 // --- Texture & Display Options ---
 boolean uiShowLidTextures = false;
 Toggle tShowLidTextures;
+// HIDDEN for now: the Mesh toggle is kept out of the bottom bar. The toggle is still built,
+// so every reference to it stays valid; flip this to true to bring it back.
+final boolean FEATURE_MESH_TOGGLE = false;
 boolean uiShowTessellationMesh = false;
 Toggle tShowTessellationMesh;
 
@@ -310,6 +312,7 @@ void initShapeUI() {
   tShowTessellationMesh.getCaptionLabel().setFont(uiFont(12))
     .alignX(CENTER)
     .alignY(CENTER);
+  tShowTessellationMesh.setVisible(FEATURE_MESH_TOGGLE);
 
   // n sides with +/- buttons
   final int UI_BTN_SIZE = 26;
@@ -1391,21 +1394,6 @@ void initShapeUI() {
     .setPaddingY(6);
   advY += row + 10;
 
-  // Rotates the bent-strip texture. Rotates the source bitmap rather than the UVs, so the
-  // strip re-fits to the new aspect — see StripRotation.pde.
-  sStripRotation = cp5__prism.addSlider("adv_stripRotation")
-    .setPosition(advX, advY).setSize(w, h)
-    .setLabel("STRIP TEXTURE ROTATION (°)")  .setColorLabel(0)
-    .setRange(0, 360)
-    .setValue(uiStripRotation)
-    .setDecimalPrecision(0);
-  sStripRotation.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingX(0)
-    .setPaddingY(6);
-  advY += row + 10;
-
   //------------------------------------------------------------------------------------
   //-----------------------------EXTRA INFO LABELS (HIDDEN)-----------------------------
   // Hidden but code preserved
@@ -1846,21 +1834,6 @@ void updateSidebarControlsVisibility() {
         .setPaddingY(6);
     } else {
       sPatY.setPosition(-1000, -1000);
-    }
-  }
-  if (sStripRotation != null) {
-    boolean stripVis = viewVisible && sideTextureMode == TEX_STRIP_BENT;
-    sStripRotation.setVisible(stripVis);
-    if (stripVis) {
-      sStripRotation.setPosition(SIDEBAR_PADDING, startY + 0.5*row + 3*(row + 20));
-      sStripRotation.setSize(viewControlWidth, 20);
-      sStripRotation.getCaptionLabel()
-        .setFont(uiFont(15))
-        .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-        .setPaddingX(0)
-        .setPaddingY(6);
-    } else {
-      sStripRotation.setPosition(-1000, -1000);
     }
   }
   if (sPatRotation != null) {
@@ -2683,15 +2656,6 @@ void controlEvent(ControlEvent e) {
     redraw();
     return;
   }
-  if (e.isFrom(sStripRotation)) {
-    uiStripRotation = sStripRotation.getValue();
-    // updateStripRotation() rebuilds the bitmap at the top of the next draw()
-    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-      shapes.get(selectedShapeIdx).stripRotation = uiStripRotation;
-    }
-    redraw();
-    return;
-  }
   if (e.isFrom(sTextureMode)) {
     uiTextureMode = round(sTextureMode.getValue());
     // Update global texture mode
@@ -2714,7 +2678,7 @@ void controlEvent(ControlEvent e) {
   }
   
   if (e.isFrom(tShowTessellationMesh)) {
-    uiShowTessellationMesh = tShowTessellationMesh.getState();
+    uiShowTessellationMesh = FEATURE_MESH_TOGGLE && tShowTessellationMesh.getState();
     redraw();
     return;
   }
@@ -3156,9 +3120,11 @@ final int EXPORT_ROW_H     = 34;
 // The ArUco marker controls used to live here as a second row. They are settings that go
 // into the export, not view switches, and they now live together on Texture > Tracking.
 controlP5.Controller<?>[] exportRow1() {
-  return FEATURE_DISTANCE_OVERLAY
-    ? new controlP5.Controller<?>[] { tView3D, tShowDistances, tShowTessellationMesh }
-    : new controlP5.Controller<?>[] { tView3D, tShowTessellationMesh };
+  ArrayList<controlP5.Controller<?>> row = new ArrayList<controlP5.Controller<?>>();
+  row.add(tView3D);
+  if (FEATURE_DISTANCE_OVERLAY) row.add(tShowDistances);
+  if (FEATURE_MESH_TOGGLE)      row.add(tShowTessellationMesh);
+  return row.toArray(new controlP5.Controller<?>[0]);
 }
 int[] exportRow1Gaps() { return new int[] { EXPORT_GAP, EXPORT_GAP, EXPORT_GAP }; }
 

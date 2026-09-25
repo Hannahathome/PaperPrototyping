@@ -66,6 +66,8 @@
 class Rig {
   float w, d, h, offX, offY, offZ, rot;
   String preset = "Custom";
+  int cutoutFace = RIG_CUT_NONE;   // which face cuts the paper -- see RigCutout.pde
+  int cutoutSize = 0;              // index into RIG_CUT_SIZE_NAMES; 0 = Auto
 
   Rig(float w, float d, float h, float ox, float oy, float oz, float rot) {
     this.w = w; this.d = d; this.h = h;
@@ -75,6 +77,8 @@ class Rig {
   Rig copy() {
     Rig r = new Rig(w, d, h, offX, offY, offZ, rot);
     r.preset = preset;
+    r.cutoutFace = cutoutFace;
+    r.cutoutSize = cutoutSize;
     return r;
   }
 

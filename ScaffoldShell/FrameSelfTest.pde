@@ -31,6 +31,7 @@ void frameSelfTestRun() {
   frameTestPhaseAlignment();
   frameTestFrustumSupportParity();
   frameTestScadOutput();
+  frameTestRigCutouts();
   frameTestTabInteraction();
   println("[FRAME SELFTEST] " + (_ftChecks - _ftFails) + "/" + _ftChecks + " passed"
         + (_ftFails == 0 ? "" : "   <-- " + _ftFails + " FAILED"));
@@ -213,6 +214,82 @@ void frameTestScadOutput() {
           frameCountChar(out, '{') + " open, " + frameCountChar(out, '}') + " close");
 
   shapes.remove(idx);
+}
+
+// 5. Rig cutouts (RigCutout.pde) land where the rig is. The plan is made in FS millimetres
+//    without any globals; here it is projected through the paper's OWN frames -- LidFrame
+//    and SidePanelFrame, the ones the 3D preview uses -- and must meet the rig's face.
+void frameTestRigCutouts() {
+  println(" rig cutouts");
+  ShapeSpec s = new ShapeSpec();
+  s.nSides   = 4;
+  s.cylinder = new PVector(160, 160, 50);   // 40 mm square prism, 50 tall
+  s.frame.enabled     = true;
+  s.frame.strutRadius = 1.0;
+  s.frame.clearanceMM = 0.4;
+  loadGlobalsFrom(s);
+  setParams(false);
+
+  // Top: a rig whose top sits 1 mm under the lid, off-centre and turned.
+  Rig r = new Rig(24, 24, 31.5, 3, -4, 0, 20);
+  s.frame.rigs.add(r);
+  FrameGeometry g = buildFrameGeometry(s);
+  r.offZ = (s.cylinder.z / 2 - 1) - (g.zBottom - 2 * s.frame.strutRadius + r.h);
+  r.cutoutFace = RIG_CUT_TOP;
+  RigCutoutPlan p = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("top: reaches the lid", p != null && p.onLid && p.reaches, p == null ? "null" : p.status);
+  if (p != null) {
+    ftNear("top: gap", p.gapMM, 1, 1e-3);
+    ftNear("top: auto size for a 24 mm face", p.sizeMM, CUTOUT_SIZE_SMALL, 1e-6);
+    ftCheck("top: fits the lid", p.fits, p.status);
+    PVector want = frameToLocalPx(new PVector(r.offX, r.offY, s.cylinder.z / 2));
+    PVector got  = lidLocalTo3D(p.localMM, true);
+    ftNear("top: lands over the rig", PVector.dist(got, want), 0, 0.01);
+  }
+
+  r.offZ = 0;
+  p = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("top: a low rig cuts nothing", p != null && !p.reaches, p == null ? "null" : p.status);
+
+  // Side: every face of an unturned rig, pushed toward the wall it names. The apothem is
+  // 20 mm; the face is put 1.5 mm inside it, under the 2 mm reach (strut radius + 1).
+  r.rot = 0;
+  r.offZ = 5;
+  int[]     faces = { RIG_CUT_POS_X, RIG_CUT_NEG_X, RIG_CUT_POS_Y, RIG_CUT_NEG_Y };
+  float[][] dirs  = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+  for (int k = 0; k < faces.length; k++) {
+    r.cutoutFace = faces[k];
+    r.offX = dirs[k][0] * (18.5 - r.w / 2);
+    r.offY = dirs[k][1] * (18.5 - r.d / 2);
+    g = buildFrameGeometry(s);
+    p = planRigCutout(s, g, 0);
+    String name = RIG_CUT_FACE_NAMES[faces[k]];
+    ftCheck(name + ": touches a wall", p != null && !p.onLid && p.reaches && p.panel >= 0,
+            p == null ? "null" : p.status);
+    if (p == null || p.panel < 0) continue;
+    ftNear(name + ": gap", p.gapMM, 1.5, 1e-3);
+
+    // The face centre, pushed out onto the wall, in the sketch's 3D.
+    float[] box = g.rigBoxes.get(0);
+    PVector want = frameToLocalPx(new PVector(dirs[k][0] * 20 + (dirs[k][0] == 0 ? box[0] : 0),
+                                              dirs[k][1] * 20 + (dirs[k][1] == 0 ? box[1] : 0),
+                                              box[2]));
+    PVector got = sidePanelLocalTo3D(sidePanelBasis3D(p.panel), p.localMM);
+    ftNear(name + ": lands on the face, panel " + (p.panel + 1), PVector.dist(got, want), 0, 0.01);
+  }
+
+  // 3 mm from the wall is past the reach.
+  r.cutoutFace = RIG_CUT_POS_X;
+  r.offX = 17 - r.w / 2; r.offY = 0;
+  p = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("3 mm off the wall cuts nothing", p != null && p.panel >= 0 && !p.reaches,
+          p == null ? "null" : p.status);
+
+  // A face pointing at a corner looks at no wall squarely.
+  r.cutoutFace = RIG_CUT_POS_X;
+  r.offX = 0; r.offY = 0; r.rot = 45;
+  p = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("corner-on face cuts nothing", p != null && p.panel < 0, p == null ? "null" : p.status);
 }
 
 int frameCountChar(String[] lines, char c) {

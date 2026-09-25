@@ -1022,9 +1022,10 @@ boolean selectedConnectionFits() {
 // view and swallow the click before it can reach a face.
 boolean mouseOver3DOverlay() {
   float[][] rects = {
-    get3DViewBtnRect(0), get3DViewBtnRect(1), getWireframeBtnRect(), getConnectBtnRect(),
+    get3DViewBtnRect(0), get3DViewBtnRect(1), getConnectBtnRect(),
     get3DViewArrowRect(0), get3DViewArrowRect(1)
   };
+  if (mouseOver3DStyleSwitch()) return true;
   for (float[] r : rects) {
     if (mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3]) return true;
   }

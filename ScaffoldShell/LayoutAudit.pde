@@ -101,7 +101,9 @@ void clickTestTick() {
   // Aimed at the LAST control in the bar, as the one furthest from the origin and so the
   // first to fall outside a stale hit rectangle. That was Distances until it was hidden
   // behind FEATURE_DISTANCE_OVERLAY; clicking a hidden control would prove nothing.
-  controlP5.Toggle barEnd = FEATURE_DISTANCE_OVERLAY ? tShowDistances : tShowTessellationMesh;
+  // Mesh is hidden the same way, behind FEATURE_MESH_TOGGLE.
+  controlP5.Toggle barEnd = FEATURE_MESH_TOGGLE ? tShowTessellationMesh
+                          : FEATURE_DISTANCE_OVERLAY ? tShowDistances : tView3D;
   if (barEnd != null) {
     float[] p = barEnd.getPosition();
     float cx = p[0] + barEnd.getWidth() / 2;

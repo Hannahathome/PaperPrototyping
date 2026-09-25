@@ -190,6 +190,7 @@ void draw() {
 
       // --- Show Selected / Show All overlay buttons ---
       draw3DViewModeButtons();
+      draw3DStyleSwitch();
       
       toolbar.draw();
       toolbar.drawDropdown();  // Draw dropdown menu if active
@@ -587,6 +588,7 @@ void drawPlan(boolean img) {
     // On screen and in the printed PDF there are fills and textures to contend with, and a
     // ring emitted first would be painted over, so there it goes on top instead.
     if (bExportingCutFile) drawConnectionSlitsOnPanels();
+    if (bExportingCutFile) drawRigCutoutsOnPanels();
 
     if (splitStrip && nSides >= 4) {
       // --- SPLIT STRIP MODE (uniform) ---
@@ -665,6 +667,7 @@ void drawPlan(boolean img) {
     // Preview and print layer: the wall slits go on top, where fills and textures cannot
     // bury them. The cut file drew them first instead — see the note above the strip.
     if (!bExportingCutFile) drawConnectionSlitsOnPanels();
+    if (!bExportingCutFile) drawRigCutoutsOnPanels();
 
     // Use actual strip height to prevent overlap
     float stripHeight = getStripHeight();
@@ -711,6 +714,8 @@ void drawPlan(boolean img) {
     }
     // Mounting slits for any shape connected to this face — cut before the lid outline.
     drawConnectionSlits(true);
+    // Scaffold rigs that reach the top lid cut their window here, also before the outline.
+    drawRigCutoutsOnTopLid();
     drawChildMateMarks(true);
     drawPolygonLidHollow(nSides, cellTopL_px, neckDepth_px2, tabInset_top_px, arrowheadFlare_top_px, true);
     popMatrix();
@@ -1006,23 +1011,18 @@ boolean bottomExportClicked = false;
 // btn 0 = "Selected", btn 1 = "All"
 float[] get3DViewBtnRect(int btnIdx) {
   float btnW = 90, btnH = 28, gap = 6;
-  float bx = width - (5 * btnW + 4 * gap + 10);  // Selected, All, Wireframe, Connect, Disconnect
+  float bx = width - (4 * btnW + 3 * gap + 10);  // Selected, All, Connect, Disconnect
   float by = TOOLBAR_HEIGHT + 10;
   return new float[]{ bx + btnIdx * (btnW + gap), by, btnW, btnH };
 }
 
-// Returns the screen rect [x, y, w, h] of the Wireframe toggle button.
-float[] getWireframeBtnRect() {
-  float[] allBtn = get3DViewBtnRect(1);  // "All" button
-  float btnW = 90, btnH = 28, gap = 6;
-  return new float[]{ allBtn[0] + allBtn[2] + gap, allBtn[1], btnW, btnH };
-}
-
 // Returns the screen rect [x, y, w, h] of the Connect toggle button.
+// Wireframe used to sit between All and Connect; it is now one of the three view styles in
+// the bottom-right switch (View3DStyle.pde).
 float[] getConnectBtnRect() {
-  float[] wf = getWireframeBtnRect();
+  float[] allBtn = get3DViewBtnRect(1);  // "All" button
   float gap = 6;
-  return new float[]{ wf[0] + wf[2] + gap, wf[1], wf[2], wf[3] };
+  return new float[]{ allBtn[0] + allBtn[2] + gap, allBtn[1], allBtn[2], allBtn[3] };
 }
 
 // Returns the screen rect [x, y, w, h] of the Disconnect button.
@@ -1065,18 +1065,6 @@ void draw3DViewModeButtons() {
     text(labels[i], r[0] + r[2]/2, r[1] + r[3]/2);
   }
   
-  // --- Wireframe toggle button ---
-  {
-    float[] r = getWireframeBtnRect();
-    boolean hov = mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3];
-    color bg = wireframeMode ? color(80, 130, 200) : (hov ? color(60, 70, 100) : color(40, 50, 80));
-    fill(bg);
-    noStroke();
-    rect(r[0], r[1], r[2], r[3], 5);
-    fill(255);
-    text("Wireframe", r[0] + r[2]/2, r[1] + r[3]/2);
-  }
-
   // --- Connect toggle button ---
   {
     float[] r = getConnectBtnRect();

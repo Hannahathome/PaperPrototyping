@@ -653,7 +653,8 @@ void drawShapeTree(PGraphics pg, int idx, int depth) {
 
   loadGlobalsFrom(shapes.get(idx));
   setParams(false);
-  drawPrismWireframe(pg);
+  // Textured / Overlay / Scaffold / Wireframe -- see View3DStyle.pde.
+  drawShell3D(pg, idx);
   // After the shell, so the frame's depth-test-off pass paints over it rather than under.
   drawFrameWireframe(pg, idx);
 

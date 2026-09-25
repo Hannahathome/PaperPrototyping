@@ -160,14 +160,8 @@ void mousePressed() {
         return;
       }
     }
-    // Wireframe toggle button
-    {
-      float[] r = getWireframeBtnRect();
-      if (mouseX >= r[0] && mouseX <= r[0]+r[2] && mouseY >= r[1] && mouseY <= r[1]+r[3]) {
-        wireframeMode = !wireframeMode;
-        return;
-      }
-    }
+    // Textured / Scaffold / Wireframe switch, bottom right
+    if (handle3DStyleClick()) return;
     // Connect toggle button
     {
       float[] r = getConnectBtnRect();

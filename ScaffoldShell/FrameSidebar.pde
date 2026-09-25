@@ -125,6 +125,22 @@ ArrayList<FrameRow> frameRows() {
              isRot ? "deg" : "mm"));
     }
 
+    // Which face of this rig cuts a window in the paper, and whether it gets there.
+    rows.add(new FrameRow(FROW_SELECT, "rig_cut_face", "Paper cutout")
+      .txt(RIG_CUT_FACE_NAMES[r.cutoutFace]));
+    if (r.cutoutFace != RIG_CUT_NONE) {
+      RigCutoutPlan cp = planRigCutout(s, buildFrameGeometry(s), f.selectedRigIdx);
+      String sizeTxt = RIG_CUT_SIZE_NAMES[r.cutoutSize];
+      if (r.cutoutSize == 0 && cp != null && cp.sizeMM > 0) sizeTxt += " (" + nf(cp.sizeMM, 0, 0) + " mm)";
+      rows.add(new FrameRow(FROW_SELECT, "rig_cut_size", "Cutout size").txt(sizeTxt));
+      if (cp != null && !cp.status.isEmpty()) {
+        boolean ok = cp.reaches && cp.fits;
+        rows.add(new FrameRow(FROW_NOTE, "", "")
+          .txt(cp.status)
+          .colored(ok ? color(60, 130, 80) : color(200, 120, 30)));
+      }
+    }
+
     rows.add(new FrameRow(FROW_TOGGLE, "dual_struts", "Two posts per face")
       .toggled(f.dualStruts));
     if (f.dualStruts) {
@@ -145,7 +161,7 @@ ArrayList<FrameRow> frameRows() {
 
   rows.add(new FrameRow(FROW_HEADER, "", "EXPORT"));
   rows.add(new FrameRow(FROW_TOGGLE, "show_frame", "Show scaffolds in the 3D view")
-    .toggled(showFrame3D));
+    .toggled(scaffoldVisible3D()));
   rows.add(new FrameRow(FROW_BUTTON, "frame_export", "Export this scaffold (.scad)"));
   rows.add(new FrameRow(FROW_NOTE, "", "")
     .txt("Scaffolds are also written by the main Export, one file per scaffold-enabled shape. "
@@ -500,10 +516,13 @@ void applyFrameToggle(FrameSpec f, FrameRow row) {
     f.enabled = !f.enabled;
     // A frame with nothing in it is just a cage, which is a legitimate thing to want, so
     // enabling does not force a rig. The rig list starts empty and stays that way.
+    // Turning one on switches the 3D view to show it; the user can switch straight back.
+    if (f.enabled) setView3DStyle(VIEW3D_SCAFFOLD);
   } else if (row.id.equals("dual_struts")) {
     f.dualStruts = !f.dualStruts;
   } else if (row.id.equals("show_frame")) {
-    showFrame3D = !showFrame3D;
+    // Same switch as the 3D view's bottom-right buttons: Scaffold, or back to Textured.
+    setView3DStyle(scaffoldVisible3D() ? VIEW3D_TEXTURED : VIEW3D_SCAFFOLD);
   }
   redraw();
 }
@@ -528,6 +547,16 @@ void applyFrameSelect(FrameSpec f, FrameRow row, int dir) {
     if (r == null) return;
     int n = RIG_PRESET_NAMES.length;
     frameApplyRigPreset(f, (frameRigPresetIndex(r) + dir + n) % n);
+  } else if (row.id.equals("rig_cut_face")) {
+    Rig r = f.selectedRig();
+    if (r == null) return;
+    int n = RIG_CUT_FACE_NAMES.length;
+    r.cutoutFace = (r.cutoutFace + dir + n) % n;
+  } else if (row.id.equals("rig_cut_size")) {
+    Rig r = f.selectedRig();
+    if (r == null) return;
+    int n = RIG_CUT_SIZE_NAMES.length;
+    r.cutoutSize = (r.cutoutSize + dir + n) % n;
   }
   redraw();
 }
