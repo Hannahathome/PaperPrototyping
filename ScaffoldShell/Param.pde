@@ -299,7 +299,7 @@ void applyPageSize(int idx) {
 // and from relayout(), so the page follows the window instead of staying at its startup size.
 void fitPageToCanvas() {
   float availW = width  - LEFT_SIDEBAR_WIDTH;
-  float availH = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
+  float availH = height - TOOLBAR_HEIGHT - PAGE_BAR_H - BOTTOM_EXPORT_HEIGHT;
   if (availW <= 0 || availH <= 0) return;
   SCREEN_SCALE = min(availW / widthA4, availH / heightA4) * 0.95;
   widthA4_display  = widthA4  * SCREEN_SCALE;

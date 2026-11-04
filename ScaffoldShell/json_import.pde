@@ -197,6 +197,7 @@ ShapeSpec buildShapeFromJSON(JSONObject e) {
   s.markerStartIndex = markerId;
   s.nRep             = 1;
   s.repPositions     = null;
+  s.repPages         = new int[] { currentPage };
 
   // Optional solid fill colour: "#RRGGBB"
   String hexColor = e.isNull("color") ? "" : e.getString("color", "");

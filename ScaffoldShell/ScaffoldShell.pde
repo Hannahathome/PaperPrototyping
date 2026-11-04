@@ -117,10 +117,11 @@ void setup() {
   if (AUDIT_MODE) auditInit();  // TEMP: layout measurement harness, see LayoutAudit.pde
   if (FRAME_SELFTEST) frameSelfTestRun();  // frame geometry checks, see FrameSelfTest.pde
   if (TEXTURE_SELFTEST) textureSelfTestRun();  // texture state checks, see TextureSelfTest.pde
+  if (PAGES_SELFTEST) pagesSelfTestRun();  // page assignment checks, see PagesSelfTest.pde
 }
 
 void draw() {
-
+  _pageBarDrawn = false;  // only the 2D page view draws it
 
   // One buffer rebuild per frame at most, however many resize events arrived.
   ensureView3DBuffer();
@@ -205,116 +206,35 @@ void draw() {
       return;
     }
     
-    // Calculate available space and center the A4 canvas
-    float availableWidth = width - LEFT_SIDEBAR_WIDTH;
-    float availableHeight = height - TOOLBAR_HEIGHT - BOTTOM_EXPORT_HEIGHT;
-    float centerOffsetX = LEFT_SIDEBAR_WIDTH + (availableWidth - widthA4_display) / 2;
-    float centerOffsetY = TOOLBAR_HEIGHT + (availableHeight - heightA4_display) / 2;
-    canvasOffsetX = centerOffsetX;  // save for mouse coordinate transforms
-    canvasOffsetY = centerOffsetY;
-    
-    pushMatrix();
-    translate(centerOffsetX, centerOffsetY);
-    scale(SCREEN_SCALE);  // Scale down for screen display
-    
-    drawA4Paper();
-    setParams(false);
-    pushMatrix();
-    drawCalibCrosses();
-    translate(patX_px, patY_px);
-    rotate(radians(patRotation));
-    
-    // --- Multi-shape draw loop ---
-    _baseDrawnThisFrame = false;   // base plate draws once, during the first shape
-    _piecesCapturedThisFrame = false;  // distance-overlay bboxes captured once
-    int _autoIdx = (shapes.size() > 0) ? shapes.get(0).markerStartIndex : Start_Index;
-    for (int si = 0; si < shapes.size(); si++) {
-      ShapeSpec _s = shapes.get(si);
-      loadGlobalsFrom(_s);
-      setParams(false);
-      _drawingShapeIdx = si;   // tells drawConnectionSlits() whose lid it is drawing
-      _s.cachedBBox    = getTemplateBBox();
-      _s.cachedBBoxTop = _bboxTopTemp;
-      PVector bbox = _s.cachedBBox;
-      
-      for (int rep = 0; rep < _s.nRep; rep++) {
-        if (autoMarkerIDs) { Start_Index = _autoIdx; _autoIdx += max(1, markerGrid*markerGrid); }
-        else Start_Index = _s.markerStartIndex + rep;
-        pushMatrix();
-        if (freePlacementMode && _s.repPositions != null && rep < _s.repPositions.length) {
-          translate(_s.repPositions[rep].x * MM_current, _s.repPositions[rep].y * MM_current);
-        } else {
-          translate((rep % 2) * bbox.x, (rep / 2) * bbox.y);
-        }
-        
-        // Selection highlight (orange) when multiple shapes exist.
-        // bbox.z = overallLeft (≤ 0), _s.cachedBBoxTop = overallTop (the actual top of the AABB).
-        float bboxTop = _s.cachedBBoxTop;
-        if (shapes.size() > 1 && si == selectedShapeIdx) {
-          pushStyle();
-          noFill();
-          stroke(SELECTION_ORANGE);
-          strokeWeight(2.5 / SCREEN_SCALE);
-          rect(bbox.z - 2 / SCREEN_SCALE, bboxTop - 2 / SCREEN_SCALE,
-               bbox.x + 4 / SCREEN_SCALE,
-               bbox.y + 4 / SCREEN_SCALE);
-          popStyle();
-        }
-        
-        // Drag highlight (blue) for the copy being dragged
-        if (freePlacementMode && si == draggedShapeIdx && rep == draggedRepIdx) {
-          pushStyle();
-          noFill();
-          stroke(50, 150, 255);
-          strokeWeight(2 / SCREEN_SCALE);
-          rect(bbox.z - 2 / SCREEN_SCALE, bboxTop - 2 / SCREEN_SCALE,
-               bbox.x + 4 / SCREEN_SCALE,
-               bbox.y + 4 / SCREEN_SCALE);
-          popStyle();
-        }
-        
-        // Shape label: small text at top-left of bounding box
-        if (_s.label != null && !_s.label.isEmpty()) {
-          pushStyle();
-          fill(80);
-          noStroke();
-          textAlign(LEFT, BOTTOM);
-          pageText(10 / SCREEN_SCALE);
-          text(_s.label, 0, -tabDepth_px - 3 / SCREEN_SCALE);
-          popStyle();
-        }
-        
-        // Draw textured lids for preview (if any lid textures are enabled)
-        if (sidebar != null && (_s.topLidEnabled || _s.bottomLidEnabled)) {
-          if (sideTextureMode == TEX_WRAP_FULL) {
-            drawWrapLidsOnPlan(g);   // one image over both caps — see WrapFrame.pde
-          } else if ((perEdgeMode || cuboidMode) && edgeTop_px != null && edgeBot_px != null) {
-            texturedLidsForPrint_PerEdge(g);
-          } else {
-            texturedLidsForPrint_Uniform(g);
-          }
-        }
-        
-        drawPlan(true);
-        popMatrix();
-      }
+    currentPage = constrain(currentPage, 0, pageCount - 1);
+    _pageHasOverflow = false;
+
+    if (pageOverview) {
+      drawPageOverview();
+    } else {
+      // Calculate available space and center the A4 canvas
+      float availableWidth = width - LEFT_SIDEBAR_WIDTH;
+      float availableHeight = height - TOOLBAR_HEIGHT - PAGE_BAR_H - BOTTOM_EXPORT_HEIGHT;
+      float centerOffsetX = LEFT_SIDEBAR_WIDTH + (availableWidth - widthA4_display) / 2;
+      float centerOffsetY = TOOLBAR_HEIGHT + PAGE_BAR_H + (availableHeight - heightA4_display) / 2;
+      canvasOffsetX = centerOffsetX;  // save for mouse coordinate transforms
+      canvasOffsetY = centerOffsetY;
+
+      pushMatrix();
+      translate(centerOffsetX, centerOffsetY);
+      scale(SCREEN_SCALE);  // Scale down for screen display
+
+      drawA4Paper();
+      drawPageView(currentPage);
+
+      // Draw shape parameter info note at the bottom of the A4 page
+      drawShapeInfoNote();
+
+      popMatrix();  // Close sidebar/toolbar offset matrix
     }
-    _drawingShapeIdx = -1;
-    // Restore globals to selected shape so the sidebar reflects correct values
-    loadGlobalsFrom(shapes.get(selectedShapeIdx));
-    setParams(false);
-    // Always trust the actual toggle state — loadGlobalsFrom may carry a stale uiLock
-    if (tLock != null) uiLock = tLock.getState();
-    // Distance overlay (preview only, in the pattern frame)
-    drawDistanceOverlay();
-    popMatrix();  // Close drawCalibCrosses/translate matrix
-    
-    // Draw shape parameter info note at the bottom of the A4 page
-    drawShapeInfoNote();
-    
-    popMatrix();  // Close sidebar/toolbar offset matrix
     
     // Draw UI elements AFTER everything else (on top)
+    drawPageBar();
     toolbar.draw();
     toolbar.drawDropdown();  // Draw dropdown menu if active
     sidebar.draw();
@@ -330,14 +250,130 @@ void draw() {
     bSavePDF = false;
     exportNotifyTimer = 240;  // ~4 seconds at 60fps
     exportNotifyPath = pdfFilename
+      + (lastExportPageCount > 1 ? "  (" + lastExportPageCount + " pages)" : "")
       + (lastExportFrameCount > 0
          ? "  (+" + lastExportFrameCount + " frame" + (lastExportFrameCount == 1 ? "" : "s") + ".scad)"
          : "");
   }
 }
 
+// Draws one page's crosses and templates. The caller has already applied the page matrix and
+// set SCREEN_SCALE to match, so the overview can run this once per sheet at thumbnail size.
+void drawPageView(int page) {
+  setParams(false);
+  pushMatrix();
+  drawCalibCrosses();
+  translate(patX_px, patY_px);
+  rotate(radians(patRotation));
+  
+  // --- Multi-shape draw loop ---
+  _baseDrawnThisFrame = !basePlateOnPage(page);   // draws once, on its own page
+  _baseDrawnValid = false;           // stays false if the base is on another page
+  _piecesCapturedThisFrame = false;  // distance-overlay bboxes captured once
+  int _autoIdx = (shapes.size() > 0) ? shapes.get(0).markerStartIndex : Start_Index;
+  for (int si = 0; si < shapes.size(); si++) {
+    ShapeSpec _s = shapes.get(si);
+    loadGlobalsFrom(_s);
+    setParams(false);
+    _drawingShapeIdx = si;   // tells drawConnectionSlits() whose lid it is drawing
+    _s.cachedBBox    = getTemplateBBox();
+    _s.cachedBBoxTop = _bboxTopTemp;
+    PVector bbox = _s.cachedBBox;
+    
+    for (int rep = 0; rep < _s.nRep; rep++) {
+      if (autoMarkerIDs) { Start_Index = _autoIdx; _autoIdx += max(1, markerGrid*markerGrid); }
+      else Start_Index = _s.markerStartIndex + rep;
+      if (repPage(_s, rep) != page) continue;  // after the ID, see Pages.pde
+      pushMatrix();
+      PVector repOff = repOffset(_s, rep, bbox);
+      translate(repOff.x, repOff.y);
+      
+      // Selection highlight (orange) when multiple shapes exist.
+      // bbox.z = overallLeft (≤ 0), _s.cachedBBoxTop = overallTop (the actual top of the AABB).
+      float bboxTop = _s.cachedBBoxTop;
+      if (shapes.size() > 1 && si == selectedShapeIdx) {
+        pushStyle();
+        noFill();
+        stroke(SELECTION_ORANGE);
+        strokeWeight(2.5 / SCREEN_SCALE);
+        rect(bbox.z - 2 / SCREEN_SCALE, bboxTop - 2 / SCREEN_SCALE,
+             bbox.x + 4 / SCREEN_SCALE,
+             bbox.y + 4 / SCREEN_SCALE);
+        popStyle();
+      }
+      
+      // Drag highlight (blue) for the copy being dragged
+      if (freePlacementMode && si == draggedShapeIdx && rep == draggedRepIdx) {
+        pushStyle();
+        noFill();
+        stroke(50, 150, 255);
+        strokeWeight(2 / SCREEN_SCALE);
+        rect(bbox.z - 2 / SCREEN_SCALE, bboxTop - 2 / SCREEN_SCALE,
+             bbox.x + 4 / SCREEN_SCALE,
+             bbox.y + 4 / SCREEN_SCALE);
+        popStyle();
+      }
+      
+      // Outline (red) for a copy the cutter cannot reach all of
+      if (copyOutsideCutArea(repOff, bbox, bboxTop)) {
+        _pageHasOverflow = true;
+        pushStyle();
+        noFill();
+        stroke(200, 40, 40);
+        strokeWeight(1.5 / SCREEN_SCALE);
+        rect(bbox.z, bboxTop, bbox.x, bbox.y);
+        popStyle();
+      }
+
+      // Shape label: small text at top-left of bounding box
+      if (_s.label != null && !_s.label.isEmpty()) {
+        pushStyle();
+        fill(80);
+        noStroke();
+        textAlign(LEFT, BOTTOM);
+        pageText(10 / SCREEN_SCALE);
+        text(_s.label, 0, -tabDepth_px - 3 / SCREEN_SCALE);
+        popStyle();
+      }
+      
+      // Draw textured lids for preview (if any lid textures are enabled)
+      if (sidebar != null && (_s.topLidEnabled || _s.bottomLidEnabled)) {
+        if (sideTextureMode == TEX_WRAP_FULL) {
+          drawWrapLidsOnPlan(g);   // one image over both caps — see WrapFrame.pde
+        } else if ((perEdgeMode || cuboidMode) && edgeTop_px != null && edgeBot_px != null) {
+          texturedLidsForPrint_PerEdge(g);
+        } else {
+          texturedLidsForPrint_Uniform(g);
+        }
+      }
+      
+      drawPlan(true);
+      popMatrix();
+    }
+  }
+  _drawingShapeIdx = -1;
+  // Restore globals to selected shape so the sidebar reflects correct values
+  loadGlobalsFrom(shapes.get(selectedShapeIdx));
+  setParams(false);
+  // Always trust the actual toggle state — loadGlobalsFrom may carry a stale uiLock
+  if (tLock != null) uiLock = tLock.getState();
+  // The base belongs to no copy, so the per-copy check above never sees it
+  if (_baseDrawnValid && copyOutsideCutArea(
+        new PVector(_baseBBoxX * MM_current, _baseBBoxY * MM_current),
+        new PVector((_baseBBoxW + CUT_GAP_MM) * MM_current, (_baseBBoxH + CUT_GAP_MM) * MM_current, 0), 0)) {
+    _pageHasOverflow = true;
+  }
+  // Distance overlay (preview only, in the pattern frame)
+  if (!pageOverview) drawDistanceOverlay();
+  popMatrix();  // Close drawCalibCrosses/translate matrix
+}
+
 void drawA4Paper() {
   background(200);
+  drawPaperSheet();
+}
+
+void drawPaperSheet() {
   pushMatrix();
   fill(255);
   stroke(0);
@@ -784,6 +820,7 @@ void drawPlan(boolean img) {
 
 // How many .scad frames the last export wrote, for the on-screen notification.
 int lastExportFrameCount = 0;
+int lastExportPageCount = 1;  // and how many sheets
 
 void exportPlan() {
   timestamp = month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second();
@@ -888,15 +925,22 @@ void initRepPositions() {
   }
   // Sync to selected shape
   if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-    shapes.get(selectedShapeIdx).repPositions = repPositions;
+    ShapeSpec sel = shapes.get(selectedShapeIdx);
+    sel.repPositions = repPositions;
+    sel.repPages = resizedRepPages(sel.repPages, nRep);
   }
 }
 
 // Convert a screen pixel coordinate to the pattern-space position in mm
 // (relative to the patX/patY origin, accounting for patRotation).
 PVector screenToPatternMM(float sx, float sy) {
-  float canvasX = (sx - canvasOffsetX) / SCREEN_SCALE;
-  float canvasY = (sy - canvasOffsetY) / SCREEN_SCALE;
+  return screenToPatternMM(sx, sy, canvasOffsetX, canvasOffsetY, SCREEN_SCALE);
+}
+
+// The same for a sheet drawn at (originX, originY) at the given scale, as in the overview.
+PVector screenToPatternMM(float sx, float sy, float originX, float originY, float viewScale) {
+  float canvasX = (sx - originX) / viewScale;
+  float canvasY = (sy - originY) / viewScale;
   // Undo the translate(patX_px, patY_px)
   float rx = canvasX - patX_px;
   float ry = canvasY - patY_px;

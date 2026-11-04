@@ -63,9 +63,35 @@ void drawFrontPDF() {
   beginRecord(pdf);
   pushStyle();
   stroke(0);
-  strokeWeight(1);
 
-  // HIGH-RESOLUTION TEXTURE LAYER (300 DPI)
+  // One buffer for every page: at A1 it is too large to allocate once per sheet.
+  PGraphics art = createGraphics((int)widthA4_render, (int)heightA4_render, P2D);
+  int[] pages = usedPages();
+  for (int pi = 0; pi < pages.length; pi++) {
+    // nextPage() resets the recorder's matrix, so nothing may be pushed across this call.
+    if (pi > 0) pdf.nextPage();
+    strokeWeight(1);
+    renderPageTextures(art, pages[pi]);
+
+    // Composite high-res texture into PDF, scaled down to 72 DPI coordinate space
+    image(art, 0, 0, widthA4, heightA4);
+
+    // VECTOR LAYER (72 DPI - native PDF resolution)
+    pushMatrix();
+    drawCalibCrosses();
+    strokeWeight(0.5);  // Thinner lines for fold/cut outlines
+    drawPageTemplates(pages[pi], false);
+    popMatrix();
+  }
+  lastExportPageCount = pages.length;
+
+  popStyle();
+  endRecord();
+  println("Print File saved:", pdfFilename);
+}
+
+// HIGH-RESOLUTION TEXTURE LAYER (300 DPI): redraws art with one page's textures.
+void renderPageTextures(PGraphics art, int page) {
   // Save original values
   float oldMM = MM;
   float oldWidthA4 = widthA4;
@@ -82,7 +108,6 @@ void drawFrontPDF() {
   setParams(false);
   
   // Render textures at 3508x2480 px
-  PGraphics art = createGraphics((int)widthA4_render, (int)heightA4_render, P2D);
   art.beginDraw();
   art.smooth(8); // Enable high-quality anti-aliasing
   art.background(0, 0); // transparent background
@@ -93,12 +118,10 @@ void drawFrontPDF() {
     setParams(false);
     PVector bboxTex = getTemplateBBox();
     for (int rep = 0; rep < _ts.nRep; rep++) {
+      if (repPage(_ts, rep) != page) continue;
       art.pushMatrix();
-      if (freePlacementMode && _ts.repPositions != null && rep < _ts.repPositions.length) {
-        art.translate(_ts.repPositions[rep].x * MM_current, _ts.repPositions[rep].y * MM_current);
-      } else {
-        art.translate((rep % 2) * bboxTex.x, (rep / 2) * bboxTex.y);
-      }
+      PVector repOff = repOffset(_ts, rep, bboxTex);
+      art.translate(repOff.x, repOff.y);
       drawTexturesForPrinting(art);  // Draws at 300 DPI coordinates
       art.popMatrix();
       _texRunIdx++;
@@ -113,46 +136,37 @@ void drawFrontPDF() {
   widthA4 = oldWidthA4;
   heightA4 = oldHeightA4;
   setParams(false);  // Recalculate back to 72 DPI
-  
-  // Composite high-res texture into PDF, scaled down to 72 DPI coordinate space
-  image(art, 0, 0, widthA4, heightA4);
+}
 
-  // VECTOR LAYER (72 DPI - native PDF resolution)
-  pushMatrix();
-  drawCalibCrosses();
-  strokeWeight(0.5);  // Thinner lines for fold/cut outlines
+// Draws one page's templates at the current scale: drawPlan(true) artwork for the print
+// layer, drawPlan(false) outlines when cut is set. Shared so the PDF and SVG pages cannot
+// drift apart. Caller owns the matrix.
+void drawPageTemplates(int page, boolean cut) {
   translate(patX_px, patY_px);
   rotate(radians(patRotation));
-  _baseDrawnThisFrame = false;   // base plate draws once, during the first shape
-  int _pdfAutoIdx = (shapes.size() > 0) ? shapes.get(0).markerStartIndex : Start_Index;
-  for (int _psi = 0; _psi < shapes.size(); _psi++) {
-    ShapeSpec _ps = shapes.get(_psi);
-    loadGlobalsFrom(_ps);
-    setParams(false);
-    _drawingShapeIdx = _psi;   // tells drawConnectionSlits() whose lid it is drawing
-    PVector bboxPDF = getTemplateBBox();
-    for (int rep = 0; rep < _ps.nRep; rep++) {
-      if (autoMarkerIDs) { Start_Index = _pdfAutoIdx; _pdfAutoIdx += max(1, markerGrid*markerGrid); }
-      else Start_Index = _ps.markerStartIndex + rep;
+  _baseDrawnThisFrame = !basePlateOnPage(page);   // base plate draws once, on its own page
+  int autoIdx = (shapes.size() > 0) ? shapes.get(0).markerStartIndex : Start_Index;
+  for (int si = 0; si < shapes.size(); si++) {
+    ShapeSpec s = shapes.get(si);
+    loadGlobalsFrom(s);
+    setParams(cut);
+    _drawingShapeIdx = si;   // tells drawConnectionSlits() whose lid it is drawing
+    PVector bbox = getTemplateBBox();
+    for (int rep = 0; rep < s.nRep; rep++) {
+      if (autoMarkerIDs) { Start_Index = autoIdx; autoIdx += max(1, markerGrid*markerGrid); }
+      else Start_Index = s.markerStartIndex + rep;
+      if (repPage(s, rep) != page) continue;  // after the ID, see Pages.pde
       pushMatrix();
-      if (freePlacementMode && _ps.repPositions != null && rep < _ps.repPositions.length) {
-        translate(_ps.repPositions[rep].x * MM_current, _ps.repPositions[rep].y * MM_current);
-      } else {
-        translate((rep % 2) * bboxPDF.x, (rep / 2) * bboxPDF.y);
-      }
-      drawPlan(true);
+      PVector repOff = repOffset(s, rep, bbox);
+      translate(repOff.x, repOff.y);
+      drawPlan(!cut);
       popMatrix();
     }
   }
   _drawingShapeIdx = -1;
   // Restore selected shape globals
   loadGlobalsFrom(shapes.get(selectedShapeIdx));
-  setParams(false);
-  popMatrix();
-
-  popStyle();
-  endRecord();
-  println("Print File saved:", pdfFilename);
+  setParams(cut);
 }
 
 void saveFrontFold() {
@@ -182,52 +196,35 @@ void saveFrontFold() {
     return;
   }
 
-  // SVG canvas at vinyl DPI — physical dimensions declared via fixSVGPhysicalDimensions
-  svg = createGraphics((int)widthA4_V, (int)heightA4_V, SVG, svgFilename);
-  beginRecord(svg);
-  pushStyle();
-  stroke(0);
-  strokeWeight(0.5);  // Thinner lines for vinyl cutting
-
-  setParams(true);  // Ensure patX_px/patY_px use vinyl DPI before translate
-  pushMatrix();
-  translate(offW_V_F, offH_V_F); //optional
-  translate(patX_px, patY_px);
-  rotate(radians(patRotation));
-  _baseDrawnThisFrame = false;   // base plate draws once, during the first shape
-  int _svgAutoIdx = (shapes.size() > 0) ? shapes.get(0).markerStartIndex : Start_Index;
-  for (int _fsi = 0; _fsi < shapes.size(); _fsi++) {
-    ShapeSpec _fs = shapes.get(_fsi);
-    loadGlobalsFrom(_fs);
-    setParams(true);
-    _drawingShapeIdx = _fsi;   // tells drawConnectionSlits() whose lid it is drawing
-    PVector bboxSVG = getTemplateBBox();
-    for (int rep = 0; rep < _fs.nRep; rep++) {
-      if (autoMarkerIDs) { Start_Index = _svgAutoIdx; _svgAutoIdx += max(1, markerGrid*markerGrid); }
-      else Start_Index = _fs.markerStartIndex + rep;
-      pushMatrix();
-      if (freePlacementMode && _fs.repPositions != null && rep < _fs.repPositions.length) {
-        translate(_fs.repPositions[rep].x * MM_current, _fs.repPositions[rep].y * MM_current);
-      } else {
-        translate((rep % 2) * bboxSVG.x, (rep / 2) * bboxSVG.y);
-      }
-      drawPlan(false);
-      popMatrix();
+  // SVG has no pages, so each sheet gets its own file. The numbers follow the PDF: fold_p2
+  // cuts PDF page 2, whatever page it was in the sketch.
+  int[] pages = usedPages();
+  for (int pi = 0; pi < pages.length; pi++) {
+    if (pages.length > 1) {
+      svgFilename = "output/" + baseName + "_fold_p" + (pi + 1) + "_" + timestamp + ".svg";
     }
-  }
-  _drawingShapeIdx = -1;
-  // Restore selected shape globals
-  loadGlobalsFrom(shapes.get(selectedShapeIdx));
-  setParams(true);
-  popMatrix();
+    // SVG canvas at vinyl DPI — physical dimensions declared via fixSVGPhysicalDimensions
+    svg = createGraphics((int)widthA4_V, (int)heightA4_V, SVG, svgFilename);
+    beginRecord(svg);
+    pushStyle();
+    stroke(0);
+    strokeWeight(0.5);  // Thinner lines for vinyl cutting
 
-  popStyle();
-  endRecord();
-  fixSVGPhysicalDimensions(svgFilename, VINYL_W, VINYL_H, widthA4_V, heightA4_V);
-  println("Print File saved:", svgFilename);
+    setParams(true);  // Ensure patX_px/patY_px use vinyl DPI before translate
+    pushMatrix();
+    translate(offW_V_F, offH_V_F); //optional
+    drawPageTemplates(pages[pi], true);
+    popMatrix();
+
+    popStyle();
+    endRecord();
+    fixSVGPhysicalDimensions(svgFilename, VINYL_W, VINYL_H, widthA4_V, heightA4_V);
+    println("Print File saved:", svgFilename);
+  }
   bExportingCutFile = false;  // restore color fill for screen
 }
 
+// One calibration file however many pages: the crosses are the same on every sheet.
 void saveFrontCalib() {
   String baseName = (uiExportFilename != null && !uiExportFilename.trim().isEmpty()) ? uiExportFilename : "result";
   svgFilename = "output/" + baseName + "_calib_" + timestamp + ".svg";
@@ -295,4 +292,7 @@ drawFrontPDF()
  --> Closes that positioning: popMatrix();
  --> Restores style: popStyle();
  --> Finishes and saves the PDF: endRecord(); println("Print File saved:", pdfFilename);
+
+ With more than one page, everything from the crosses to the plan repeats per page in usedPages(),
+ with pdf.nextPage() between them. saveFrontFold() writes one SVG per page the same way.
  */

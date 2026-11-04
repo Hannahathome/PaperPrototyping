@@ -59,6 +59,25 @@ Press `E`. Writes a timestamped set into `output/` (gitignored):
 
 Print the calibration SVG first to verify alignment before committing material.
 
+### Multiple pages
+
+Use the bar above the page to spread templates over several sheets. `<` `>` switch page, `+`
+and `-` add or remove one, and **Move** sends the selected copy to the previous or next page.
+Each copy stays whole, and repeats of a shape can sit on different pages. Removing a page moves
+its templates to the page before it, so nothing is lost. Pages last for the session.
+
+**Overview** (or `O`, or scrolling down over the page) shows every page side by side. Drag a
+template onto another sheet to move it there; it lands where you drop it. Click a sheet, or
+scroll up over it, to open it. Use `+` to add a sheet to drag onto.
+
+A multi-page export has one PDF with a page per sheet and calibration crosses on each, plus one
+`<name>_fold_p<n>_<stamp>.svg` per sheet: `fold_p2` cuts PDF page 2. There is still one
+calibration SVG, since the crosses are identical on every sheet. Empty pages are skipped. The
+base plate goes on the page holding the first shape's first copy. Bar assembly stays single-page.
+
+A red outline and "Outside cut area" mean a copy runs past the area the cutter can reach
+(280 × 200 mm on A4). A template larger than that does not fit on any page.
+
 The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export STL, print.
 `flap_length` is written near the top of each file so it can be tweaked without re-exporting.
 
@@ -75,6 +94,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `C` | Copy top widths to bottom |
 | `N` | Normalise edges to the target perimeter |
 | `E` | Export PDF + SVG |
+| `O` | Toggle the page overview |
 
 ## Source layout
 
@@ -102,6 +122,7 @@ The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
 | `PrintNCut.pde` | PDF/SVG export and calibration marks |
+| `Pages.pde` | Spreading templates over several sheets |
 | `json_import.pde` | Shape import from DataPhysicalisation |
 | `PlaceholderAssets.pde` | Generates placeholder textures on first run |
 | `DistanceOverlay.pde` | On-canvas measurement overlay — hidden, see below |

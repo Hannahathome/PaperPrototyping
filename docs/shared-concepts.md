@@ -71,6 +71,11 @@ The timestamp is `M_D_H_MM_SS`. The order that matters in practice:
    calibration.
 3. Cut the fold SVG using the same origin.
 
+ScaffoldShell can spread a layout over several sheets. The PDF then has one page per
+sheet, each with its own crosses, and the fold SVG becomes one
+`<name>_fold_p<n>_<stamp>.svg` per sheet, where `p<n>` is the PDF page it cuts. The
+single calibration SVG applies to every sheet.
+
 Fold lines are conventionally dashed and cut lines solid, so the cutter can be
 configured to score rather than cut through. Check the dash-pattern setting
 before a long run.

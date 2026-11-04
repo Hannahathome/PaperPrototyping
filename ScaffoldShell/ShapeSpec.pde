@@ -74,6 +74,9 @@ class ShapeSpec {
   // --- Placement ---
   int nRep;
   PVector[] repPositions; // mm, relative to patX/patY; null = use auto-grid
+  // Page of each copy, parallel to repPositions. Deliberately absent from
+  // saveGlobalsTo/loadGlobalsFrom: nothing at draw time needs it as a global. See Pages.pde.
+  int[] repPages;
 
   // --- Strip rotation cache (StripRotation.pde) ---
   // Derived from stripImgSrc + stripRotation, and rebuilt only when one of those changes.
@@ -164,6 +167,7 @@ class ShapeSpec {
 
     nRep             = 1;
     repPositions     = null;
+    repPages         = new int[1];
     _stripRotOut     = null;
     _stripRotApplied = -1;
     _stripRotSrcUsed = null;
@@ -409,6 +413,7 @@ void initRepPositionsForShape(ShapeSpec s) {
       ((i / 2) * bbox.y) / MM_current
     );
   }
+  s.repPages = resizedRepPages(s.repPages, s.nRep);
 }
 
 // ---------------------------------------------------------------------------
@@ -444,22 +449,29 @@ void addShape() {
   // Build the new shape from current globals
   ShapeSpec ns = shapeFromCurrentGlobals();
 
-  // Auto-place the new shape below all existing content
+  // Auto-place the new shape below everything on the page in view
   float newYmm = 0;
   for (int si = 0; si < shapes.size(); si++) {
     ShapeSpec ex = shapes.get(si);
     float shapeH = (ex.cachedBBox != null) ? (ex.cachedBBox.y / MM) : 100;
     float maxRepY = 0;
+    boolean onPage = false;
     if (ex.repPositions != null) {
-      for (PVector rp : ex.repPositions) maxRepY = max(maxRepY, rp.y);
+      for (int ri = 0; ri < ex.repPositions.length; ri++) {
+        if (repPage(ex, ri) != currentPage) continue;
+        maxRepY = max(maxRepY, ex.repPositions[ri].y);
+        onPage = true;
+      }
     }
-    newYmm = max(newYmm, maxRepY + shapeH + 5);
+    if (onPage) newYmm = max(newYmm, maxRepY + shapeH + 5);
   }
   ns.nRep = 1;
   ns.repPositions = new PVector[] { new PVector(0, newYmm) };
+  ns.repPages = new int[] { currentPage };
 
   shapes.add(ns);
   selectedShapeIdx = shapes.size() - 1;
+  selectedRepIdx = 0;
 
   loadGlobalsFrom(ns);
   setParams(false);

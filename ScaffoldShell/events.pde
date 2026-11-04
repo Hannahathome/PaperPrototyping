@@ -24,6 +24,9 @@ void mousePressed() {
   // fill the canvas, they map straight onto it -- which is why the buttons stopped responding
   // as soon as the window was resized.
   if (mouseInCanvasArea()) {
+  if (handlePageBarClick()) return;
+  if (handleOverviewClick()) return;
+
   // Assembly template piece drag — check before UI so clicks on the canvas work
   if (assemblyMode && assemblyShowTemplate && activeAssembly != null && !view3DMode) {
     float pxX = (mouseX - canvasOffsetX) / SCREEN_SCALE - patX_px;
@@ -117,6 +120,7 @@ void mousePressed() {
         setParams(false);
         syncUIToSelectedShape();
       }
+      selectedRepIdx  = picked[1];
       draggedShapeIdx = picked[0];
       draggedRepIdx   = picked[1];
       PVector mMM = screenToPatternMM(mouseX, mouseY);
@@ -188,6 +192,7 @@ void mousePressed() {
           int next = selectedShapeIdx + (i == 0 ? -1 : 1);
           if (next >= 0 && next < shapes.size()) {
             selectedShapeIdx = next;
+            followSelectionToPage();
             loadGlobalsFrom(shapes.get(selectedShapeIdx));
             setParams(false);
           }
@@ -351,6 +356,11 @@ void keyPressed() {
     if (keyCode == 'Y')                           { redoConnections(); return; }
   }
 
+  if ((key == 'o' || key == 'O') && _pageBarDrawn) {
+    pageOverview = !pageOverview;
+    redraw();
+    return;
+  }
   if (key == 'e' || key == 'E') {
     bSavePDF = true;
   }
@@ -532,6 +542,8 @@ void keyReleased() {
 }
 
 void mouseReleased() {
+  endOverviewDrag();
+
   // Connect mode: a click that did not drag, on a face that was ALREADY selected, clears
   // the selection. Resolving this on release (not press) is what lets you still press a
   // selected face and drag its connection.
@@ -548,6 +560,7 @@ void mouseReleased() {
       shapes != null && _shapePressIdx < shapes.size() && _shapePressIdx != selectedShapeIdx) {
     saveGlobalsTo(shapes.get(selectedShapeIdx));
     selectedShapeIdx = _shapePressIdx;
+    followSelectionToPage();
     loadGlobalsFrom(shapes.get(selectedShapeIdx));
     setParams(false);
     syncUIToSelectedShape();
@@ -594,6 +607,8 @@ void mouseWheel(MouseEvent event) {
   // more sides than the list can show at once (roughly eight).
   if (sidebar != null && sidebar.handleMouseWheel(event.getCount())) return;
 
+  if (handlePageWheel(event.getCount())) return;
+
   // Handle 3D zoom (only in canvas area, not in bottom bar)
   boolean in3DView = view3DMode || (assemblyMode && !assemblyShowTemplate);
   if (in3DView && mouseY < height - BOTTOM_EXPORT_HEIGHT) {
@@ -608,6 +623,11 @@ void mouseDragged() {
   // Check cropper first
   if (cropperActive && imageCropper != null) {
     imageCropper.handleMouseDragged();
+    return;
+  }
+
+  if (ovDragging) {
+    dragCopyInOverview();
     return;
   }
 
@@ -842,8 +862,12 @@ void handleTemplateEditModeClick() {
 // Requires each shape's cachedBBox to be populated by the draw loop.
 // ---------------------------------------------------------------------------
 int[] pickShape(float sx, float sy) {
+  return pickShapeAt(screenToPatternMM(sx, sy), currentPage);
+}
+
+// The same for a position already in pattern mm, on a given page.
+int[] pickShapeAt(PVector mMM, int page) {
   if (shapes == null) return new int[]{-1, -1};
-  PVector mMM = screenToPatternMM(sx, sy);
   for (int si = shapes.size() - 1; si >= 0; si--) {
     ShapeSpec _ps = shapes.get(si);
     if (_ps.repPositions == null || _ps.cachedBBox == null) continue;
@@ -853,6 +877,7 @@ int[] pickShape(float sx, float sy) {
     float leftOffMm = _ps.cachedBBox.z / MM_current;
     float topOffMm  = _ps.cachedBBoxTop / MM_current;
     for (int ri = _ps.repPositions.length - 1; ri >= 0; ri--) {
+      if (repPage(_ps, ri) != page) continue;
       float px = _ps.repPositions[ri].x + leftOffMm;
       float py = _ps.repPositions[ri].y + topOffMm;
       if (mMM.x >= px && mMM.x <= px + bboxWmm &&
