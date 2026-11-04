@@ -104,32 +104,39 @@ void drawRightSlantFlap(PVector p2, PVector p3, float flapDepth, float inset, fl
 
 
 void drawBottomTabContour(PVector p, PVector d, float tabDepth, float tabInset, float arrowheadFlare, float neckDepth) {
-  drawDashedLine(p.x + d.x - tabInset*0, p.y + d.y, p.x + tabInset*2, p.y + d.y, dash_px, gap_px);
+  // Bottom tabs sit on the right half of the edge, or the left half on the inner wall
+  float tabL = innerWallTabsOffset ? p.x : p.x + tabInset*2;
+  float tabR = innerWallTabsOffset ? p.x + d.x - tabInset*2 : p.x + d.x;
+
+  drawDashedLine(tabR, p.y + d.y, tabL, p.y + d.y, dash_px, gap_px);
 
   beginShape();
   vertex(p.x + d.x, p.y + d.y);
-  vertex(p.x + d.x - tabInset*0, p.y + d.y);
-  vertex(p.x + d.x - tabInset*0, p.y + d.y - neckDepth);
-  vertex(p.x + d.x - tabInset*0 - arrowheadFlare, p.y + d.y - tabDepth);
-  vertex(p.x + tabInset*2 + arrowheadFlare, p.y + d.y - tabDepth);
-  vertex(p.x + tabInset*2, p.y + d.y - neckDepth);
-  vertex(p.x + tabInset*2, p.y + d.y);
+  vertex(tabR, p.y + d.y);
+  vertex(tabR, p.y + d.y - neckDepth);
+  vertex(tabR - arrowheadFlare, p.y + d.y - tabDepth);
+  vertex(tabL + arrowheadFlare, p.y + d.y - tabDepth);
+  vertex(tabL, p.y + d.y - neckDepth);
+  vertex(tabL, p.y + d.y);
   vertex(p.x, p.y + d.y);
   endShape();
 }
 
 void drawTopTabContour(PVector p, PVector d, float tabDepth, float tabInset, float arrowheadFlare, float neckDepth) {
+  // Top tabs sit on the left half of the edge, or the right half on the inner wall
+  float tabL = innerWallTabsOffset ? p.x + tabInset*2 : p.x;
+  float tabR = innerWallTabsOffset ? p.x + d.x : p.x + d.x - tabInset*2;
 
-  drawDashedLine(p.x + tabInset*0, p.y, p.x + d.x - tabInset*2, p.y, dash_px, gap_px);
+  drawDashedLine(tabL, p.y, tabR, p.y, dash_px, gap_px);
 
   beginShape();
   vertex(p.x, p.y);
-  vertex(p.x + tabInset*0, p.y);
-  vertex(p.x + tabInset*0, p.y + neckDepth);
-  vertex(p.x + tabInset*0 + arrowheadFlare, p.y + tabDepth);
-  vertex(p.x + d.x - tabInset*2 - arrowheadFlare, p.y + tabDepth);
-  vertex(p.x + d.x - tabInset*2, p.y + neckDepth);
-  vertex(p.x + d.x - tabInset*2, p.y);
+  vertex(tabL, p.y);
+  vertex(tabL, p.y + neckDepth);
+  vertex(tabL + arrowheadFlare, p.y + tabDepth);
+  vertex(tabR - arrowheadFlare, p.y + tabDepth);
+  vertex(tabR, p.y + neckDepth);
+  vertex(tabR, p.y);
   vertex(p.x + d.x, p.y);
   endShape();
 }
@@ -560,31 +567,36 @@ void drawPolygonLidHollow(int numSides, float sideLength, float neckDepth,
   float tabBaseWidth = sideLengthInner - 2 * tabInsetInner;
   float maxFlare = tabBaseWidth * 0.2;  // Flare should be fraction of tab base
   float arrowheadFlareInner = min(tabInsetInner / 3.0, maxFlare);
-  
+
+  // Inner tabs take the half of the edge the outer tabs leave free, so the two
+  // rings of flaps are offset instead of landing on top of each other
+  float tabStartInner = -sideLengthInner/2.;
+  float tabEndInner = sideLengthInner/2. - tabInsetInner*2;
+
   for (int i = 0; i < innerSides; i++) {
     pushMatrix();
     rotate(i * angleIncrementInner);
     translate(0, -radiusInner*cos(angleIncrementInner/2)); // Move to midpoint of inner edge
-    
+
     // Draw fold line at tab base (where tab meets lid edge)
-    drawDashedLine(-sideLengthInner/2. + tabInsetInner*2, 0, sideLengthInner/2., 0, dash_px, gap_px);
-    
+    drawDashedLine(tabStartInner, 0, tabEndInner, 0, dash_px, gap_px);
+
     // Draw arrowhead tab shape extending inward (positive Y direction)
     beginShape();
     vertex(-sideLengthInner/2., 0);  // Edge start
-    vertex(-sideLengthInner/2 + tabInsetInner*2, 0);  // Tab base start
-    vertex(-sideLengthInner/2 + tabInsetInner*2, neckDepthInner);  // Neck depth (inward)
-    vertex(-sideLengthInner/2 + tabInsetInner*2 + arrowheadFlareInner, tabDepthInner);  // Arrow flare
-    vertex(sideLengthInner/2  - arrowheadFlareInner, tabDepthInner);  // Arrow flare (other side)
-    vertex(sideLengthInner/2, neckDepthInner);  // Neck depth (other side)
-    vertex(sideLengthInner/2, 0);  // Tab base end
+    vertex(tabStartInner, 0);  // Tab base start
+    vertex(tabStartInner, neckDepthInner);  // Neck depth (inward)
+    vertex(tabStartInner + arrowheadFlareInner, tabDepthInner);  // Arrow flare
+    vertex(tabEndInner - arrowheadFlareInner, tabDepthInner);  // Arrow flare (other side)
+    vertex(tabEndInner, neckDepthInner);  // Neck depth (other side)
+    vertex(tabEndInner, 0);  // Tab base end
     vertex(sideLengthInner/2., 0);  // Edge end
     endShape();
-    
+
     // Draw second fold line at wall thickness position (for bending to match wall)
     if (foldLineDepth < tabDepthInner) {
-      drawDashedLine(-sideLengthInner/2. + tabInsetInner*2, foldLineDepth, 
-                     sideLengthInner/2., foldLineDepth, 
+      drawDashedLine(tabStartInner, foldLineDepth,
+                     tabEndInner, foldLineDepth,
                      dash_px, gap_px);
     }
     
@@ -667,16 +679,16 @@ void drawPolygonLidVarHollow(float[] sidePx, float neckDepth, float tabInset,
     PVector edgeDir = PVector.sub(p2, p1);
     float edgeLen = edgeDir.mag();
     edgeDir.normalize();
-    PVector perpOut = new PVector(-edgeDir.y, edgeDir.x);
-    
+    PVector perpOut = new PVector(edgeDir.y, -edgeDir.x);
+
     // Calculate arrowhead tab vertices
-    float tabWidth = max(0.001f, edgeLen - tabInset * 2.0);
-    float insetDist = (edgeLen - tabWidth) / 2.0;
-    
+    // Tab on the far half of the edge, same as the single-wall lid, so it interlocks with the wall tabs
+    float localInset = min(tabInset, TAB_INSET_RATIO * edgeLen);
+
     PVector edgeStart = PVector.add(midpoint, PVector.mult(edgeDir, -edgeLen/2.0));
     PVector edgeEnd = PVector.add(midpoint, PVector.mult(edgeDir, edgeLen/2.0));
-    PVector tabBase1 = PVector.add(edgeStart, PVector.mult(edgeDir, insetDist));
-    PVector tabBase2 = PVector.add(edgeEnd, PVector.mult(edgeDir, -insetDist));
+    PVector tabBase1 = PVector.add(edgeStart, PVector.mult(edgeDir, localInset * 2.0));
+    PVector tabBase2 = edgeEnd.copy();
     PVector neckPt1 = PVector.add(tabBase1, PVector.mult(perpOut, neckDepth));
     PVector neckPt2 = PVector.add(tabBase2, PVector.mult(perpOut, neckDepth));
     PVector arrowPt1 = PVector.add(tabBase1, PVector.mult(edgeDir, arrowFlare));
@@ -742,16 +754,14 @@ void drawPolygonLidVarHollow(float[] sidePx, float neckDepth, float tabInset,
     PVector edgeDir = PVector.sub(p2, p1);
     float edgeLen = edgeDir.mag();
     edgeDir.normalize();
-    PVector perpIn = new PVector(edgeDir.y, -edgeDir.x); // Inward toward center
-    
+    PVector perpIn = new PVector(-edgeDir.y, edgeDir.x); // Inward toward center
+
     // Calculate arrowhead tab vertices
-    float tabWidth = max(0.001f, edgeLen - tabInsetInner * 2.0);
-    float insetDist = (edgeLen - tabWidth) / 2.0;
-    
+    // Tab on the near half of the edge, offset from the outer tabs
     PVector edgeStart = PVector.add(midpoint, PVector.mult(edgeDir, -edgeLen/2.0));
     PVector edgeEnd = PVector.add(midpoint, PVector.mult(edgeDir, edgeLen/2.0));
-    PVector tabBase1 = PVector.add(edgeStart, PVector.mult(edgeDir, insetDist));
-    PVector tabBase2 = PVector.add(edgeEnd, PVector.mult(edgeDir, -insetDist));
+    PVector tabBase1 = edgeStart.copy();
+    PVector tabBase2 = PVector.add(edgeEnd, PVector.mult(edgeDir, -tabInsetInner * 2.0));
     PVector neckPt1 = PVector.add(tabBase1, PVector.mult(perpIn, neckDepthInner));
     PVector neckPt2 = PVector.add(tabBase2, PVector.mult(perpIn, neckDepthInner));
     PVector arrowPt1 = PVector.add(tabBase1, PVector.mult(edgeDir, arrowFlareInner));

@@ -867,13 +867,16 @@ void drawTrapezoidsPerEdgeHollow(float startX, float startY, float[] edgeTop_px,
   tabDepth_px = innerTabDepth;
   neckDepth_px = innerNeckDepth;
   
+  innerWallTabsOffset = true;
+
   // Draw inner wall panels and all features using standard functions
   pushMatrix();
   drawTrapezoidsPerEdge(innerWallX, innerWallY, edgeTopInner, edgeBotInner, hPx, m, drawTabs);
   drawTzFoldlinesPerEdge(innerWallX, innerWallY, edgeTopInner, edgeBotInner, hPx, m);
   popMatrix();
-  
+
   // Restore original parameters
+  innerWallTabsOffset = false;
   flapDepth_px = savedFlapDepth;
   tabInset_bot_px = savedTabInset_bot;
   tabInset_top_px = savedTabInset_top;

@@ -242,6 +242,7 @@ boolean hollowMode = false;                    // false=single wall, true=double
 float wallThickness = 5.0;                     // Gap between inner and outer walls (mm)
 boolean showInnerWall = true;                  // Toggle to show/hide inner wall in preview
 float wallThickness_px;                        // Derived pixel value
+boolean innerWallTabsOffset = false;           // Set while drawing the inner wall: top/bottom tabs move to the other half of each edge
 
 // ==================== INNER SHAPE PARAMETERS (for donut lids) ====================
 int nSidesInner = 4;                           // Number of sides for inner polygon (default same as outer)
