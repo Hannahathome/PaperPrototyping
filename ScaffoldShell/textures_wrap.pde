@@ -16,17 +16,16 @@
 // The strip renderer counts its rows from the model's BOTTOM edge, so the band is handed
 // over descending: row 0 samples the bottom rim, row 1 the top rim.
 void drawWrapWall(PGraphics pg) {
-  if (!wrapActive()) return;
-  drawTriangleStripTexture_Uniform(pg, wrapImg,
-                                   wrapImgVFrac(wrapTBottomRim()),
-                                   wrapImgVFrac(wrapTTopRim()));
+  drawWrapWall_Range(pg, 0, max(3, nSides));
 }
 
 void drawWrapWall_Range(PGraphics pg, int panelStart, int panelEnd) {
   if (!wrapActive()) return;
+  final float[][] uEnds = wrapPanelEndsU();
   drawTriangleStripTexture_Uniform_Range(pg, wrapImg, panelStart, panelEnd,
                                          wrapImgVFrac(wrapTBottomRim()),
-                                         wrapImgVFrac(wrapTTopRim()));
+                                         wrapImgVFrac(wrapTTopRim()),
+                                         uEnds[0], uEnds[1]);
 }
 
 // ---------------------------------------------------------------------------
@@ -38,20 +37,20 @@ void drawWrapWall_Range(PGraphics pg, int panelStart, int panelEnd) {
 //
 // printedMirror is the bottom lid. A bottom lid is flipped over when it is folded onto the
 // form, so walking its printed rim clockwise walks the assembled model anticlockwise, and s
-// has to run backwards to match - a flip is not something a rotation can undo. Which
-// printed edge ends up against which wall panel is NOT fixed, and does not need to be: a
-// regular n-gon mates in n rotational positions and they are all physically identical, so
-// the builder simply turns the lid until the picture lines up. Reversing s per edge, and
-// leaving the edge index alone, is therefore both correct and the least arbitrary choice.
+// has to run backwards to match - a flip is not something a rotation can undo. Reversing s
+// inside each edge is not enough: the edges themselves have to come in the opposite order,
+// or every printed edge sits beside the wrong neighbour. Which printed edge ends up against
+// which wall panel is NOT fixed, and does not need to be: a regular n-gon mates in n
+// rotational positions, so the builder simply turns the lid until the picture lines up.
 void drawWrapCapToPG(PGraphics pg, boolean isTop, boolean printedMirror) {
-  if (wrapImg == null || !wrapFrameAvailable()) return;
+  if (wrapImg == null || !wrapFrameAvailable() || wrapCapHidden(isTop)) return;
 
   final int n = max(3, nSides);
   final int density = max(2, tessellationDensity);   // full density: the radial squeeze bands at low counts
-  final float[] sSpan = wrapPanelSpansS();
+  final float[][] sEnds = wrapPanelEndsS();
   final PVector[] V = wrapCapVertsPx(isTop);
   final float tRim  = isTop ? wrapTTopRim() : wrapTBottomRim();
-  final float tPole = isTop ? 1.0 : 0.0;
+  final float tPole = wrapTPole(isTop);
 
   pg.pushStyle();
   pg.noStroke();
@@ -64,8 +63,8 @@ void drawWrapCapToPG(PGraphics pg, boolean isTop, boolean printedMirror) {
 
   for (int i = 0; i < n; i++) {
     PVector A = V[i], B = V[(i + 1) % n];
-    float sA = printedMirror ? sSpan[i + 1] : sSpan[i];
-    float sB = printedMirror ? sSpan[i]     : sSpan[i + 1];
+    float[] sAB = wrapCapEdgeS(i, printedMirror, sEnds);
+    float sA = sAB[0], sB = sAB[1];
 
     for (int ring = 0; ring < density; ring++) {
       float r0 = (float) ring / density;          // 0 = centre, 1 = rim
@@ -107,6 +106,17 @@ void drawWrapCapToPG(PGraphics pg, boolean isTop, boolean printedMirror) {
 
   pg.endShape();
   pg.popStyle();
+}
+
+// s at each end of a cap edge, walking vertex i -> vertex i+1. See drawWrapCapToPG for the
+// mirror.
+float[] wrapCapEdgeS(int edge, boolean printedMirror, float[][] sEnds) {
+  int n = sEnds[0].length;
+  if (printedMirror) {
+    int panel = n - 1 - edge;
+    return new float[]{ sEnds[1][panel], sEnds[0][panel] };
+  }
+  return new float[]{ sEnds[0][edge], sEnds[1][edge] };
 }
 
 // Places both lid pieces exactly where drawPlan() puts their outlines, then draws the cap
@@ -168,7 +178,7 @@ void drawWrapPrismFaces3D(PGraphics pg, PVector[] topVerts, PVector[] botVerts) 
 
   final int n = min(topVerts.length, botVerts.length);
   final int density = max(2, tessellationDensity / 2);
-  final float[] sSpan = wrapPanelSpansS();
+  final float[][] sEnds = wrapPanelEndsS();
   final float tBot = wrapTBottomRim(), tTop = wrapTTopRim();
 
   pg.pushStyle();
@@ -201,8 +211,8 @@ void drawWrapPrismFaces3D(PGraphics pg, PVector[] topVerts, PVector[] botVerts) 
         PVector p01 = wrapQuadPoint(BL, BR, TL, TR, a0, f1);
         PVector p11 = wrapQuadPoint(BL, BR, TL, TR, a1, f1);
 
-        float s0 = lerp(sSpan[i], sSpan[i + 1], a0);
-        float s1 = lerp(sSpan[i], sSpan[i + 1], a1);
+        float s0 = lerp(sEnds[0][i], sEnds[1][i], a0);
+        float s1 = lerp(sEnds[0][i], sEnds[1][i], a1);
 
         PVector uv00 = wrapUV(s0, t0, wrapImg);
         PVector uv10 = wrapUV(s1, t0, wrapImg);
@@ -234,13 +244,13 @@ PVector wrapQuadPoint(PVector BL, PVector BR, PVector TL, PVector TR, float a, f
 // One cap in 3D. No mirror here: verts already ARE the assembled polygon, so edge i is wall
 // panel i and s runs forwards. The mirror belongs to the printed piece alone.
 void drawWrapCap3D(PGraphics pg, PVector[] verts, boolean isTop) {
-  if (!wrapActive() || verts == null || verts.length < 3) return;
+  if (!wrapActive() || verts == null || verts.length < 3 || wrapCapHidden(isTop)) return;
 
   final int n = verts.length;
   final int density = max(2, tessellationDensity / 2);
-  final float[] sSpan = wrapPanelSpansS();
+  final float[][] sEnds = wrapPanelEndsS();
   final float tRim  = isTop ? wrapTTopRim() : wrapTBottomRim();
-  final float tPole = isTop ? 1.0 : 0.0;
+  final float tPole = wrapTPole(isTop);
   final float y = verts[0].y;
 
   pg.pushStyle();
@@ -269,8 +279,8 @@ void drawWrapCap3D(PGraphics pg, PVector[] verts, boolean isTop) {
         float ex0 = lerp(A.x, B.x, a0), ez0 = lerp(A.z, B.z, a0);
         float ex1 = lerp(A.x, B.x, a1), ez1 = lerp(A.z, B.z, a1);
 
-        float s0 = lerp(sSpan[i], sSpan[i + 1], a0);
-        float s1 = lerp(sSpan[i], sSpan[i + 1], a1);
+        float s0 = lerp(sEnds[0][i], sEnds[1][i], a0);
+        float s1 = lerp(sEnds[0][i], sEnds[1][i], a1);
 
         PVector uv00 = wrapUV(s0, t0, wrapImg);
         PVector uv10 = wrapUV(s1, t0, wrapImg);

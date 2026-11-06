@@ -340,6 +340,14 @@ void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelS
 // vFrom / vTo as in drawTriangleStripTexture_Uniform above.
 void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelStart, int panelEnd,
                                             float vFrom, float vTo) {
+  drawTriangleStripTexture_Uniform_Range(pg, img, panelStart, panelEnd, vFrom, vTo, null, null);
+}
+
+// sLeft / sRight give each panel's image columns as 0..1 fractions, for wrap mode, whose
+// panels need not run left to right across the image (see wrapPanelEndsU). Null means the
+// strip's own continuous walk.
+void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelStart, int panelEnd,
+                                            float vFrom, float vTo, float[] sLeft, float[] sRight) {
   if (img == null) return;
   final int totalN = max(3, (rows - 1));
   final float h = cylinderH_px;
@@ -370,8 +378,8 @@ void drawTriangleStripTexture_Uniform_Range(PGraphics pg, PImage img, int panelS
 
   // Draw panels [panelStart..panelEnd)
   for (int i = panelStart; i < panelEnd && i < totalN; i++) {
-    float u0px = uAcc * uScale;
-    float u1px = (uAcc + wAvg) * uScale;
+    float u0px = (sLeft != null) ? sLeft[i] * img.width : uAcc * uScale;
+    float u1px = (sRight != null) ? sRight[i] * img.width : (uAcc + wAvg) * uScale;
 
     float bleed = textureBleed ? textureBleedMM * MM : 0;
     float xBL = -bleed, yBL = -bleed;
