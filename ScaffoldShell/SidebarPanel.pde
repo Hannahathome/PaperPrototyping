@@ -1383,9 +1383,39 @@ class SidebarPanel {
       fill(120);
       text("Best fit " + nf(wrapIdealAspect(), 0, 2) + " : 1  (around : over)",
            bx + fullBtnWidth/2, by + (hasWrap ? 18 : 4));
+      drawWrapStackToggle();
     }
 
     popStyle();
+  }
+
+  // Below the Best fit lines. Null when the selected shape has no matching neighbour, which
+  // keeps the tab exactly as it was for a shape on its own.
+  float[] wrapStackToggleRect() {
+    if (wrapStackJoints(selectedShapeIdx).isEmpty()) return null;
+    float[] a = textureAreaRect();
+    return new float[] { a[0] + SIDEBAR_PADDING, a[1] + 172, a[2] - 2 * SIDEBAR_PADDING, 26 };
+  }
+
+  void drawWrapStackToggle() {
+    float[] r = wrapStackToggleRect();
+    if (r == null) return;
+    boolean on = wrapStackOn(selectedShapeIdx);
+    boolean hover = mouseX >= r[0] && mouseX <= r[0] + r[2] && mouseY >= r[1] && mouseY <= r[1] + r[3];
+    fill(on ? color(50, 150, 50) : (hover ? color(170, 170, 170) : color(150, 150, 150)));
+    noStroke();
+    rect(r[0], r[1], r[2], r[3], 4);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    uiText(10);
+    text("Wrap across connected shapes: " + (on ? "ON" : "OFF"), r[0] + r[2]/2, r[1] + r[3]/2);
+
+    String problem = wrapStackProblem(selectedShapeIdx);
+    if (problem.length() > 0) {
+      fill(170, 60, 60);
+      textAlign(CENTER, TOP);
+      text(problem, r[0] + r[2]/2, r[1] + r[3] + 4);
+    }
   }
 
   void drawTextureBleedToggle() {
@@ -1939,6 +1969,14 @@ class SidebarPanel {
         if (wrapImg != null) editWrapTexture(); else selectWrapTexture();
         return true;
       }
+
+      float[] stackR = wrapStackToggleRect();
+      if (stackR != null && wrapUnavailableReason().length() == 0 &&
+          mouseX >= stackR[0] && mouseX <= stackR[0] + stackR[2] &&
+          mouseY >= stackR[1] && mouseY <= stackR[1] + stackR[3]) {
+        setWrapAcrossStack(!wrapStackOn(selectedShapeIdx));
+        return true;
+      }
     }
 
     // Check strip upload and edit buttons
@@ -2254,10 +2292,8 @@ class SidebarPanel {
   void restoreWrapTextureToDefault() {
     wrapImg = null;
     originalWrapImg = null;
-    if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-      shapes.get(selectedShapeIdx).wrapImg = null;
-    }
     saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+    wrapShareImage(null);
     println("[Sidebar] Wrap texture restored to default");
   }
   
@@ -2447,11 +2483,9 @@ void wrapTextureSelected(File selection) {
   sideTextureMode = TEX_WRAP_FULL;
   uiTextureMode   = TEX_WRAP_FULL;
   if (sTextureMode != null) sTextureMode.setValue(TEX_WRAP_FULL);
-  if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-    shapes.get(selectedShapeIdx).wrapImg = wrapImg;
-  }
   if (sidebar != null) sidebar.enableLidsForWrap();
   saveGlobalsTo(shapes != null && shapes.size() > 0 ? shapes.get(selectedShapeIdx) : null);
+  wrapShareImage(wrapImg);
 
   // Straight into the cropper, so the image can be trimmed to the wrap's aspect before it
   // is ever printed stretched.

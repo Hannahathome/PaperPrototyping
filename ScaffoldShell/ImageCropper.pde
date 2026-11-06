@@ -150,6 +150,7 @@ class ImageCropper {
       case CROP_MODE_WRAP:
         // Perimeter across, bottom apothem + slant height + top apothem down. The whole
         // surface, so the guide box is the shape the artwork has to be to avoid stretching.
+        // In a chain that is the whole stack; see WrapChain.pde.
         cropAspectRatio = wrapIdealAspect();
         cropPhysicalWidthMm = wrapPerimeterPx() / MM;
         break;
@@ -734,8 +735,8 @@ class ImageCropper {
         case CROP_MODE_WRAP:
           wrapImg = croppedImg;
           if (shapes != null && selectedShapeIdx >= 0 && selectedShapeIdx < shapes.size()) {
-            shapes.get(selectedShapeIdx).wrapImg = wrapImg;
             saveGlobalsTo(shapes.get(selectedShapeIdx));
+            wrapShareImage(wrapImg);
           }
           break;
           

@@ -45,6 +45,13 @@
 // would flip every strip texture anyone has already cropped - but a new mode has no such
 // debt, and "up in the picture is up on the model" is what people expect.
 //
+// Across, the image reads left to right when the model is seen from OUTSIDE, so text comes
+// out the right way round: u = (1 - s) * img.width. Both axes are reversed, and that is the
+// point. Reversing only v would print a mirror image, which no amount of turning the model
+// can undo; reversing both is a half turn, which is all the printed sheet needs, since the
+// strip is laid out with the model's bottom rim along the top of the page. s itself still
+// runs with the panels - only the step into the image reverses it.
+//
 // SCOPE
 //
 // Uniform regular prisms and frustums only, matching lidFrameAvailable(). Hollow is
@@ -115,6 +122,18 @@ float[] wrapPanelSpansS() {
   return out;
 }
 
+// s at each end of each panel: {left[], right[]}, n values each. What the renderers read.
+float[][] wrapPanelEndsS() {
+  int n = max(3, nSides);
+  float[] span = wrapPanelSpansS();
+  float[][] out = new float[2][n];
+  for (int i = 0; i < n; i++) {
+    out[0][i] = span[i];
+    out[1][i] = span[i + 1];
+  }
+  return out;
+}
+
 // Total perimeter (px) under the same average-width measure s is allocated by.
 float wrapPerimeterPx() {
   int n = max(3, nSides);
@@ -157,10 +176,27 @@ float wrapImgVFrac(float t) {
   return 1.0 - t;
 }
 
+// s -> horizontal position in the image, as a 0..1 fraction. Reads left to right from
+// outside the model; see IMAGE ORIENTATION above.
+float wrapImgUFrac(float s) {
+  return 1.0 - s;
+}
+
+// wrapPanelEndsS(), as image columns: {left[], right[]} in 0..1 fractions of image width.
+float[][] wrapPanelEndsU() {
+  float[][] s = wrapPanelEndsS();
+  float[][] out = new float[2][s[0].length];
+  for (int i = 0; i < s[0].length; i++) {
+    out[0][i] = wrapImgUFrac(s[0][i]);
+    out[1][i] = wrapImgUFrac(s[1][i]);
+  }
+  return out;
+}
+
 // (s, t) -> IMAGE-mode texture coordinates for img.
 PVector wrapUV(float s, float t, PImage img) {
   if (img == null) return new PVector(0, 0);
-  return new PVector(s * img.width, wrapImgVFrac(t) * img.height);
+  return new PVector(wrapImgUFrac(s) * img.width, wrapImgVFrac(t) * img.height);
 }
 
 // The source aspect that maps onto the surface without stretching: perimeter : surface run.

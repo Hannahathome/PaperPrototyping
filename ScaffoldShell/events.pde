@@ -463,7 +463,8 @@ void keyPressed() {
     }
     if (key == ',' || key == '<' || key == '.' || key == '>') {
       pushConnectionUndo("spin:" + selectedConnectionIdx);   // a held key is one step
-      selConn.spinDeg += (key == ',' || key == '<') ? -5 : 5;
+      selConn.spinDeg += ((key == ',' || key == '<') ? -1 : 1) * connectionSpinStepDeg(selConn);
+      wrapSnapJointSpin(selConn);
       // Spinning changes how far the footprint reaches, so a child sitting flush against a
       // fold line has to be re-settled or it creeps over the edge.
       snapConnectionInParentFrame(selConn);

@@ -55,6 +55,7 @@ class Connection {
   PVector posLocal;         // mm in the parent face's canonical frame
   float spinDeg;            // child's rotation about the face normal
   int markId;               // stable; picks the pairing mark's colour and symbol
+  boolean continueWrap;     // the texture wrap carries on across this joint; see WrapChain.pde
 
   Connection(int _parent, int _child, int _kind, int _index, PVector _pos) {
     parentShapeIdx  = _parent;
@@ -65,6 +66,7 @@ class Connection {
     posLocal        = _pos.copy();
     spinDeg         = 0;
     markId          = 0;   // assigned by addConnection, or copied by copyConnection
+    continueWrap    = false;
   }
 
   boolean onLid()    { return faceIsLid(parentFaceKind); }
@@ -950,6 +952,7 @@ void flipSelectedConnection() {
   pushConnectionUndo("");
   Connection c = connections.get(selectedConnectionIdx);
   c.childFlipped = !c.childFlipped;
+  wrapSnapJointSpin(c);   // an odd-sided child lands half a panel out when turned over
   println("[Connection] Child mates by its " + (c.childFlipped ? "TOP" : "BOTTOM") + " lid");
 }
 

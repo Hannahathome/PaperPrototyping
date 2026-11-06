@@ -130,6 +130,7 @@ warning; their real measurements stay in the file. *Export all scaffolds* writes
 | `StripRotation.pde` | Rotating the bent-strip texture |
 | `texturesnew.pde`, `textures_triangles.pde` | Texture loading, mapping, strip bending |
 | `WrapFrame.pde` | Canonical surface frame for the whole-surface wrap |
+| `WrapChain.pde` | One wrap across a stack of connected shapes |
 | `textures_wrap.pde` | Drawing the wrap — flat pattern, export and 3D |
 | `ImageCropper.pde`, `color_fill.pde` | Image cropping and solid fills |
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
@@ -317,6 +318,9 @@ The top of the image lands on the top of the model. Note this is the opposite of
 which maps image row 0 onto the model's *bottom* rim in both the pattern and the 3D view —
 long-standing, and left alone rather than flip everyone's existing strip artwork.
 
+Seen from outside the model the image reads left to right, so text comes out the right way
+round.
+
 At `t = 0` and `t = 1` a whole image row collapses to a point, so detail at the very top and
 bottom disappears — the bargain any map projection makes at its poles. Keep the extremes of
 the artwork quiet.
@@ -327,12 +331,37 @@ a whole, and per-edge and cuboid because their lids are not the regular polygons
 walks; the tab says which of these is in the way rather than mis-mapping quietly. Split strip
 works — it only changes where the halves sit on the page.
 
-On the printed sheet the wall artwork appears upside down. That is the layout, not a fault:
-the strip is drawn with the model's bottom rim along the top of the page.
+On the printed sheet the wall artwork appears upside down: turned by half a turn, not
+mirrored. That is the layout, not a fault: the strip is drawn with the model's bottom rim
+along the top of the page.
 
 `data/wrap.jpg` is generated on first run as a calibration sheet — hue around, brightness up,
 a percentage grid, a red seam line down both edges and the two poles captioned. Print it and
 fold it: the grid lines say where each rim and fold landed, and the two red edges must meet.
+
+### Wrapping across connected shapes
+
+Shapes joined lid to lid with matching rims — same side count, same edge length — can share
+one wrap, so artwork runs straight over the joint. Select any shape in the stack and turn on
+**Wrap across connected shapes** in the Wrap tab. The toggle only appears when there is a
+matching neighbour. It puts every shape in the stack on Wrap with the selected shape's image,
+and from then on a new image, a crop or a restore reaches all of them.
+
+**t** now runs from the centre of one end lid, up every wall in turn, to the centre of the
+other end lid. The lids buried inside a joint take no share of it and print blank. **s** is
+unchanged: every shape spans the full image width, so a narrower shape squeezes the artwork
+rather than cropping it, the same bargain a frustum makes. The sidebar's best-fit aspect and
+the cropper's guide box describe the whole stack, with the perimeter averaged over its height.
+
+A wrapped joint has to sit on the panels, or the rims would not meet. Switching on, or
+flipping a wrapped joint, snaps its spin to the nearest panel, and `,` `.` then step one panel
+at a time. A shape that has been turned over or spun gets its artwork turned to suit, so it
+stays continuous whichever way round it is mounted.
+
+The stack breaks into separate wraps at any joint it cannot carry, and the tab says why: a
+shape on another texture mode, a shape the wrap refuses (see above), or two shapes on one
+lid. Turning the toggle off leaves each shape holding the image, wrapping alone. Stacks with
+a step in them, and shapes mounted on walls, are out of scope.
 
 ## Strip texture rotation
 
@@ -514,3 +543,4 @@ machine it would emit `19,1` and produce a file OpenSCAD cannot parse. `scadNum(
 | OpenSCAD reports a parse error | Check for decimal commas; run `FRAME_SELFTEST` |
 | Wrap artwork stretched | Crop it to the aspect the Wrap tab names, or re-export the source at that shape |
 | Wrap tab refuses the shape | Hollow, kresling, cuboid and per-edge are out of scope — use Strip or Per Panel |
+| No "Wrap across connected shapes" toggle | The rims do not match, or the joint is on a wall — it needs the same side count and edge length, lid to lid |

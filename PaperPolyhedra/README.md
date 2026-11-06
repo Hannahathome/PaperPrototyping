@@ -240,6 +240,9 @@ The top of the image lands on the top of the model. Note this is the opposite of
 which maps image row 0 onto the model's *bottom* rim in both the pattern and the 3D view —
 long-standing, and left alone rather than flip everyone's existing strip artwork.
 
+Seen from outside the model the image reads left to right, so text comes out the right way
+round.
+
 At `t = 0` and `t = 1` a whole image row collapses to a point, so detail at the very top and
 bottom disappears — the bargain any map projection makes at its poles. Keep the extremes of
 the artwork quiet.
@@ -250,8 +253,9 @@ a whole, and per-edge and cuboid because their lids are not the regular polygons
 walks; the tab says which of these is in the way rather than mis-mapping quietly. Split strip
 works — it only changes where the halves sit on the page.
 
-On the printed sheet the wall artwork appears upside down. That is the layout, not a fault:
-the strip is drawn with the model's bottom rim along the top of the page.
+On the printed sheet the wall artwork appears upside down: turned by half a turn, not
+mirrored. That is the layout, not a fault: the strip is drawn with the model's bottom rim
+along the top of the page.
 
 `data/wrap.jpg` is generated on first run as a calibration sheet — hue around, brightness up,
 a percentage grid, a red seam line down both edges and the two poles captioned. Print it and

@@ -389,6 +389,9 @@ void loadGlobalsFrom(ShapeSpec s) {
   // Placement
   nRep         = s.nRep;
   repPositions = s.repPositions;
+
+  // Whose globals these now are; see WrapChain.pde
+  _loadedShapeIdx = (shapes == null) ? -1 : shapes.indexOf(s);
 }
 
 // ---------------------------------------------------------------------------
