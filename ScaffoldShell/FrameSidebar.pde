@@ -163,13 +163,32 @@ ArrayList<FrameRow> frameRows() {
   rows.add(new FrameRow(FROW_TOGGLE, "show_frame", "Show scaffolds in the 3D view")
     .toggled(scaffoldVisible3D()));
   rows.add(new FrameRow(FROW_BUTTON, "frame_export", "Export this scaffold (.scad)"));
+  if (shapes.size() > 1) addFrameExportAllRows(rows);
   rows.add(new FrameRow(FROW_NOTE, "", "")
-    .txt("Scaffolds are also written by the main Export, one file per scaffold-enabled shape. "
+    .txt("Scaffolds are also written by the main Export, one file per different scaffold. "
        + "Open the .scad in OpenSCAD, render with F6, export STL.")
     .colored(color(140)));
 
   layoutFrameRows(rows);
   return rows;
+}
+
+// What each shape will do at export, so a shape left out is visible before the files are
+// written rather than after. Only with two or more shapes: alone, the tab already says it.
+void addFrameExportAllRows(ArrayList<FrameRow> rows) {
+  int files = frameExportFileCount();
+  if (files > 0) {
+    rows.add(new FrameRow(FROW_BUTTON, "frame_export_all",
+                          "Export all scaffolds (" + files + (files == 1 ? " file)" : " files)")));
+  }
+  for (FrameExportEntry e : frameExportPlan()) {
+    color tint = e.writes ? color(40, 130, 70)
+               : (e.wanted && e.sameAs < 0) ? color(200, 120, 30)
+               : color(140);
+    rows.add(new FrameRow(FROW_NOTE, "", "")
+      .txt(frameShapeName(e.shapeIdx) + ": " + e.status)
+      .colored(tint));
+  }
 }
 
 // How far the tab is scrolled, in pixels. The rig parameters alone are seven rows, so on a
@@ -534,6 +553,8 @@ void applyFrameButton(ShapeSpec s, FrameSpec f, FrameRow row) {
     frameRemoveRig(f);
   } else if (row.id.equals("frame_export")) {
     exportSingleFrame(s);
+  } else if (row.id.equals("frame_export_all")) {
+    exportAllFrames();
   }
   redraw();
 }
@@ -574,13 +595,22 @@ void exportSingleFrame(ShapeSpec s) {
     println("[Scaffold] ERROR: missing OpenSCAD module library in data/. Nothing written.");
     return;
   }
-  String baseName = (uiExportFilename != null && !uiExportFilename.trim().isEmpty())
-                  ? uiExportFilename : "result";
   String stamp = month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second();
   int idx = shapes.indexOf(s);
-  String path = "output/" + baseName + "_" + stamp + "_frame_" + frameShapeSlug(idx) + ".scad";
+  String path = "output/" + frameExportBaseName() + "_" + stamp + "_frame_" + frameShapeSlug(idx) + ".scad";
   if (writeFrameSCAD(s, idx, path, mainLines, helperLines)) {
     exportNotifyTimer = 240;
     exportNotifyPath  = path;
+  }
+}
+
+// The Export all button: every different scaffold, again without the print-and-cut set.
+void exportAllFrames() {
+  String stamp = month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second();
+  int count = exportFrameSCAD(frameExportBaseName(), stamp).size();
+  if (count > 0) {
+    exportNotifyTimer = 240;
+    exportNotifyPath  = count + " scaffold" + (count == 1 ? "" : "s") + " in output/"
+                      + frameExportNote(count);
   }
 }

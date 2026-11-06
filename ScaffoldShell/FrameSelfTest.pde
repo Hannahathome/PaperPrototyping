@@ -16,6 +16,8 @@
 //   4. The written .scad: modules called are modules defined, braces balance, and no
 //      number carries a locale decimal comma.
 //   5. The Frame tab's clicks land on the controls it drew.
+//   6. An export writes one file per different scaffold, counted on disk, and says so when
+//      a scaffold shares a file or is left out.
 //
 // Enable with FRAME_SELFTEST = true and run the sketch: it prints a pass/fail table and
 // exits. Same shape as AUDIT_MODE in LayoutAudit.pde.
@@ -33,6 +35,7 @@ void frameSelfTestRun() {
   frameTestScadOutput();
   frameTestRigCutouts();
   frameTestTabInteraction();
+  frameTestExportSet();
   println("[FRAME SELFTEST] " + (_ftChecks - _ftFails) + "/" + _ftChecks + " passed"
         + (_ftFails == 0 ? "" : "   <-- " + _ftFails + " FAILED"));
   exit();
@@ -369,4 +372,124 @@ boolean ftClickRow(String id, int dir) {
     return true;
   }
   return false;
+}
+
+// 6. What leaves the sketch. The counts come off the disk, not from what the export reports,
+//    because the failure this guards against reported two files and left one.
+ShapeSpec ftFramedShape(float perim, float h) {
+  ShapeSpec s = new ShapeSpec();
+  s.nSides   = 6;
+  s.cylinder = new PVector(perim, perim, h);
+  s.frame.enabled = true;
+  return s;
+}
+
+void ftSetShapes(ShapeSpec... list) {
+  shapes = new ArrayList<ShapeSpec>(java.util.Arrays.asList(list));
+}
+
+// .scad files in output/ starting with tag. Removes them, so a run leaves nothing behind.
+int ftTakeFiles(String tag) {
+  int count = 0;
+  java.io.File[] files = new java.io.File(sketchPath("output")).listFiles();
+  if (files == null) return 0;
+  for (java.io.File file : files) {
+    if (file.getName().startsWith(tag) && file.getName().endsWith(".scad")) {
+      count++;
+      file.delete();
+    }
+  }
+  return count;
+}
+
+int ftExportFiles() {
+  exportFrameSCAD("selftest_set", "T");
+  return ftTakeFiles("selftest_set");
+}
+
+void frameTestExportSet() {
+  println(" export set");
+  ArrayList<ShapeSpec> realShapes = shapes;
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 30));
+  ftCheck("two different scaffolds, two files", ftExportFiles() == 2, "");
+
+  ShapeSpec off = ftFramedShape(180, 30);
+  off.frame.enabled = false;
+  ftSetShapes(ftFramedShape(180, 60), off);
+  ftCheck("a shape with its scaffold off is left out", ftExportFiles() == 1, "");
+  ftCheck("and the plan says so", frameExportPlan().get(1).status.equals("scaffold off"),
+          frameExportPlan().get(1).status);
+  ftCheck("and it is not a shortfall", frameExportNote(1).isEmpty(), frameExportNote(1));
+
+  ShapeSpec twice = ftFramedShape(180, 60);
+  twice.nRep = 2;
+  ftSetShapes(twice);
+  ftCheck("two copies of one shape, one file", ftExportFiles() == 1, "");
+
+  // --- identical scaffolds ---
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 60));
+  ftCheck("identical scaffolds, one file", ftExportFiles() == 1, "");
+  ftCheck("the second points at the first", frameExportPlan().get(1).sameAs == 0, "");
+  ftCheck("and the note counts it", frameExportNote(1).equals(", 1 identical"), frameExportNote(1));
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 30), ftFramedShape(180, 60));
+  ftCheck("a matching pair and a different one, two files", ftExportFiles() == 2, "");
+
+  // The rig's name only reaches a comment, so these print the same.
+  ShapeSpec named = ftFramedShape(180, 60), plain = ftFramedShape(180, 60);
+  named.frame.rigs.add(new Rig(24, 24, 31.5, 0, 0, 8.5, 0));
+  plain.frame.rigs.add(new Rig(24, 24, 31.5, 0, 0, 8.5, 0));
+  named.frame.rigs.get(0).preset = "M5Atom lying";
+  ftSetShapes(named, plain);
+  ftCheck("a name in a comment is not a difference", ftExportFiles() == 1, "");
+
+  plain.frame.rigs.get(0).offX += 1;
+  ftCheck("a rig moved 1 mm is", ftExportFiles() == 2, "");
+  plain.frame.rigs.get(0).offX -= 1;
+  plain.frame.dualStruts = !plain.frame.dualStruts;
+  ftCheck("and so is a strut setting", ftExportFiles() == 2, "");
+
+  // --- filenames ---
+  ShapeSpec a = ftFramedShape(180, 60), b = ftFramedShape(180, 30), c = ftFramedShape(180, 45);
+  a.label = "Cup";
+  b.label = "Cup";
+  ftSetShapes(a, b);
+  ftCheck("the same label does not overwrite", ftExportFiles() == 2, "");
+  b.label = "cup";
+  ftCheck("nor does the same label in another case", ftExportFiles() == 2, "");
+  c.label = "Cup_2";
+  ftSetShapes(a, b, c);
+  ftCheck("nor does a label that looks like the fix", ftExportFiles() == 3, "");
+
+  // --- left out, and saying so ---
+  ShapeSpec hollow = ftFramedShape(180, 30);
+  hollow.hollowMode = true;
+  ftSetShapes(ftFramedShape(180, 60), hollow);
+  ftCheck("a hollow shape is left out", ftExportFiles() == 1, "");
+  ftCheck("and counted as skipped", frameExportNote(1).equals(", 1 skipped"), frameExportNote(1));
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(6, 3));
+  ftCheck("a scaffold that cannot fit is left out", ftExportFiles() == 1, "");
+  ftCheck("and counted as skipped", frameExportNote(1).equals(", 1 skipped"), frameExportNote(1));
+
+  // --- the tab, on the real shape list ---
+  shapes = realShapes;
+  sidebar.activeMainTab = MAIN_TAB_FRAME;
+  shapes.get(selectedShapeIdx).frame.enabled = true;
+  addShape();
+  ShapeSpec added = shapes.get(shapes.size() - 1);
+  ftCheck("a new shape starts without a scaffold", !added.frame.enabled, "");
+
+  added.frame.enabled = true;
+  added.cylinder = new PVector(added.cylinder.x, added.cylinder.y, added.cylinder.z / 2);
+  String keptName = uiExportFilename;
+  uiExportFilename = "selftest_all";
+  frameRows();
+  frameScrollY = frameScrollMax();
+  ftCheck("Export all is clickable and writes both", ftClickRow("frame_export_all", 0)
+          && ftTakeFiles("selftest_all") == 2, "");
+  ftCheck("and the notification counts them", exportNotifyPath.startsWith("2 scaffolds"), exportNotifyPath);
+  frameScrollY = 0;
+  uiExportFilename = keptName;
 }

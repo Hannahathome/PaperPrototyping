@@ -55,7 +55,7 @@ Press `E`. Writes a timestamped set into `output/` (gitignored):
 | `<name>_<stamp>.pdf` | Print layer — artwork and fills |
 | `<name>_fold_<stamp>.svg` | Cut and fold lines for the cutter |
 | `<name>_calib_<stamp>.svg` | Registration marks for print/cut alignment |
-| `<name>_<stamp>_frame_<shape>.scad` | Internal scaffold — one per scaffold-enabled shape |
+| `<name>_<stamp>_frame_<shape>.scad` | Internal scaffold — one per different scaffold |
 
 Print the calibration SVG first to verify alignment before committing material.
 
@@ -80,6 +80,11 @@ A red outline and "Outside cut area" mean a copy runs past the area the cutter c
 
 The `.scad` is source, not a mesh: open it in OpenSCAD, render with `F6`, export STL, print.
 `flap_length` is written near the top of each file so it can be tweaked without re-exporting.
+
+With two or more shapes, the Scaffold tab lists what each one will do at export, and *Export
+all scaffolds* writes them without the PDF and SVGs. A new shape starts with its scaffold
+off, so turn on *Build a scaffold* for each shape that needs one. Shapes with identical
+scaffolds, and copies of one shape, share a single file: print it as many times as you need.
 
 ## Keyboard controls
 
@@ -497,6 +502,7 @@ machine it would emit `19,1` and produce a file OpenSCAD cannot parse. `scadNum(
 | Scaffold rattles inside the shell | Decrease *Clearance* |
 | Struts sit mid-facet, not in the corners | `phase` has been edited out of `data/template_frame.txt` |
 | No `.scad` in `output/` | The shape is out of scope, or *Build a scaffold* is off — check the Scaffold tab for the reason |
+| Fewer `.scad` files than shapes | The Scaffold tab's export list gives the reason for each shape; identical scaffolds share one file |
 | OpenSCAD reports a parse error | Check for decimal commas; run `FRAME_SELFTEST` |
 | Wrap artwork stretched | Crop it to the aspect the Wrap tab names, or re-export the source at that shape |
 | Wrap tab refuses the shape | Hollow, kresling, cuboid and per-edge are out of scope — use Strip or Per Panel |
