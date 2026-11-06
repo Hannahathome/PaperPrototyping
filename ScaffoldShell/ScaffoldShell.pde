@@ -251,8 +251,9 @@ void draw() {
     exportNotifyTimer = 240;  // ~4 seconds at 60fps
     exportNotifyPath = pdfFilename
       + (lastExportPageCount > 1 ? "  (" + lastExportPageCount + " pages)" : "")
-      + (lastExportFrameCount > 0
-         ? "  (+" + lastExportFrameCount + " frame" + (lastExportFrameCount == 1 ? "" : "s") + ".scad)"
+      + (lastExportFrameCount > 0 || !lastExportFrameNote.isEmpty()
+         ? "  (+" + lastExportFrameCount + " frame" + (lastExportFrameCount == 1 ? "" : "s") + ".scad"
+           + lastExportFrameNote + ")"
          : "");
   }
 }
@@ -820,6 +821,7 @@ void drawPlan(boolean img) {
 
 // How many .scad frames the last export wrote, for the on-screen notification.
 int lastExportFrameCount = 0;
+String lastExportFrameNote = "";  // scaffolds that shared a file or were left out
 int lastExportPageCount = 1;  // and how many sheets
 
 void exportPlan() {
@@ -827,13 +829,13 @@ void exportPlan() {
   setParams(false);
   drawFrontPDF(); //pdf
 
-  // Internal support frames, one .scad per frame-enabled shape. Written here, while the
+  // Internal support frames, one .scad per different scaffold. Written here, while the
   // sketch is still at print scale: the writer works purely in mm and never reads a _px
   // global, but keeping it on this side of the MM_V flip below means a slip cannot go
   // unnoticed at 96 DPI. See FrameSCAD.pde.
-  String baseName = (uiExportFilename != null && !uiExportFilename.trim().isEmpty())
-                  ? uiExportFilename : "result";
-  lastExportFrameCount = exportFrameSCAD(baseName, timestamp).size();
+  lastExportFrameCount = exportFrameSCAD(frameExportBaseName(), timestamp).size();
+  lastExportFrameNote = frameExportNote(lastExportFrameCount);
+  exportShapeRecord(frameExportBaseName(), timestamp);
 
   setParams(true);
   saveFrontFold(); //cut

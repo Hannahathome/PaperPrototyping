@@ -36,14 +36,96 @@ String scadInt(int v) {
 // Which shapes get a frame
 // ---------------------------------------------------------------------------
 
-ArrayList<Integer> framedShapeIndices() {
-  ArrayList<Integer> out = new ArrayList<Integer>();
-  if (shapes == null) return out;
+// What an export will do with one shape. The status is what the Scaffold tab shows.
+class FrameExportEntry {
+  int shapeIdx;
+  boolean wanted = false;   // its scaffold is switched on
+  boolean writes = false;   // it gets a file of its own
+  int sameAs = -1;          // the earlier shape whose file already covers it
+  String status;
+}
+
+// One entry per shape, in shape order. THE single decision: the Scaffold tab's list, the
+// export and the notification all read this, so what the tab promises is what gets written.
+// Shapes with identical scaffolds share one file - it is the same print either way.
+ArrayList<FrameExportEntry> frameExportPlan() {
+  ArrayList<FrameExportEntry> plan = new ArrayList<FrameExportEntry>();
+  if (shapes == null) return plan;
+  HashMap<String, Integer> firstWithKey = new HashMap<String, Integer>();
+
   for (int i = 0; i < shapes.size(); i++) {
     ShapeSpec s = shapes.get(i);
-    if (s.frame != null && s.frame.enabled && frameAvailable(s)) out.add(i);
+    FrameExportEntry e = new FrameExportEntry();
+    e.shapeIdx = i;
+    plan.add(e);
+
+    if (s.frame == null || !s.frame.enabled) {
+      e.status = "scaffold off";
+      continue;
+    }
+    e.wanted = true;
+    if (!frameAvailable(s)) {
+      e.status = "skipped, " + frameUnavailableReason(s);
+      continue;
+    }
+    FrameScadParams p = frameScadParamsFor(s);
+    if (!p.valid) {
+      e.status = "skipped, " + p.problem;
+      continue;
+    }
+    String key = frameScadKey(s, p);
+    Integer first = firstWithKey.get(key);
+    if (first != null) {
+      e.sameAs = first;
+      e.status = "same as " + frameShapeName(first);
+    } else {
+      firstWithKey.put(key, i);
+      e.writes = true;
+      e.status = "will export";
+    }
   }
-  return out;
+  return plan;
+}
+
+int frameExportFileCount() {
+  int count = 0;
+  for (FrameExportEntry e : frameExportPlan()) if (e.writes) count++;
+  return count;
+}
+
+// What the notification adds to a file count: ", 1 identical, 1 skipped", or "" when every
+// scaffold that was asked for got a file.
+String frameExportNote(int written) {
+  int wanted = 0, identical = 0;
+  for (FrameExportEntry e : frameExportPlan()) {
+    if (e.wanted) wanted++;
+    if (e.sameAs >= 0) identical++;
+  }
+  int skipped = wanted - identical - written;
+  return (identical > 0 ? ", " + identical + " identical" : "")
+       + (skipped > 0 ? ", " + skipped + " skipped" : "");
+}
+
+// What OpenSCAD builds for this shape, as text: the assembly with its comment lines removed,
+// so two scaffolds differing only in a rig's name or the shell note still count as the same.
+// Comes from the writer itself, so it cannot miss a parameter the file depends on.
+String frameScadKey(ShapeSpec s, FrameScadParams p) {
+  java.io.StringWriter text = new java.io.StringWriter();
+  PrintWriter out = new PrintWriter(text);
+  writeFrameAssembly(out, s, p);
+  out.flush();
+
+  StringBuilder key = new StringBuilder();
+  for (String line : text.toString().split("\\R")) {
+    if (!line.trim().startsWith("//")) key.append(line).append('\n');
+  }
+  return key.toString();
+}
+
+// A shape's name as the Scaffold tab shows it.
+String frameShapeName(int idx) {
+  ShapeSpec s = shapes.get(idx);
+  return (s.label != null && !s.label.isEmpty()) ? s.label : ("Shape " + (idx + 1));
 }
 
 // A filename-safe name for one shape: its label if it has one, else its position.
@@ -56,16 +138,31 @@ String frameShapeSlug(int idx) {
   return name.isEmpty() ? ("shape" + (idx + 1)) : name;
 }
 
+// frameShapeSlug(), kept apart from the names already taken in this export: two shapes can
+// share a label, and the second file would silently replace the first. Compared without
+// case, because the file systems this runs on mostly do.
+String frameUniqueSlug(int idx, java.util.HashSet<String> taken) {
+  String slug = frameShapeSlug(idx);
+  while (!taken.add(slug.toLowerCase())) slug += "_" + (idx + 1);
+  return slug;
+}
+
+// The name in the export field, or the default.
+String frameExportBaseName() {
+  return (uiExportFilename != null && !uiExportFilename.trim().isEmpty())
+       ? uiExportFilename : "result";
+}
+
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
-// Writes one .scad per frame-enabled shape. Returns the paths written, so the caller can
-// report them. Called from exportPlan() alongside the PDF and SVGs.
+// Writes one .scad per different scaffold (see frameExportPlan). Returns the paths written,
+// so the caller can report them. Called from exportPlan() alongside the PDF and SVGs, and
+// from the Scaffold tab's Export all button.
 ArrayList<String> exportFrameSCAD(String baseName, String stamp) {
   ArrayList<String> written = new ArrayList<String>();
-  ArrayList<Integer> idxs = framedShapeIndices();
-  if (idxs.isEmpty()) return written;
+  if (frameExportFileCount() == 0) return written;
 
   // Load the OpenSCAD module libraries ONCE, before writing anything. These are real
   // source, not the generated placeholders PlaceholderAssets.pde makes -- if they are
@@ -79,9 +176,11 @@ ArrayList<String> exportFrameSCAD(String baseName, String stamp) {
     return written;
   }
 
-  for (int idx : idxs) {
-    String path = "output/" + baseName + "_" + stamp + "_frame_" + frameShapeSlug(idx) + ".scad";
-    if (writeFrameSCAD(shapes.get(idx), idx, path, mainLines, helperLines)) {
+  java.util.HashSet<String> taken = new java.util.HashSet<String>();
+  for (FrameExportEntry e : frameExportPlan()) {
+    if (!e.writes) continue;
+    String path = "output/" + baseName + "_" + stamp + "_frame_" + frameUniqueSlug(e.shapeIdx, taken) + ".scad";
+    if (writeFrameSCAD(shapes.get(e.shapeIdx), e.shapeIdx, path, mainLines, helperLines)) {
       written.add(path);
     }
   }
@@ -97,11 +196,24 @@ boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, St
     return false;
   }
 
+  PrintWriter out = createWriter(path);
+  writeFrameAssembly(out, s, p);
+
+  for (String line : mainLines) out.println(line);
+  out.println();
+  for (String line : helperLines) out.println(line);
+
+  out.flush();
+  out.close();
+  println("[Scaffold] wrote " + path);
+  return true;
+}
+
+// Everything in the file except the module libraries, which are the same in all of them.
+void writeFrameAssembly(PrintWriter out, ShapeSpec s, FrameScadParams p) {
   FrameSpec f = s.frame;
   FrameDims d = frameDimsFor(s);
   boolean hasRigs = !f.rigs.isEmpty();
-
-  PrintWriter out = createWriter(path);
 
   out.println("// Internal support scaffold, exported from ScaffoldShell.");
   out.println("// Render with F6, export STL, print. Dimensions are millimetres.");
@@ -156,15 +268,6 @@ boolean writeFrameSCAD(ShapeSpec s, int idx, String path, String[] mainLines, St
   writeTopTrimSlice(out, p);
   out.println("}");
   out.println();
-
-  for (String line : mainLines) out.println(line);
-  out.println();
-  for (String line : helperLines) out.println(line);
-
-  out.flush();
-  out.close();
-  println("[Scaffold] wrote " + path);
-  return true;
 }
 
 // Flat disc subtracted at the top cap plane, so the wall struts are cut off straight rather

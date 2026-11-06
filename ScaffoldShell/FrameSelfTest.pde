@@ -16,6 +16,9 @@
 //   4. The written .scad: modules called are modules defined, braces balance, and no
 //      number carries a locale decimal comma.
 //   5. The Frame tab's clicks land on the controls it drew.
+//   6. An export writes one file per different scaffold, counted on disk, and says so when
+//      a scaffold shares a file or is left out.
+//   7. The dimensions file, loaded back, rebuilds the same shapes and the same scaffolds.
 //
 // Enable with FRAME_SELFTEST = true and run the sketch: it prints a pass/fail table and
 // exits. Same shape as AUDIT_MODE in LayoutAudit.pde.
@@ -33,6 +36,8 @@ void frameSelfTestRun() {
   frameTestScadOutput();
   frameTestRigCutouts();
   frameTestTabInteraction();
+  frameTestExportSet();
+  frameTestDimensionRecord();
   println("[FRAME SELFTEST] " + (_ftChecks - _ftFails) + "/" + _ftChecks + " passed"
         + (_ftFails == 0 ? "" : "   <-- " + _ftFails + " FAILED"));
   exit();
@@ -369,4 +374,243 @@ boolean ftClickRow(String id, int dir) {
     return true;
   }
   return false;
+}
+
+// 6. What leaves the sketch. The counts come off the disk, not from what the export reports,
+//    because the failure this guards against reported two files and left one.
+ShapeSpec ftFramedShape(float perim, float h) {
+  ShapeSpec s = new ShapeSpec();
+  s.nSides   = 6;
+  s.cylinder = new PVector(perim, perim, h);
+  s.frame.enabled = true;
+  return s;
+}
+
+void ftSetShapes(ShapeSpec... list) {
+  shapes = new ArrayList<ShapeSpec>(java.util.Arrays.asList(list));
+}
+
+// .scad files in output/ starting with tag. Removes them, so a run leaves nothing behind.
+int ftTakeFiles(String tag) {
+  int count = 0;
+  java.io.File[] files = new java.io.File(sketchPath("output")).listFiles();
+  if (files == null) return 0;
+  for (java.io.File file : files) {
+    if (file.getName().startsWith(tag) && file.getName().endsWith(".scad")) {
+      count++;
+      file.delete();
+    }
+  }
+  return count;
+}
+
+int ftTakeRecords(String tag) {
+  int count = 0;
+  java.io.File[] files = new java.io.File(sketchPath("output")).listFiles();
+  if (files == null) return 0;
+  for (java.io.File file : files) {
+    if (file.getName().startsWith(tag) && file.getName().endsWith("_dimensions.json")) {
+      count++;
+      file.delete();
+    }
+  }
+  return count;
+}
+
+int ftExportFiles() {
+  exportFrameSCAD("selftest_set", "T");
+  return ftTakeFiles("selftest_set");
+}
+
+void frameTestExportSet() {
+  println(" export set");
+  ArrayList<ShapeSpec> realShapes = shapes;
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 30));
+  ftCheck("two different scaffolds, two files", ftExportFiles() == 2, "");
+
+  ShapeSpec off = ftFramedShape(180, 30);
+  off.frame.enabled = false;
+  ftSetShapes(ftFramedShape(180, 60), off);
+  ftCheck("a shape with its scaffold off is left out", ftExportFiles() == 1, "");
+  ftCheck("and the plan says so", frameExportPlan().get(1).status.equals("scaffold off"),
+          frameExportPlan().get(1).status);
+  ftCheck("and it is not a shortfall", frameExportNote(1).isEmpty(), frameExportNote(1));
+
+  ShapeSpec twice = ftFramedShape(180, 60);
+  twice.nRep = 2;
+  ftSetShapes(twice);
+  ftCheck("two copies of one shape, one file", ftExportFiles() == 1, "");
+
+  // --- identical scaffolds ---
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 60));
+  ftCheck("identical scaffolds, one file", ftExportFiles() == 1, "");
+  ftCheck("the second points at the first", frameExportPlan().get(1).sameAs == 0, "");
+  ftCheck("and the note counts it", frameExportNote(1).equals(", 1 identical"), frameExportNote(1));
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(180, 30), ftFramedShape(180, 60));
+  ftCheck("a matching pair and a different one, two files", ftExportFiles() == 2, "");
+
+  // The rig's name only reaches a comment, so these print the same.
+  ShapeSpec named = ftFramedShape(180, 60), plain = ftFramedShape(180, 60);
+  named.frame.rigs.add(new Rig(24, 24, 31.5, 0, 0, 8.5, 0));
+  plain.frame.rigs.add(new Rig(24, 24, 31.5, 0, 0, 8.5, 0));
+  named.frame.rigs.get(0).preset = "M5Atom lying";
+  ftSetShapes(named, plain);
+  ftCheck("a name in a comment is not a difference", ftExportFiles() == 1, "");
+
+  plain.frame.rigs.get(0).offX += 1;
+  ftCheck("a rig moved 1 mm is", ftExportFiles() == 2, "");
+  plain.frame.rigs.get(0).offX -= 1;
+  plain.frame.dualStruts = !plain.frame.dualStruts;
+  ftCheck("and so is a strut setting", ftExportFiles() == 2, "");
+
+  // --- filenames ---
+  ShapeSpec a = ftFramedShape(180, 60), b = ftFramedShape(180, 30), c = ftFramedShape(180, 45);
+  a.label = "Cup";
+  b.label = "Cup";
+  ftSetShapes(a, b);
+  ftCheck("the same label does not overwrite", ftExportFiles() == 2, "");
+  b.label = "cup";
+  ftCheck("nor does the same label in another case", ftExportFiles() == 2, "");
+  c.label = "Cup_2";
+  ftSetShapes(a, b, c);
+  ftCheck("nor does a label that looks like the fix", ftExportFiles() == 3, "");
+
+  // --- left out, and saying so ---
+  ShapeSpec hollow = ftFramedShape(180, 30);
+  hollow.hollowMode = true;
+  ftSetShapes(ftFramedShape(180, 60), hollow);
+  ftCheck("a hollow shape is left out", ftExportFiles() == 1, "");
+  ftCheck("and counted as skipped", frameExportNote(1).equals(", 1 skipped"), frameExportNote(1));
+
+  ftSetShapes(ftFramedShape(180, 60), ftFramedShape(6, 3));
+  ftCheck("a scaffold that cannot fit is left out", ftExportFiles() == 1, "");
+  ftCheck("and counted as skipped", frameExportNote(1).equals(", 1 skipped"), frameExportNote(1));
+
+  // --- the tab, on the real shape list ---
+  shapes = realShapes;
+  sidebar.activeMainTab = MAIN_TAB_FRAME;
+  shapes.get(selectedShapeIdx).frame.enabled = true;
+  addShape();
+  ShapeSpec added = shapes.get(shapes.size() - 1);
+  ftCheck("a new shape starts without a scaffold", !added.frame.enabled, "");
+
+  added.frame.enabled = true;
+  added.cylinder = new PVector(added.cylinder.x, added.cylinder.y, added.cylinder.z / 2);
+  String keptName = uiExportFilename;
+  uiExportFilename = "selftest_all";
+  frameRows();
+  frameScrollY = frameScrollMax();
+  ftCheck("Export all is clickable and writes both", ftClickRow("frame_export_all", 0)
+          && ftTakeFiles("selftest_all") == 2, "");
+  ftCheck("and the notification counts them", exportNotifyPath.startsWith("2 scaffolds"), exportNotifyPath);
+  ftCheck("and the dimensions file", ftTakeRecords("selftest_all") == 1, "");
+  frameScrollY = 0;
+  uiExportFilename = keptName;
+}
+
+boolean ftLabelSurvives(String label) {
+  ShapeSpec s = ftFramedShape(180, 30);
+  s.label = label;
+  ftSetShapes(s);
+  String path = exportShapeRecord("selftest_label", "T");
+  JSONArray arr = loadJSONArray(path);
+  new java.io.File(sketchPath(path)).delete();
+  return arr != null && label.equals(arr.getJSONObject(0).getString("label", ""));
+}
+
+// 7. The record is only worth keeping if it brings the piece back, so this goes through the
+//    file: write it, read it from disk, rebuild, and compare what OpenSCAD would build.
+//    The awkward perimeter is deliberate - a value that rounds would pass with clean numbers.
+void frameTestDimensionRecord() {
+  println(" dimensions file");
+  ArrayList<ShapeSpec> realShapes = shapes;
+  int realSelected = selectedShapeIdx;
+  selectedShapeIdx = 0;
+
+  ShapeSpec frustum = ftFramedShape(187.33334, 61.7);
+  frustum.cylinder.y = 241.07;
+  frustum.label = "Lamp base";
+  frustum.tabDepth = 12.5;
+  frustum.fillColorEnabled = true;
+  frustum.shapeColor = color(200, 40, 90);
+  frustum.frame.strutRadius = 1.3;
+  frustum.frame.clearanceMM = 0.55;
+  frustum.frame.dualStruts = true;
+  frustum.frame.strutSpacing = 11.25;
+  frustum.frame.flapLength = 6.5;
+  Rig rig = new Rig(24, 31.5, 8.25, 3.5, -2.25, 8.5, 30);
+  rig.preset = "M5Atom lying";
+  rig.cutoutFace = RIG_CUT_TOP;
+  rig.cutoutSize = 2;
+  frustum.frame.rigs.add(rig);
+
+  ShapeSpec plain = ftFramedShape(180, 30);
+  plain.frame.enabled = false;
+
+  ShapeSpec hollow = ftFramedShape(180, 30);
+  hollow.hollowMode = true;
+  hollow.wallThickness = 3.5;
+  hollow.frame.enabled = false;
+
+  ShapeSpec box = ftFramedShape(160, 40);
+  box.nSides = 4;
+  box.cuboidMode = true;
+
+  ftSetShapes(frustum, plain, hollow, box);
+  String path = exportShapeRecord("selftest_record", "T");
+  JSONArray arr = loadJSONArray(path);
+  ftCheck("one entry per shape, scaffold or not", arr != null && arr.size() == 4, "");
+  if (arr == null || arr.size() != 4) return;
+
+  ArrayList<ShapeSpec> back = new ArrayList<ShapeSpec>();
+  for (int i = 0; i < arr.size(); i++) back.add(buildShapeFromJSON(arr.getJSONObject(i)));
+  ShapeSpec f2 = back.get(0);
+
+  ftCheck("sides come back", f2.nSides == frustum.nSides, "");
+  ftCheck("the label comes back", "Lamp base".equals(f2.label), f2.label);
+  ftCheck("the height comes back exactly", f2.cylinder.z == frustum.cylinder.z, "");
+  ftCheck("the top perimeter comes back exactly", f2.cylinder.x == frustum.cylinder.x, "");
+  ftCheck("a frustum stays a frustum", f2.cylinder.y == frustum.cylinder.y, "");
+  ftCheck("tab depth comes back", f2.tabDepth == frustum.tabDepth, "");
+  ftCheck("colour comes back", f2.fillColorEnabled && f2.shapeColor == frustum.shapeColor, "");
+  ftCheck("the sidebar's diameters match the perimeters",
+          abs(f2.uiBotW - shapeDiameterFromPerimeter(241.07, 6)) < 1e-3 && !f2.uiLock, "");
+
+  ftCheck("the scaffold comes back switched on", f2.frame.enabled, "");
+  ftCheck("the rig comes back with its cutout", f2.frame.rigs.size() == 1
+          && f2.frame.rigs.get(0).preset.equals("M5Atom lying")
+          && f2.frame.rigs.get(0).cutoutFace == RIG_CUT_TOP
+          && f2.frame.rigs.get(0).cutoutSize == 2, "");
+  ftCheck("OpenSCAD would build the same scaffold",
+          frameScadKey(f2, frameScadParamsFor(f2)).equals(frameScadKey(frustum, frameScadParamsFor(frustum))), "");
+
+  ftCheck("no scaffold stays no scaffold", !back.get(1).frame.enabled, "");
+  ftCheck("hollow comes back", back.get(2).hollowMode && back.get(2).wallThickness == 3.5, "");
+  ftCheck("cuboid is recorded", arr.getJSONObject(3).hasKey("cuboid_mm"), "");
+  ftCheck("and flagged as not rebuilt", jsonApproximatedCount(arr) == 1, "");
+
+  // A shape selected when the file loads must not leak its modes into what is loaded.
+  hollowMode = true;
+  ftCheck("the selected shape's modes do not leak in",
+          !buildShapeFromJSON(arr.getJSONObject(1)).hollowMode, "");
+  hollowMode = false;
+
+  JSONObject old = JSONObject.parse("{ \"sides\": 6, \"diameter\": 100, \"height\": 20 }");
+  ftNear("a plain diameter file still loads", buildShapeFromJSON(old).cylinder.x, 300, 0.01);
+
+  String raw = join(loadStrings(path), " ");
+  ftCheck("no locale decimal commas", !raw.matches(".*[0-9],[0-9].*"), "");
+  ftCheck("no float noise in the numbers", !raw.matches(".*\\.[0-9]{8,}.*"), "");
+  ftCheck("a shape reads from its name down", raw.indexOf("\"name\"") < raw.indexOf("\"sides\"")
+          && raw.indexOf("\"sides\"") < raw.indexOf("\"height\"")
+          && raw.indexOf("\"height\"") < raw.indexOf("\"scaffold\""), "");
+  ftCheck("a label that needs escaping survives", ftLabelSurvives("Lamp \"A\" \\ base"), "");
+  new java.io.File(sketchPath(path)).delete();
+
+  shapes = realShapes;
+  selectedShapeIdx = realSelected;
+  loadGlobalsFrom(shapes.get(selectedShapeIdx));
+  setParams(false);
 }

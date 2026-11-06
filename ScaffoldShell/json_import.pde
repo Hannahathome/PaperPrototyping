@@ -14,6 +14,10 @@
 //   label      (string) — optional display name. Default: ""
 //   marker_id  (int)    — aruco start index for rep 0. Default: 48
 //
+// A dimensions file from an export (json_export.pde) is this array with more fields. When it
+// gives top_perimeter_mm, those perimeters are used instead of diameter, and its scaffold and
+// hollow settings are restored. Cuboid and per-edge shapes come back as regular ones.
+//
 // Called from SidebarPanel click handler when "Load JSON" is pressed.
 
 import javax.swing.JOptionPane;
@@ -82,6 +86,11 @@ void jsonFileSelected(File selection) {
   // --- Ask Replace / Append / Cancel ---
   String msg = "Found " + newShapes.size() + " shape" + (newShapes.size() == 1 ? "" : "s") +
                " in the JSON file.\nReplace all existing shapes, or append them?";
+  int approximated = jsonApproximatedCount(arr);
+  if (approximated > 0) {
+    msg += "\n\n" + approximated + " cuboid or per-edge shape" + (approximated == 1 ? "" : "s")
+         + " will load as a regular shape with the same perimeters.";
+  }
   String[] options = { "Replace", "Append", "Cancel" };
   int choice = JOptionPane.showOptionDialog(
     null, msg, "Load JSON Shapes",
@@ -142,6 +151,16 @@ void jsonFileSelected(File selection) {
   redraw();
 }
 
+// Entries whose geometry buildShapeFromJSON() cannot rebuild.
+int jsonApproximatedCount(JSONArray arr) {
+  int count = 0;
+  for (int i = 0; i < arr.size(); i++) {
+    String type = arr.getJSONObject(i).getString("type", "");
+    if (type.equals("cuboid") || type.equals("per-edge")) count++;
+  }
+  return count;
+}
+
 // ---------------------------------------------------------------------------
 // Build a single ShapeSpec from a JSON object entry.
 // Temporarily clobbers the draw-time globals; caller must restore them.
@@ -180,6 +199,16 @@ ShapeSpec buildShapeFromJSON(JSONObject e) {
     botPerim = topPerim;
   }
 
+  // A dimensions file gives both perimeters, which is the only way to keep a frustum one.
+  boolean exact = e.hasKey("top_perimeter_mm") && e.hasKey("bottom_perimeter_mm");
+  if (exact) {
+    topPerim = e.getFloat("top_perimeter_mm");
+    botPerim = e.getFloat("bottom_perimeter_mm");
+    uiTopW = shapeDiameterFromPerimeter(topPerim, sides);
+    uiBotW = shapeDiameterFromPerimeter(botPerim, sides);
+    uiLock = topPerim == botPerim;
+  }
+
   // Write into model
   cylinder.x = topPerim;
   cylinder.y = botPerim;
@@ -206,5 +235,37 @@ ShapeSpec buildShapeFromJSON(JSONObject e) {
     s.fillColorEnabled = true;
   }
 
+  // saveGlobalsTo() carried over whatever shape happened to be selected.
+  if (exact) {
+    s.perEdgeMode   = false;
+    s.cuboidMode    = false;
+    s.hollowMode    = e.getString("type", "").equals("hollow");
+    s.wallThickness = e.getFloat("wall_thickness_mm", s.wallThickness);
+    s.tabDepth      = e.getFloat("tab_depth_mm", s.tabDepth);
+    s.flapDepth     = e.getFloat("flap_depth_mm", s.flapDepth);
+  }
+  if (e.hasKey("scaffold")) applyScaffoldJSON(s.frame, e.getJSONObject("scaffold"));
+
   return s;
+}
+
+void applyScaffoldJSON(FrameSpec f, JSONObject j) {
+  f.enabled      = true;
+  f.strutRadius  = j.getFloat("strut_radius_mm", f.strutRadius);
+  f.clearanceMM  = j.getFloat("clearance_mm", f.clearanceMM);
+  f.flapLength   = j.getFloat("wall_flap_length_mm", f.flapLength);
+  f.dualStruts   = j.getBoolean("dual_struts", f.dualStruts);
+  f.strutSpacing = j.getFloat("strut_spacing_mm", f.strutSpacing);
+
+  JSONArray rigs = j.getJSONArray("rigs");
+  for (int i = 0; rigs != null && i < rigs.size(); i++) {
+    JSONObject o = rigs.getJSONObject(i);
+    Rig r = new Rig(o.getFloat("w"), o.getFloat("d"), o.getFloat("h"),
+                    o.getFloat("off_x"), o.getFloat("off_y"), o.getFloat("off_z"),
+                    o.getFloat("rotation"));
+    r.preset     = o.getString("preset", r.preset);
+    r.cutoutFace = max(0, java.util.Arrays.asList(RIG_CUT_FACE_NAMES).indexOf(o.getString("cutout_face", "")));
+    r.cutoutSize = max(0, java.util.Arrays.asList(RIG_CUT_SIZE_NAMES).indexOf(o.getString("cutout_size", "")));
+    f.rigs.add(r);
+  }
 }
