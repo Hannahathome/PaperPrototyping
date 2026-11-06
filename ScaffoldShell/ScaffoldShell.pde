@@ -835,6 +835,7 @@ void exportPlan() {
   // unnoticed at 96 DPI. See FrameSCAD.pde.
   lastExportFrameCount = exportFrameSCAD(frameExportBaseName(), timestamp).size();
   lastExportFrameNote = frameExportNote(lastExportFrameCount);
+  exportShapeRecord(frameExportBaseName(), timestamp);
 
   setParams(true);
   saveFrontFold(); //cut

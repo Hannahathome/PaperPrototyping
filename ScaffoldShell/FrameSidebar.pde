@@ -165,7 +165,8 @@ ArrayList<FrameRow> frameRows() {
   rows.add(new FrameRow(FROW_BUTTON, "frame_export", "Export this scaffold (.scad)"));
   if (shapes.size() > 1) addFrameExportAllRows(rows);
   rows.add(new FrameRow(FROW_NOTE, "", "")
-    .txt("Scaffolds are also written by the main Export, one file per different scaffold. "
+    .txt("Scaffolds are also written by the main Export, one file per different scaffold, "
+       + "with a dimensions .json for every shape. "
        + "Open the .scad in OpenSCAD, render with F6, export STL.")
     .colored(color(140)));
 
@@ -609,6 +610,7 @@ void exportAllFrames() {
   String stamp = month()+"_"+day()+"_"+hour()+"_"+minute()+"_"+second();
   int count = exportFrameSCAD(frameExportBaseName(), stamp).size();
   if (count > 0) {
+    exportShapeRecord(frameExportBaseName(), stamp);
     exportNotifyTimer = 240;
     exportNotifyPath  = count + " scaffold" + (count == 1 ? "" : "s") + " in output/"
                       + frameExportNote(count);

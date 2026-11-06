@@ -56,6 +56,7 @@ Press `E`. Writes a timestamped set into `output/` (gitignored):
 | `<name>_fold_<stamp>.svg` | Cut and fold lines for the cutter |
 | `<name>_calib_<stamp>.svg` | Registration marks for print/cut alignment |
 | `<name>_<stamp>_frame_<shape>.scad` | Internal scaffold — one per different scaffold |
+| `<name>_<stamp>_dimensions.json` | Dimensions of every shape and scaffold, for rebuilding them |
 
 Print the calibration SVG first to verify alignment before committing material.
 
@@ -85,6 +86,12 @@ With two or more shapes, the Scaffold tab lists what each one will do at export,
 all scaffolds* writes them without the PDF and SVGs. A new shape starts with its scaffold
 off, so turn on *Build a scaffold* for each shape that needs one. Shapes with identical
 scaffolds, and copies of one shape, share a single file: print it as many times as you need.
+
+The dimensions file records each shape and its scaffold in millimetres. Load it with **Load
+JSON** to bring them back: perimeters, height, label, colour, tab and flap depths, hollow
+settings and the full scaffold with its rigs. Copies and connections are recorded or left
+out rather than restored, and cuboid and per-edge shapes load as regular shapes, with a
+warning; their real measurements stay in the file. *Export all scaffolds* writes it too.
 
 ## Keyboard controls
 
@@ -128,7 +135,8 @@ scaffolds, and copies of one shape, share a single file: print it as many times 
 | `marker.pde`, `marker_functions.pde` | ArUco marker generation |
 | `PrintNCut.pde` | PDF/SVG export and calibration marks |
 | `Pages.pde` | Spreading templates over several sheets |
-| `json_import.pde` | Shape import from DataPhysicalisation |
+| `json_import.pde` | Shape import from DataPhysicalisation and from dimensions files |
+| `json_export.pde` | Dimensions file written with each export |
 | `PlaceholderAssets.pde` | Generates placeholder textures on first run |
 | `DistanceOverlay.pde` | On-canvas measurement overlay — hidden, see below |
 | `Frame.pde` | Internal support frame — model, the shell→frustum bridge, geometry |
