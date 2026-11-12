@@ -66,20 +66,25 @@ ArrayList<FrameRow> frameRows() {
       .txt("No scaffold for this shape: " + frameUnavailableReason(s) + ".")
       .colored(color(180, 90, 40)));
     rows.add(new FrameRow(FROW_NOTE, "", "")
-      .txt("A scaffold is built as a uniform regular frustum, matching the scope of "
-         + "base plates and lid connections."));
+      .txt("A scaffold is built for a uniform regular frustum or a cuboid."));
     layoutFrameRows(rows);
     return rows;
   }
 
   FrameDims d = frameDimsFor(s);
   rows.add(new FrameRow(FROW_HEADER, "", "SCAFFOLD  —  " + shapeName));
+  String dimsTxt = d.box
+    ? "Cuboid   ·   bottom " + nf(d.botL, 0, 1) + " × " + nf(d.botW, 0, 1)
+      + "   ·   top " + nf(d.topL, 0, 1) + " × " + nf(d.topW, 0, 1)
+      + "   ·   H " + nf(d.height, 0, 1) + " mm"
+    : d.n + " sides   ·   R bottom " + nf(d.botR, 0, 1) + "   ·   R top " + nf(d.topR, 0, 1)
+      + "   ·   H " + nf(d.height, 0, 1) + " mm";
   rows.add(new FrameRow(FROW_NOTE, "", "")
-    .txt(d.n + " sides   ·   R bottom " + nf(d.botR, 0, 1) + "   ·   R top " + nf(d.topR, 0, 1)
-       + "   ·   H " + nf(d.height, 0, 1) + " mm")
+    .txt(dimsTxt)
     .colored(color(90, 110, 140)));
   rows.add(new FrameRow(FROW_NOTE, "", "")
-    .txt("Derived from the shape's perimeters — edit them on the Shape tab.")
+    .txt(d.box ? "Derived from the cuboid's X and Y sizes — edit them on the Shape tab."
+               : "Derived from the shape's perimeters — edit them on the Shape tab.")
     .colored(color(140)));
 
   rows.add(new FrameRow(FROW_TOGGLE, "frame_enabled", "Build a scaffold for this shape")

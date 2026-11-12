@@ -44,7 +44,8 @@ class ShapeSpec {
   boolean cuboidMode;
   float uiCubTopLen, uiCubTopWid;
   float uiCubBotLen, uiCubBotWid;
-  boolean uiCubRatioLock, uiCubAspectLock;
+  boolean uiCubRatioLock;
+  int     uiSidesBeforeCuboid;
 
   // --- Textures (PImage references, not deep-copied) ---
   int sideTextureMode;
@@ -143,7 +144,7 @@ class ShapeSpec {
     uiCubBotLen       = 35;
     uiCubBotWid       = 35;
     uiCubRatioLock    = false;
-    uiCubAspectLock   = false;
+    uiSidesBeforeCuboid = 4;
 
     sideTextureMode  = 0; // TEX_NONE
     panelTextures    = null;
@@ -250,7 +251,7 @@ void saveGlobalsTo(ShapeSpec s) {
   s.uiCubBotLen      = uiCubBotLen;
   s.uiCubBotWid      = uiCubBotWid;
   s.uiCubRatioLock   = uiCubRatioLock;
-  s.uiCubAspectLock  = uiCubAspectLock;
+  s.uiSidesBeforeCuboid = uiSidesBeforeCuboid;
 
   // Textures (reference, not deep copy)
   s.sideTextureMode  = sideTextureMode;
@@ -350,7 +351,7 @@ void loadGlobalsFrom(ShapeSpec s) {
   uiCubBotLen      = s.uiCubBotLen;
   uiCubBotWid      = s.uiCubBotWid;
   uiCubRatioLock   = s.uiCubRatioLock;
-  uiCubAspectLock  = s.uiCubAspectLock;
+  uiSidesBeforeCuboid = s.uiSidesBeforeCuboid;
 
   // Textures
   sideTextureMode  = s.sideTextureMode;

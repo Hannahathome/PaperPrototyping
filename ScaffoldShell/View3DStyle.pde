@@ -134,12 +134,15 @@ ArrayList<CutoutHole3D> cutoutHoles3D(int idx, PVector[] botVerts, PVector[] top
   ArrayList<CutoutHole3D> out = new ArrayList<CutoutHole3D>();
   if (shapes == null || idx < 0 || idx >= shapes.size()) return out;
   int n = min(topVerts.length, botVerts.length);
+  // A cuboid's lid and walls are refused by LidFrame and SidePanelFrame (connections do not
+  // handle them yet), but the projections below hold for it -- see RigCutout.pde's header.
+  boolean box = cuboidMode && nSides == 4 && edgeSlantH_px != null;
   for (RigCutoutPlan p : planRigCutouts(shapes.get(idx))) {
     if (!p.reaches) continue;
     PVector[] q = null;
     if (p.onLid) {
-      if (lidFrameAvailable()) q = rigCutoutQuad3DOnLid(p);
-    } else if (sidePanelFrameAvailable() && p.panel >= 0 && p.panel < n) {
+      if (lidFrameAvailable() || box) q = rigCutoutQuad3DOnLid(p);
+    } else if ((sidePanelFrameAvailable() || box) && p.panel >= 0 && p.panel < n) {
       q = rigCutoutQuad3DOnPanel(p, sidePanelBasis3D(botVerts, topVerts, p.panel));
     }
     if (q == null) continue;
@@ -295,10 +298,19 @@ PVector[] rigCutoutQuad3DOnPanel(RigCutoutPlan p, SidePanelBasis b) {
   if (b == null) return null;
   float hs = p.sizeMM / 2;
   float[][] corners = { {-hs, -hs}, {hs, -hs}, {hs, hs}, {-hs, hs} };
+  // A cuboid's panels are each drawn at their own height (edgeSlantH_px), not cylinderH_px,
+  // so v is scaled against that panel's height. Split strips draw them all at panel 0's.
+  float vScale = sidePanelVScale3D(b);
+  if (cuboidMode && nSides == 4 && edgeSlantH_px != null && p.panel < edgeSlantH_px.length) {
+    vScale = b.slantPx / edgeSlantH_px[splitStrip ? 0 : p.panel];
+  }
   PVector[] out = new PVector[4];
   for (int k = 0; k < 4; k++) {
-    out[k] = sidePanelLocalTo3D(b, new PVector(p.localMM.x + corners[k][0],
-                                               p.localMM.y + corners[k][1]));
+    float du = (p.localMM.x + corners[k][0]) * MM_current;
+    float dv = (p.localMM.y + corners[k][1]) * MM_current * vScale;
+    out[k] = new PVector(b.c.x + b.u.x * du + b.v.x * dv,
+                         b.c.y + b.u.y * du + b.v.y * dv,
+                         b.c.z + b.u.z * du + b.v.z * dv);
   }
   return out;
 }

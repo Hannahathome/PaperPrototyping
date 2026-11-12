@@ -52,9 +52,18 @@
 // would show up in the other. Connection.pde's header makes the same call for the same
 // reason. The frame is reached as shapes.get(i).frame, never through a global mirror.
 //
-// Scope (v1): uniform regular polygons -- the same scope LidFrame.pde and BasePlate.pde
-// take. Per-edge, cuboid and hollow shells are refused by frameAvailable() rather than
-// given a frame that cannot seat.
+// ---------------------------------------------------------------------------
+// CUBOIDS
+// ---------------------------------------------------------------------------
+// A cuboid's top and bottom are rectangles, which no circumradius describes. It is built
+// from its corners instead: FrameDims.box, with lengths along FS x and widths along FS y.
+// getPolygonVertices() walks edge 0 (a length) along +x, then turns 90 degrees, and centres
+// on the centroid, so the shell's corner 0 is at (-L/2, -W/2) and the rest follow
+// anticlockwise -- the same corner the regular ring's phase puts first for n = 4. The
+// clearance is taken square off each wall rather than along the diagonal.
+//
+// Scope: uniform regular polygons and 4-sided cuboids. Per-edge and hollow shells are
+// refused by frameAvailable() rather than given a frame that cannot seat.
 
 // ---------------------------------------------------------------------------
 // Model
@@ -161,21 +170,26 @@ final float FRAME_CLEARANCE_DEFAULT = 0.4;
 // Availability
 // ---------------------------------------------------------------------------
 
-// The frame addresses a shell as a uniform regular frustum. Anything else is refused
-// rather than given a frame that will not seat.
+// The frame addresses a shell as a uniform regular frustum or a cuboid. Anything else is
+// refused rather than given a frame that will not seat.
 boolean frameAvailable(ShapeSpec s) {
   if (s == null) return false;
-  return !s.perEdgeMode && !s.cuboidMode && !s.hollowMode && s.nSides >= 3;
+  return frameUnavailableReason(s).isEmpty();
 }
 
 // Why not, for the sidebar to show. Empty string when the shape is fine.
 String frameUnavailableReason(ShapeSpec s) {
-  if (s == null)        return "no shape selected";
-  if (s.perEdgeMode)    return "per-edge shapes are not supported yet";
-  if (s.cuboidMode)     return "cuboid shapes are not supported yet";
-  if (s.hollowMode)     return "hollow (double-wall) shapes are not supported yet";
-  if (s.nSides < 3)     return "needs at least 3 sides";
+  if (s == null)                       return "no shape selected";
+  if (s.perEdgeMode)                   return "per-edge shapes are not supported yet";
+  if (s.hollowMode)                    return "hollow (double-wall) shapes are not supported yet";
+  if (s.cuboidMode && s.nSides != 4)   return "a cuboid needs 4 sides";
+  if (s.nSides < 3)                    return "needs at least 3 sides";
   return "";
+}
+
+// A cuboid shell, as the frame sees it. Cuboid mode only takes effect at 4 sides.
+boolean frameIsBox(ShapeSpec s) {
+  return s.cuboidMode && s.nSides == 4;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +214,8 @@ class FrameDims {
   int   n;
   float botR, topR, height;   // shell circumradii and vertical height (mm)
   float phaseDeg;
+  boolean box;                // a cuboid: the lengths and widths below describe it, not the radii
+  float botL, botW, topL, topW;
 }
 
 FrameDims frameDimsFor(ShapeSpec s) {
@@ -209,7 +225,37 @@ FrameDims frameDimsFor(ShapeSpec s) {
   d.botR     = circumradiusFromPerimeterMM(s.cylinder.y, d.n);   // cylinder.y = base perimeter
   d.height   = s.cylinder.z;                                     // vertical, not slant
   d.phaseDeg = framePhaseDeg(d.n);
+  if (frameIsBox(s)) {
+    d.box  = true;
+    d.botL = s.uiCubBotLen; d.botW = s.uiCubBotWid;
+    d.topL = s.uiCubTopLen; d.topW = s.uiCubTopWid;
+    d.botR = dist(0, 0, d.botL / 2, d.botW / 2);   // to the corner, for anything that wants a radius
+    d.topR = dist(0, 0, d.topL / 2, d.topW / 2);
+  }
   return d;
+}
+
+// The shell's corners in FS mm, no clearance: corner i is where wall i-1 meets wall i.
+PVector[] frameShellCorners(FrameDims d, boolean isTop) {
+  float z = (isTop ? 1 : -1) * d.height / 2;
+  if (d.box) {
+    return frameRectCorners(isTop ? d.topL / 2 : d.botL / 2, isTop ? d.topW / 2 : d.botW / 2, z);
+  }
+  float r = isTop ? d.topR : d.botR;
+  PVector[] out = new PVector[d.n];
+  for (int i = 0; i < d.n; i++) {
+    float a = radians(i * 360.0 / d.n + d.phaseDeg);
+    out[i] = new PVector(r * cos(a), r * sin(a), z);
+  }
+  return out;
+}
+
+// A rectangle's corners from its half length and half width, in the shell's corner order.
+PVector[] frameRectCorners(float halfL, float halfW, float z) {
+  return new PVector[] {
+    new PVector(-halfL, -halfW, z), new PVector(halfL, -halfW, z),
+    new PVector( halfL,  halfW, z), new PVector(-halfL, halfW, z)
+  };
 }
 
 // What actually gets passed to OpenSCAD: the shell pulled in by the clearance. The module
@@ -219,6 +265,8 @@ class FrameScadParams {
   int   n;
   float botR, topR, height;   // clearance applied, strut radius NOT yet
   float strutRadius, phaseDeg;
+  boolean box;                // a cuboid: boxCage() with the lengths and widths below
+  float botL, botW, topL, topW;   // full lengths, clearance applied on both sides
   boolean valid;
   String problem;
 }
@@ -236,6 +284,11 @@ FrameScadParams frameScadParamsFor(ShapeSpec s) {
   p.height      = d.height  - 2 * f.clearanceMM;
   p.valid       = true;
   p.problem     = "";
+  if (d.box) {
+    p.box  = true;
+    p.botL = d.botL - 2 * f.clearanceMM; p.botW = d.botW - 2 * f.clearanceMM;
+    p.topL = d.topL - 2 * f.clearanceMM; p.topW = d.topW - 2 * f.clearanceMM;
+  }
 
   // The module subtracts a strut radius from each radius and two from the height. If that
   // takes anything to zero the frame is inside-out, and OpenSCAD would render it as an
@@ -243,7 +296,10 @@ FrameScadParams frameScadParamsFor(ShapeSpec s) {
   if (p.height - 2 * f.strutRadius <= 0) {
     p.valid = false;
     p.problem = "strut radius and clearance exceed the shell height";
-  } else if (min(p.botR, p.topR) - f.strutRadius <= 0) {
+  } else if (p.box && min(min(p.botL, p.botW), min(p.topL, p.topW)) / 2 - f.strutRadius <= 0) {
+    p.valid = false;
+    p.problem = "strut radius and clearance exceed the shell's width";
+  } else if (!p.box && min(p.botR, p.topR) - f.strutRadius <= 0) {
     p.valid = false;
     p.problem = "strut radius and clearance exceed the shell radius";
   }
@@ -300,12 +356,17 @@ FrameGeometry buildFrameGeometry(ShapeSpec s) {
   int n = p.n;
   PVector[] bot = new PVector[n];
   PVector[] top = new PVector[n];
-  for (int i = 0; i < n; i++) {
-    float a = radians(i * 360.0 / n + p.phaseDeg);
-    bot[i] = new PVector(botR * cos(a), botR * sin(a), g.zBottom);
-    top[i] = new PVector(topR * cos(a), topR * sin(a), g.zTop);
-    g.cageVertices.add(bot[i]);
+  if (p.box) {
+    bot = frameRectCorners(p.botL / 2 - eR, p.botW / 2 - eR, g.zBottom);
+    top = frameRectCorners(p.topL / 2 - eR, p.topW / 2 - eR, g.zTop);
+  } else {
+    for (int i = 0; i < n; i++) {
+      float a = radians(i * 360.0 / n + p.phaseDeg);
+      bot[i] = new PVector(botR * cos(a), botR * sin(a), g.zBottom);
+      top[i] = new PVector(topR * cos(a), topR * sin(a), g.zTop);
+    }
   }
+  for (int i = 0; i < n; i++) g.cageVertices.add(bot[i]);
   for (int i = 0; i < n; i++) {
     g.cageRing.add(new PVector[]{ bot[i], bot[(i + 1) % n] });
     g.cageWallStruts.add(new PVector[]{ bot[i], top[i] });

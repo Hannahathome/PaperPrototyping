@@ -218,16 +218,24 @@ void writeFrameAssembly(PrintWriter out, ShapeSpec s, FrameScadParams p) {
   out.println("// Internal support scaffold, exported from ScaffoldShell.");
   out.println("// Render with F6, export STL, print. Dimensions are millimetres.");
   out.println("//");
-  out.println("// Shell it goes inside: " + scadInt(d.n) + " sides"
-            + ", bottom perimeter " + scadNum(s.cylinder.y) + " mm"
-            + ", top perimeter " + scadNum(s.cylinder.x) + " mm"
-            + ", height " + scadNum(s.cylinder.z) + " mm.");
-  out.println("// Derived circumradii: bottom " + scadNum(d.botR)
-            + ", top " + scadNum(d.topR) + ".");
-  out.println("// Clearance of " + scadNum(f.clearanceMM)
-            + " mm is already subtracted from the radii and the height below.");
-  out.println("// Ring phase " + scadNum(d.phaseDeg)
-            + " deg aligns the wall struts with the shell's folded corners.");
+  if (d.box) {
+    out.println("// Shell it goes inside: a cuboid, bottom " + scadNum(d.botL) + " x " + scadNum(d.botW)
+              + " mm, top " + scadNum(d.topL) + " x " + scadNum(d.topW)
+              + " mm (length x width), height " + scadNum(d.height) + " mm.");
+    out.println("// Clearance of " + scadNum(f.clearanceMM)
+              + " mm is already subtracted from each wall and from the height below.");
+  } else {
+    out.println("// Shell it goes inside: " + scadInt(d.n) + " sides"
+              + ", bottom perimeter " + scadNum(s.cylinder.y) + " mm"
+              + ", top perimeter " + scadNum(s.cylinder.x) + " mm"
+              + ", height " + scadNum(s.cylinder.z) + " mm.");
+    out.println("// Derived circumradii: bottom " + scadNum(d.botR)
+              + ", top " + scadNum(d.topR) + ".");
+    out.println("// Clearance of " + scadNum(f.clearanceMM)
+              + " mm is already subtracted from the radii and the height below.");
+    out.println("// Ring phase " + scadNum(d.phaseDeg)
+              + " deg aligns the wall struts with the shell's folded corners.");
+  }
   out.println();
 
   out.println("flap_length = " + scadNum(f.flapLength)
@@ -239,14 +247,25 @@ void writeFrameAssembly(PrintWriter out, ShapeSpec s, FrameScadParams p) {
   out.println("// --- ASSEMBLY: wall struts sheared flush at the top plane ---");
   out.println("difference() {");
   out.println("  union() {");
-  out.println("    frustumCage("
-            + scadInt(p.n) + ", "
-            + scadNum(p.botR) + ", "
-            + scadNum(p.topR) + ", "
-            + scadNum(p.height) + ", "
-            + scadNum(p.strutRadius) + ", "
-            + scadNum(p.phaseDeg) + ", "
-            + (hasRigs ? "true" : "false") + ");");
+  if (p.box) {
+    out.println("    boxCage("
+              + scadNum(p.botL) + ", "
+              + scadNum(p.botW) + ", "
+              + scadNum(p.topL) + ", "
+              + scadNum(p.topW) + ", "
+              + scadNum(p.height) + ", "
+              + scadNum(p.strutRadius) + ", "
+              + (hasRigs ? "true" : "false") + ");");
+  } else {
+    out.println("    frustumCage("
+              + scadInt(p.n) + ", "
+              + scadNum(p.botR) + ", "
+              + scadNum(p.topR) + ", "
+              + scadNum(p.height) + ", "
+              + scadNum(p.strutRadius) + ", "
+              + scadNum(p.phaseDeg) + ", "
+              + (hasRigs ? "true" : "false") + ");");
+  }
 
   if (hasRigs) {
     out.println();
@@ -273,8 +292,17 @@ void writeFrameAssembly(PrintWriter out, ShapeSpec s, FrameScadParams p) {
 // Flat disc subtracted at the top cap plane, so the wall struts are cut off straight rather
 // than ending in their wedge flaps. Spans z in [h/2 - eR, h/2 + eR]; the base sits exactly
 // on the top-vertex plane. Rotationally symmetric, so the ring phase does not reach it.
+// A cuboid gets a flat slab the shape of its top, one strut radius wider on every side.
 void writeTopTrimSlice(PrintWriter out, FrameScadParams p) {
   out.println("  // Top trimming slice: cuts all wall struts off straight");
+  if (p.box) {
+    float sl = p.topL + 2 * p.strutRadius, sw = p.topW + 2 * p.strutRadius;
+    out.println("  translate([" + scadNum(-sl / 2) + ", " + scadNum(-sw / 2) + ", "
+              + scadNum(p.height / 2 - p.strutRadius) + "])");
+    out.println("    cube([" + scadNum(sl) + ", " + scadNum(sw) + ", "
+              + scadNum(p.strutRadius * 2) + "]);");
+    return;
+  }
   out.println("  translate([0, 0, " + scadNum(p.height / 2 - p.strutRadius) + "])");
   out.println("    cylinder(h = " + scadNum(p.strutRadius * 2)
             + ", r = " + scadNum(p.topR + p.strutRadius) + ", $fn = 64);");
