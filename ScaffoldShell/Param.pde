@@ -15,8 +15,8 @@ float uiCubTopLen = 35;              // Cuboid top lid length (mm)
 float uiCubTopWid = 35;              // Cuboid top lid width (mm)
 float uiCubBotLen = 35;              // Cuboid bottom lid length (mm)
 float uiCubBotWid = 35;              // Cuboid bottom lid width (mm)
-boolean uiCubRatioLock = false;      // Lock top and bottom to be exactly the same
-boolean uiCubAspectLock = false;     // Lock bottom aspect ratio to match top's ratio
+boolean uiCubRatioLock = false;      // Same as top: the bottom follows the top
+int uiSidesBeforeCuboid = 4;         // Sides to go back to when cuboid mode is switched off
 
 float MM = 2.8346;  // Non-final to allow temporary 300 DPI switching during export
 float MM_current = MM;  // Current MM value based on export mode (updated by setParams)

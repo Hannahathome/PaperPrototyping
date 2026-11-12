@@ -34,6 +34,10 @@ texture path has something to load — see [data/README.md](data/README.md).
 
 - Uniform prisms and per-edge variable (irregular) prisms
 - Frustums — independent top and bottom perimeters
+- Cuboids — rectangular top and bottom, each with its own X and Y size: switch on **Cuboid**
+  at the end of the *Number of sides* row, and the sides and diameter controls give way to
+  *Top X / Top Y* and *Bottom X / Bottom Y*. *Same as top* makes the bottom follow the top
+  for a straight-sided box. Switching Cuboid off restores the sides and diameters it had.
 - Kresling fold patterns, including haptic button variants
 - Base plates, cutouts and internal bar assemblies
 - Connected shapes — mount one form on another's lid **or side wall**, with the mounting slits cut automatically
@@ -92,6 +96,10 @@ JSON** to bring them back: perimeters, height, label, colour, tab and flap depth
 settings and the full scaffold with its rigs. Copies and connections are recorded or left
 out rather than restored, and cuboid and per-edge shapes load as regular shapes, with a
 warning; their real measurements stay in the file. *Export all scaffolds* writes it too.
+
+**Open:** loading a cuboid back as a cuboid is not decided yet. For now a cuboid comes back
+as a square-sided shape with the same perimeters, and a cuboid scaffold comes back square;
+the load dialog says when that applies.
 
 ## Keyboard controls
 
@@ -429,7 +437,11 @@ itself is not on the tab — it is read off the shape, and the tab shows you wha
 ```
 
 Change the shape's perimeters and those numbers follow. This is the whole point of the
-merge, so there is deliberately no way to type them.
+merge, so there is deliberately no way to type them. A cuboid shows its sizes instead:
+
+```
+Cuboid   ·   bottom 70.0 × 40.0   ·   top 50.0 × 40.0   ·   H 60.0 mm
+```
 
 ### Settings
 
@@ -502,9 +514,18 @@ This is invisible at `n = 4` and obvious at `n = 3` and `n = 5`. If you edit
 
 ### Scope
 
-Scaffolds are built as uniform regular frustums — the same scope base plates and lid
-connections take. Per-edge, cuboid and hollow shapes are refused with a note on the tab
-rather than given a scaffold that cannot seat.
+Scaffolds are built for uniform regular frustums and for cuboids. Per-edge and hollow
+shapes are refused with a note on the tab rather than given a scaffold that cannot seat.
+
+A cuboid's scaffold is written with `boxCage()` instead of `frustumCage()`: it takes the
+lengths and widths, not radii, and needs no `phase`. The clearance comes off each wall
+square-on, so a 70 × 40 mm shell at 0.4 mm gets a 69.2 × 39.2 mm cage. Rig cutouts work on
+a cuboid's top lid and on all four walls; each wall is checked against its own width.
+
+A cuboid that changes size from bottom to top has its wall panels drawn a little taller than
+its real walls: the panel height adds the change in perimeter to the wall's own lean. This
+is older than cuboid scaffolds. The cutouts follow the panels as drawn, so they land in
+the right place on the paper, but the folded shell stands slightly taller than the scaffold.
 
 A shape connected to another gets its own scaffold, posed correctly in the preview, and its
 own `.scad`. Scaffolds of connected shapes are not joined into one print.
@@ -515,8 +536,9 @@ own `.scad`. Scaffolds of connected shapes are not joined into one print.
 strut ring against the shell's own 3D polygon at seven vertex counts, parity with
 FrustumSupport's defaults, the written `.scad` itself, and the Scaffold tab's click targets
 against the rows it drew. Flip `FRAME_SELFTEST` to `true` and run the sketch; it prints a
-pass/fail table and exits. 87 checks at the time of writing, including rig cutouts
-projected through the lid and wall frames onto the rig's own face.
+pass/fail table and exits. 181 checks at the time of writing, including rig cutouts
+projected through the lid and wall frames onto the rig's own face, and the same for cuboids:
+cage corners on the shell's, the `boxCage()` call, cutouts on each wall, and the Cuboid toggle.
 
 The `.scad` check includes an assertion that no number was written with a decimal comma.
 Processing's `nf()` formats through the machine's locale, so on a Dutch, German or French

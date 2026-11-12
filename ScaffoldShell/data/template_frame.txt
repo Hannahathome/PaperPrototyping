@@ -7,16 +7,19 @@
 //
 // `with_spokes` adds the floor bracing from each base midpoint to the axis. It only earns
 // its material when the frame carries rigs, so an empty cage leaves it off.
+//
+// boxCage is the same cage for a cuboid shell, whose top and bottom are rectangles rather
+// than regular polygons. It takes lengths (along x) and widths (along y) instead of radii,
+// and needs no phase: corner 0 is at (-x, -y), which is where the shell's corner 0 is.
 
 module frustumCage(
     frustum_nside, frustum_bottom_radius, frustum_top_radius, frustum_height, edge_radius,
     phase = 0, with_spokes = true
 ){
     $fn = 16;
-    vertex_radius = edge_radius;
     bottom_radius = frustum_bottom_radius - edge_radius;
     top_radius    = frustum_top_radius - edge_radius;
-    height        = frustum_height - (2 * vertex_radius);
+    height        = frustum_height - (2 * edge_radius);
     vertices = [
         for (i = [0 : frustum_nside - 1])
             let(angle = i * 360 / frustum_nside + phase)
@@ -26,26 +29,50 @@ module frustumCage(
             let(angle = i * 360 / frustum_nside + phase)
             [top_radius * cos(angle), top_radius * sin(angle), height/2]
     ];
+    _cage(vertices, frustum_nside, height, edge_radius, with_spokes);
+}
+
+module boxCage(
+    bottom_length, bottom_width, top_length, top_width, box_height, edge_radius,
+    with_spokes = true
+){
+    $fn = 16;
+    bl     = bottom_length / 2 - edge_radius;
+    bw     = bottom_width  / 2 - edge_radius;
+    tl     = top_length    / 2 - edge_radius;
+    tw     = top_width     / 2 - edge_radius;
+    height = box_height - (2 * edge_radius);
+    signs  = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+    vertices = [
+        for (s = signs) [s[0] * bl, s[1] * bw, -height/2],
+        for (s = signs) [s[0] * tl, s[1] * tw,  height/2]
+    ];
+    _cage(vertices, 4, height, edge_radius, with_spokes);
+}
+
+// The cage itself, from its corners: the bottom ring first, then the top ring.
+module _cage(vertices, n, height, edge_radius, with_spokes) {
+    vertex_radius = edge_radius;
     bottom_cross_spokes = [
-        for (i = [0 : frustum_nside - 1]) let(
+        for (i = [0 : n - 1]) let(
             p1 = vertices[i],
-            p2 = vertices[(i + 1) % frustum_nside],
+            p2 = vertices[(i + 1) % n],
             midpoint = (p1 + p2) / 2,
             center   = [0, 0, -height/2]
         )
         [midpoint, center]
     ];
     union() {
-        for (i = [0 : frustum_nside - 1]) {
+        for (i = [0 : n - 1]) {
             translate(vertices[i]) sphere(r = vertex_radius);
         }
         // Bottom perimeter ring
-        for (i = [0 : frustum_nside - 1]) {
-            _local_draw_edge(vertices[i], vertices[(i + 1) % frustum_nside], edge_radius);
+        for (i = [0 : n - 1]) {
+            _local_draw_edge(vertices[i], vertices[(i + 1) % n], edge_radius);
         }
         // Vertical wall struts (wedged flap tips, sheared flush by the top slice)
-        for (i = [0 : frustum_nside - 1]) {
-            _local_draw_half_edge(vertices[i], vertices[i + frustum_nside], edge_radius, 0);
+        for (i = [0 : n - 1]) {
+            _local_draw_half_edge(vertices[i], vertices[i + n], edge_radius, 0);
         }
         if (with_spokes) {
             for (spoke = bottom_cross_spokes) {

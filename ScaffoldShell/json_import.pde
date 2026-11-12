@@ -18,6 +18,10 @@
 // gives top_perimeter_mm, those perimeters are used instead of diameter, and its scaffold and
 // hollow settings are restored. Cuboid and per-edge shapes come back as regular ones.
 //
+// OPEN: cuboids. The file records a cuboid's X and Y sizes (cuboid_mm), but loading it back as
+// a cuboid is still to be decided, so it loads as a square-sided shape, and a scaffold it had
+// comes back square too. The load dialog says so.
+//
 // Called from SidebarPanel click handler when "Load JSON" is pressed.
 
 import javax.swing.JOptionPane;
@@ -91,6 +95,11 @@ void jsonFileSelected(File selection) {
     msg += "\n\n" + approximated + " cuboid or per-edge shape" + (approximated == 1 ? "" : "s")
          + " will load as a regular shape with the same perimeters.";
   }
+  int squaredScaffolds = jsonCuboidScaffoldCount(arr);
+  if (squaredScaffolds > 0) {
+    msg += "\n" + squaredScaffolds + " of them " + (squaredScaffolds == 1 ? "has" : "have")
+         + " a cuboid scaffold, which will come back as a square scaffold, not the original.";
+  }
   String[] options = { "Replace", "Append", "Cancel" };
   int choice = JOptionPane.showOptionDialog(
     null, msg, "Load JSON Shapes",
@@ -157,6 +166,16 @@ int jsonApproximatedCount(JSONArray arr) {
   for (int i = 0; i < arr.size(); i++) {
     String type = arr.getJSONObject(i).getString("type", "");
     if (type.equals("cuboid") || type.equals("per-edge")) count++;
+  }
+  return count;
+}
+
+// Cuboid entries that carry a scaffold, which loads onto the square stand-in shape.
+int jsonCuboidScaffoldCount(JSONArray arr) {
+  int count = 0;
+  for (int i = 0; i < arr.size(); i++) {
+    JSONObject o = arr.getJSONObject(i);
+    if (o.getString("type", "").equals("cuboid") && o.hasKey("scaffold")) count++;
   }
   return count;
 }

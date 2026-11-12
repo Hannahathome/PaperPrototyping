@@ -438,6 +438,10 @@ void drawPlan(boolean img) {
     int nEdges = min(edgeTop_px.length, edgeBot_px.length);
     float hPxPerEdge = cuboidMode && edgeSlantH_px != null ? edgeSlantH_px[0] : cylinderH_px;
 
+    // Scaffold rig cutouts in a cuboid's walls: first in the cut file, on top elsewhere, as
+    // in the uniform strip below.
+    if (bExportingCutFile) drawRigCutoutsOnPanels();
+
     if (splitStrip && nEdges >= 4) {
       // --- SPLIT STRIP MODE (per-edge / cuboid) ---
       int splitAt = (int)ceil(nEdges / 2.0);
@@ -505,6 +509,7 @@ void drawPlan(boolean img) {
       }
       popMatrix();
     }
+    if (!bExportingCutFile) drawRigCutoutsOnPanels();
 
     // Use actual strip height to prevent overlap
     float stripHeight = getStripHeight();
@@ -560,6 +565,8 @@ void drawPlan(boolean img) {
         rect(tabDepth_px, tabDepth_px, topLidW, topLidD);
         popStyle();
       }
+      // Scaffold rigs that reach the top lid cut their window here, before the outline.
+      drawRigCutoutsOnTopLid();
       drawRectangularLid(topLidW, topLidD, neckDepth_px2, tabInset_top_px, arrowheadFlare_top_px);
       popMatrix();
       

@@ -23,7 +23,6 @@ Slider sCubTopWid;    // cuboid top lid width (mm)
 Slider sCubBotLen;    // cuboid bottom lid length (mm)
 Slider sCubBotWid;    // cuboid bottom lid width (mm)
 Toggle tCubRatioLock; // lock top and bottom to be exactly the same
-Toggle tCubAspectLock; // lock bottom aspect ratio to match top
 Slider  sTotalLen;    //slider om lengte direct te zetten
 Toggle  tPerimLock; 
 Toggle tAdvanced;
@@ -319,6 +318,7 @@ void initShapeUI() {
   final int UI_GAP = 4;
   int sliderWidth = w - (2 * UI_BTN_SIZE) - (2 * UI_GAP);  // slider width adjusted to fit buttons
   y += 0.5*row;
+  int sidesRowY = y;   // the Cuboid toggle sits at the end of this row
   btnSidesMinus = cp5__prism.addButton("btn_sides_minus")
     .setPosition(x, y)
     .setSize(UI_BTN_SIZE, h)
@@ -414,7 +414,8 @@ void initShapeUI() {
   int inputW2 = 45;
   int inputGap2 = 5;
   int halfW = (w - UI_GAP - UI_GAP - lockbuttonsize - 2*(inputW2 + inputGap2)) / 2;
-  
+  int sizeRowY = y;   // cuboid mode puts its top X and Y here, in place of the diameters
+
   // Top lid size slider with input
   sTopSize = cp5__prism.addSlider("ui_top_size")
     .setPosition(x, y).setSize(halfW, h)
@@ -484,88 +485,46 @@ void initShapeUI() {
   
   y += row + 5;
 
-  // Cuboid mode toggle. It no longer occupies a row of the main column — it is placed inside
-  // the advanced group by layoutSecondaryToggles(), so no vertical space is reserved here.
+  // Cuboid toggle, at the end of the NUMBER OF SIDES row: a cuboid always has 4 sides, so
+  // switching it on takes the sides control's place (setCuboidControlsVisible).
+  int cubSideX = x + w + 8;                       // the 120px the main column leaves free
+  int cubSideW = LEFT_SIDEBAR_WIDTH - 2*SIDEBAR_PADDING - w - 8;
   tCuboidMode = cp5__prism.addToggle("ui_cuboid_mode")
-    .setPosition(-1000, -1000)
-    .setSize(22, 22)
-    .setLabel("CUBOID MODE (RECTANGULAR LIDS)")
-    .setColorLabel(color(0))
+    .setPosition(cubSideX, sidesRowY)
+    .setSize(cubSideW, h)
+    .setLabel("CUBOID")
+    .setColorLabel(color(255))
+    .setColorBackground(color(80, 80, 150))
+    .setColorForeground(color(100, 100, 180))
+    .setColorActive(color(50, 150, 50))
     .setValue(cuboidMode ? 1 : 0);
   tCuboidMode.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.CENTER)
-    .setPaddingX(31);
-  tCuboidMode.setVisible(false);
+    .setFont(uiFont(12))
+    .align(ControlP5.CENTER, ControlP5.CENTER);
 
   // Anchor for the TAB LENGTH row and the advanced group below it (cuboid mode off).
   togglesYWhenCuboidOff = y;
 
   // === CUBOID MODE CONTROLS (only visible when cuboidMode is on) ===
-  // Row 1: Top lid length + Top lid width
-  sCubTopLen = cp5__prism.addSlider("ui_cub_top_len")
-    .setPosition(x, y).setSize(halfW, h)
-    .setLabel("TOP LENGTH")
-    .setColorLabel(0)
-    .setDecimalPrecision(1)
-    .setRange(1, 120)
-    .setValue(uiCubTopLen);
-  sCubTopLen.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingX(0)
-    .setPaddingY(6);
+  // Two rows of X and Y, top then bottom: X is the length (edge 0, along the 3D view's x),
+  // Y the width. The top row takes the diameters' place.
+  int cubFieldX = halfW + inputGap2;
+  int cubBotRowY = sizeRowY + row + 20;
+  sCubTopLen  = addCuboidSlider("ui_cub_top_len", "TOP X", x, sizeRowY, halfW, h, uiCubTopLen);
+  tfCubTopLen = addCuboidField("tf_cub_top_len", x + cubFieldX, sizeRowY, inputW2, h, uiCubTopLen);
+  sCubTopWid  = addCuboidSlider("ui_cub_top_wid", "TOP Y", botSliderX, sizeRowY, halfW, h, uiCubTopWid);
+  tfCubTopWid = addCuboidField("tf_cub_top_wid", botSliderX + cubFieldX, sizeRowY, inputW2, h, uiCubTopWid);
+  sCubBotLen  = addCuboidSlider("ui_cub_bot_len", "BOTTOM X", x, cubBotRowY, halfW, h, uiCubBotLen);
+  tfCubBotLen = addCuboidField("tf_cub_bot_len", x + cubFieldX, cubBotRowY, inputW2, h, uiCubBotLen);
+  sCubBotWid  = addCuboidSlider("ui_cub_bot_wid", "BOTTOM Y", botSliderX, cubBotRowY, halfW, h, uiCubBotWid);
+  tfCubBotWid = addCuboidField("tf_cub_bot_wid", botSliderX + cubFieldX, cubBotRowY, inputW2, h, uiCubBotWid);
 
-  tfCubTopLen = cp5__prism.addTextfield("tf_cub_top_len")
-    .setPosition(x + halfW + inputGap2, y)
-    .setSize(inputW2, h)
-    .setLabel("")
-    .setColorBackground(color(255))
-    .setColorForeground(color(200))
-    .setColorActive(color(50, 150, 255))
-    .setColorValue(color(0))
-    .setColorCursor(color(0))
-    .setAutoClear(false)
-    .setText(nf(uiCubTopLen, 0, 1))
-    .setFocus(false);
-  tfCubTopLen.getCaptionLabel().setVisible(false);
-
-  sCubTopWid = cp5__prism.addSlider("ui_cub_top_wid")
-    .setPosition(botSliderX, y).setSize(halfW, h)
-    .setLabel("TOP WIDTH")
-    .setColorLabel(0)
-    .setDecimalPrecision(1)
-    .setRange(1, 120)
-    .setValue(uiCubTopWid);
-  sCubTopWid.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingX(0)
-    .setPaddingY(6);
-
-  tfCubTopWid = cp5__prism.addTextfield("tf_cub_top_wid")
-    .setPosition(botSliderX + halfW + inputGap2, y)
-    .setSize(inputW2, h)
-    .setLabel("")
-    .setColorBackground(color(255))
-    .setColorForeground(color(200))
-    .setColorActive(color(50, 150, 255))
-    .setColorValue(color(0))
-    .setColorCursor(color(0))
-    .setAutoClear(false)
-    .setText(nf(uiCubTopWid, 0, 1))
-    .setFocus(false);
-  tfCubTopWid.getCaptionLabel().setVisible(false);
-  y += row;
-
-  // Row 2: Two lock buttons side by side
-  int cubBtnGap = 6;
-  int cubBtnW = (w - cubBtnGap) / 2;
-  
+  // Same as top: the bottom follows the top, for a straight-sided box. Beside the bottom row,
+  // in the same free strip as the Cuboid toggle.
   tCubRatioLock = cp5__prism.addToggle("ui_cub_ratio_lock")
-    .setPosition(x, y)
-    .setSize(cubBtnW, 24)
-    .setLabel("SAME SIZE")
+    .setPosition(cubSideX, cubBotRowY)
+    .setSize(cubSideW, h)
+    .setLabel("SAME AS TOP")
     .setColorLabel(color(255))
     .setColorBackground(color(80, 80, 150))
     .setColorForeground(color(100, 100, 180))
@@ -574,76 +533,7 @@ void initShapeUI() {
   tCubRatioLock.getCaptionLabel()
     .setFont(uiFont(11))
     .align(ControlP5.CENTER, ControlP5.CENTER);
-
-  tCubAspectLock = cp5__prism.addToggle("ui_cub_aspect_lock")
-    .setPosition(x + cubBtnW + cubBtnGap, y)
-    .setSize(cubBtnW, 24)
-    .setLabel("LOCK RATIO")
-    .setColorLabel(color(255))
-    .setColorBackground(color(80, 80, 150))
-    .setColorForeground(color(100, 100, 180))
-    .setColorActive(color(50, 150, 50))
-    .setValue(uiCubAspectLock ? 1 : 0);
-  tCubAspectLock.getCaptionLabel()
-    .setFont(uiFont(11))
-    .align(ControlP5.CENTER, ControlP5.CENTER);
-  y += row + 20;
-
-  // Row 3: Bottom lid length + Bottom lid width
-  sCubBotLen = cp5__prism.addSlider("ui_cub_bot_len")
-    .setPosition(x, y).setSize(halfW, h)
-    .setLabel("BOTTOM LENGTH")
-    .setColorLabel(0)
-    .setDecimalPrecision(1)
-    .setRange(1, 120)
-    .setValue(uiCubBotLen);
-  sCubBotLen.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingX(0)
-    .setPaddingY(6);
-
-  tfCubBotLen = cp5__prism.addTextfield("tf_cub_bot_len")
-    .setPosition(x + halfW + inputGap2, y)
-    .setSize(inputW2, h)
-    .setLabel("")
-    .setColorBackground(color(255))
-    .setColorForeground(color(200))
-    .setColorActive(color(50, 150, 255))
-    .setColorValue(color(0))
-    .setColorCursor(color(0))
-    .setAutoClear(false)
-    .setText(nf(uiCubBotLen, 0, 1))
-    .setFocus(false);
-  tfCubBotLen.getCaptionLabel().setVisible(false);
-
-  sCubBotWid = cp5__prism.addSlider("ui_cub_bot_wid")
-    .setPosition(botSliderX, y).setSize(halfW, h)
-    .setLabel("BOTTOM WIDTH")
-    .setColorLabel(0)
-    .setDecimalPrecision(1)
-    .setRange(1, 120)
-    .setValue(uiCubBotWid);
-  sCubBotWid.getCaptionLabel()
-    .setFont(uiFont(15))
-    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
-    .setPaddingX(0)
-    .setPaddingY(6);
-
-  tfCubBotWid = cp5__prism.addTextfield("tf_cub_bot_wid")
-    .setPosition(botSliderX + halfW + inputGap2, y)
-    .setSize(inputW2, h)
-    .setLabel("")
-    .setColorBackground(color(255))
-    .setColorForeground(color(200))
-    .setColorActive(color(50, 150, 255))
-    .setColorValue(color(0))
-    .setColorCursor(color(0))
-    .setAutoClear(false)
-    .setText(nf(uiCubBotWid, 0, 1))
-    .setFocus(false);
-  tfCubBotWid.getCaptionLabel().setVisible(false);
-  y += row ;
+  y = cubBotRowY + row + 5;
 
   // Lower anchor for the secondary toggle group (used when cuboid mode is on,
   // so the toggles clear the cuboid controls above).
@@ -1726,9 +1616,9 @@ void updateSidebarControlsVisibility() {
   if (sInnerScale != null) sInnerScale.setVisible(adv && hollowMode && enableInnerShape);
   if (sInnerRotation != null) sInnerRotation.setVisible(adv && hollowMode && enableInnerShape);
 
-  // Cuboid mode toggle now lives in the advanced group; its dimension sliders stay in the
-  // main column, because once cuboid mode is on they are the primary size controls.
-  if (tCuboidMode != null) tCuboidMode.setVisible(adv && nSides == 4);
+  // The Cuboid toggle sits beside the sides control in the main column, and its X and Y
+  // sliders replace the diameters, because once it is on they are the primary size controls.
+  if (tCuboidMode != null) tCuboidMode.setVisible(shapeVisible);
   if (shapeVisible) {
     setCuboidControlsVisible(cuboidMode);
   } else {
@@ -1741,7 +1631,6 @@ void updateSidebarControlsVisibility() {
     if (tfCubBotLen != null) tfCubBotLen.setVisible(false);
     if (tfCubBotWid != null) tfCubBotWid.setVisible(false);
     if (tCubRatioLock != null) tCubRatioLock.setVisible(false);
-    if (tCubAspectLock != null) tCubAspectLock.setVisible(false);
   }
   
   // Shape input textfields (also visible in tab 0, but respect cuboid mode)
@@ -2186,170 +2075,38 @@ void controlEvent(ControlEvent e) {
   }
   // --- Cuboid Mode Events ---
   if (e.isFrom(tCuboidMode)) {
-    cuboidMode = tCuboidMode.getState();
+    // A cuboid has 4 sides. Switching it off goes back to the sides the shape had before;
+    // the diameters were never touched, so they come back as they were too.
+    boolean on = tCuboidMode.getState();
+    if (on && !cuboidMode) uiSidesBeforeCuboid = uiSides;
+    cuboidMode = on;
+    uiSides = on ? 4 : max(3, uiSidesBeforeCuboid);
+    boolean prevSync = _syncingUI;
+    _syncingUI = true;
+    sNSides.setValue(uiSides);
+    _syncingUI = prevSync;
     applyToModel();
     refreshLabels();
     return;
   }
-  if (e.isFrom(sCubTopLen)) {
-    uiCubTopLen = sCubTopLen.getValue();
-    if (tfCubTopLen != null) tfCubTopLen.setText(nf(uiCubTopLen, 0, 1));
-    if (uiCubRatioLock) {
-      uiCubBotLen = uiCubTopLen;
-      sCubBotLen.setValue(uiCubBotLen);
-      if (tfCubBotLen != null) tfCubBotLen.setText(nf(uiCubBotLen, 0, 1));
-    }
-    applyToModel();
-    refreshLabels();
-    return;
-  }
-  if (e.isFrom(sCubTopWid)) {
-    uiCubTopWid = sCubTopWid.getValue();
-    if (tfCubTopWid != null) tfCubTopWid.setText(nf(uiCubTopWid, 0, 1));
-    if (uiCubRatioLock) {
-      uiCubBotWid = uiCubTopWid;
-      sCubBotWid.setValue(uiCubBotWid);
-      if (tfCubBotWid != null) tfCubBotWid.setText(nf(uiCubBotWid, 0, 1));
-    }
-    applyToModel();
-    refreshLabels();
-    return;
-  }
-  if (e.isFrom(sCubBotLen)) {
-    uiCubBotLen = sCubBotLen.getValue();
-    if (tfCubBotLen != null) tfCubBotLen.setText(nf(uiCubBotLen, 0, 1));
-    if (uiCubRatioLock) {
-      uiCubTopLen = uiCubBotLen;
-      sCubTopLen.setValue(uiCubTopLen);
-      if (tfCubTopLen != null) tfCubTopLen.setText(nf(uiCubTopLen, 0, 1));
-    }
-    if (uiCubAspectLock && uiCubTopLen > 0) {
-      float ratio = uiCubTopWid / uiCubTopLen;
-      uiCubBotWid = constrain(uiCubBotLen * ratio, 1, 120);
-      sCubBotWid.setValue(uiCubBotWid);
-      if (tfCubBotWid != null) tfCubBotWid.setText(nf(uiCubBotWid, 0, 1));
-    }
-    applyToModel();
-    refreshLabels();
-    return;
-  }
-  if (e.isFrom(sCubBotWid)) {
-    uiCubBotWid = sCubBotWid.getValue();
-    if (tfCubBotWid != null) tfCubBotWid.setText(nf(uiCubBotWid, 0, 1));
-    if (uiCubRatioLock) {
-      uiCubTopWid = uiCubBotWid;
-      sCubTopWid.setValue(uiCubTopWid);
-      if (tfCubTopWid != null) tfCubTopWid.setText(nf(uiCubTopWid, 0, 1));
-    }
-    if (uiCubAspectLock && uiCubTopWid > 0) {
-      float ratio = uiCubTopLen / uiCubTopWid;
-      uiCubBotLen = constrain(uiCubBotWid * ratio, 1, 120);
-      sCubBotLen.setValue(uiCubBotLen);
-      if (tfCubBotLen != null) tfCubBotLen.setText(nf(uiCubBotLen, 0, 1));
-    }
-    applyToModel();
-    refreshLabels();
-    return;
-  }
+  // The four sizes. A slider or its typing box sets one; with Same as top on, the matching
+  // top or bottom size follows. See setCuboidSize() for why the follower is set quietly.
+  if (e.isFrom(sCubTopLen))  { setCuboidSize(0, sCubTopLen.getValue()); return; }
+  if (e.isFrom(sCubTopWid))  { setCuboidSize(1, sCubTopWid.getValue()); return; }
+  if (e.isFrom(sCubBotLen))  { setCuboidSize(2, sCubBotLen.getValue()); return; }
+  if (e.isFrom(sCubBotWid))  { setCuboidSize(3, sCubBotWid.getValue()); return; }
+  if (e.isFrom(tfCubTopLen)) { setCuboidSizeTyped(0, tfCubTopLen); return; }
+  if (e.isFrom(tfCubTopWid)) { setCuboidSizeTyped(1, tfCubTopWid); return; }
+  if (e.isFrom(tfCubBotLen)) { setCuboidSizeTyped(2, tfCubBotLen); return; }
+  if (e.isFrom(tfCubBotWid)) { setCuboidSizeTyped(3, tfCubBotWid); return; }
   if (e.isFrom(tCubRatioLock)) {
     uiCubRatioLock = tCubRatioLock.getState();
     if (uiCubRatioLock) {
-      uiCubAspectLock = false;
-      if (tCubAspectLock != null) tCubAspectLock.setValue(0);
-      uiCubBotLen = uiCubTopLen;
-      uiCubBotWid = uiCubTopWid;
-      sCubBotLen.setValue(uiCubBotLen);
-      sCubBotWid.setValue(uiCubBotWid);
-      if (tfCubBotLen != null) tfCubBotLen.setText(nf(uiCubBotLen, 0, 1));
-      if (tfCubBotWid != null) tfCubBotWid.setText(nf(uiCubBotWid, 0, 1));
+      showCuboidSize(2, uiCubTopLen);
+      showCuboidSize(3, uiCubTopWid);
     }
     applyToModel();
     refreshLabels();
-    return;
-  }
-  if (e.isFrom(tCubAspectLock)) {
-    uiCubAspectLock = tCubAspectLock.getState();
-    if (uiCubAspectLock) {
-      uiCubRatioLock = false;
-      if (tCubRatioLock != null) tCubRatioLock.setValue(0);
-      if (uiCubTopLen > 0) {
-        float ratio = uiCubTopWid / uiCubTopLen;
-        uiCubBotWid = constrain(uiCubBotLen * ratio, 1, 120);
-        sCubBotWid.setValue(uiCubBotWid);
-        if (tfCubBotWid != null) tfCubBotWid.setText(nf(uiCubBotWid, 0, 1));
-      }
-    }
-    applyToModel();
-    refreshLabels();
-    return;
-  }
-  // --- Cuboid Textfield Events ---
-  if (e.isFrom(tfCubTopLen)) {
-    try {
-      float val = Float.parseFloat(tfCubTopLen.getText());
-      val = constrain(val, 1, 120);
-      uiCubTopLen = val;
-      sCubTopLen.setValue(val);
-      tfCubTopLen.setText(nf(val, 0, 1));
-      if (uiCubRatioLock) {
-        uiCubBotLen = val;
-        sCubBotLen.setValue(val);
-        if (tfCubBotLen != null) tfCubBotLen.setText(nf(val, 0, 1));
-      }
-      applyToModel();
-      refreshLabels();
-    } catch (Exception ex) { tfCubTopLen.setText(nf(uiCubTopLen, 0, 1)); }
-    return;
-  }
-  if (e.isFrom(tfCubTopWid)) {
-    try {
-      float val = Float.parseFloat(tfCubTopWid.getText());
-      val = constrain(val, 1, 120);
-      uiCubTopWid = val;
-      sCubTopWid.setValue(val);
-      tfCubTopWid.setText(nf(val, 0, 1));
-      if (uiCubRatioLock) {
-        uiCubBotWid = val;
-        sCubBotWid.setValue(val);
-        if (tfCubBotWid != null) tfCubBotWid.setText(nf(val, 0, 1));
-      }
-      applyToModel();
-      refreshLabels();
-    } catch (Exception ex) { tfCubTopWid.setText(nf(uiCubTopWid, 0, 1)); }
-    return;
-  }
-  if (e.isFrom(tfCubBotLen)) {
-    try {
-      float val = Float.parseFloat(tfCubBotLen.getText());
-      val = constrain(val, 1, 120);
-      uiCubBotLen = val;
-      sCubBotLen.setValue(val);
-      tfCubBotLen.setText(nf(val, 0, 1));
-      if (uiCubRatioLock) {
-        uiCubTopLen = val;
-        sCubTopLen.setValue(val);
-        if (tfCubTopLen != null) tfCubTopLen.setText(nf(val, 0, 1));
-      }
-      applyToModel();
-      refreshLabels();
-    } catch (Exception ex) { tfCubBotLen.setText(nf(uiCubBotLen, 0, 1)); }
-    return;
-  }
-  if (e.isFrom(tfCubBotWid)) {
-    try {
-      float val = Float.parseFloat(tfCubBotWid.getText());
-      val = constrain(val, 1, 120);
-      uiCubBotWid = val;
-      sCubBotWid.setValue(val);
-      tfCubBotWid.setText(nf(val, 0, 1));
-      if (uiCubRatioLock) {
-        uiCubTopWid = val;
-        sCubTopWid.setValue(val);
-        if (tfCubTopWid != null) tfCubTopWid.setText(nf(val, 0, 1));
-      }
-      applyToModel();
-      refreshLabels();
-    } catch (Exception ex) { tfCubBotWid.setText(nf(uiCubBotWid, 0, 1)); }
     return;
   }
   if (e.isFrom(tPerimLock)) {
@@ -3030,7 +2787,6 @@ void syncUIToSelectedShape() {
     if (sCubBotLen     != null) sCubBotLen.setValue(uiCubBotLen);
     if (sCubBotWid     != null) sCubBotWid.setValue(uiCubBotWid);
     if (tCubRatioLock  != null) tCubRatioLock.setValue(uiCubRatioLock ? 1 : 0);
-    if (tCubAspectLock != null) tCubAspectLock.setValue(uiCubAspectLock ? 1 : 0);
     if (tfCubTopLen    != null) tfCubTopLen.setText(nf(uiCubTopLen, 0, 1));
     if (tfCubTopWid    != null) tfCubTopWid.setText(nf(uiCubTopWid, 0, 1));
     if (tfCubBotLen    != null) tfCubBotLen.setText(nf(uiCubBotLen, 0, 1));
@@ -3512,10 +3268,13 @@ void applyToModel() {
 
   // --- Cuboid mode: only allowed when nSides==4, controlled by toggle ---
   if (nSides != 4) cuboidMode = false;
-  
-  // Update visibility of cuboid controls
-  if (tCuboidMode != null) {
-    tCuboidMode.setVisible(nSides == 4);
+
+  // Keep the toggle showing the mode, quietly, in case something other than a click set it
+  if (tCuboidMode != null && tCuboidMode.getState() != cuboidMode) {
+    boolean prevSync = _syncingUI;
+    _syncingUI = true;
+    tCuboidMode.setValue(cuboidMode ? 1 : 0);
+    _syncingUI = prevSync;
   }
   setCuboidControlsVisible(cuboidMode);
 
@@ -3646,6 +3405,88 @@ float calculatePolygonCircumradius(int numberOfSides, float sideLength) {
   return (float)(sideLength / (2.0 * Math.sin(Math.PI / (double)numberOfSides))); // r_out
 }
 
+// The cuboid's four sizes by index: 0 top X, 1 top Y, 2 bottom X, 3 bottom Y. So (i + 2) % 4
+// is the same direction on the other face.
+float cuboidSize(int i) {
+  switch (i) {
+    case 0:  return uiCubTopLen;
+    case 1:  return uiCubTopWid;
+    case 2:  return uiCubBotLen;
+    default: return uiCubBotWid;
+  }
+}
+
+// Sets one size and, with Same as top on, its partner. Both sliders are set quietly: the
+// partner's own handler would set this one back, which would set the partner again, until
+// the stack ran out -- the old Same size button did exactly that.
+void setCuboidSize(int i, float v) {
+  v = constrain(v, 1, 120);
+  showCuboidSize(i, v);
+  if (uiCubRatioLock) showCuboidSize((i + 2) % 4, v);
+  applyToModel();
+  refreshLabels();
+}
+
+void setCuboidSizeTyped(int i, Textfield tf) {
+  try {
+    setCuboidSize(i, Float.parseFloat(tf.getText()));
+  } catch (Exception ex) {
+    tf.setText(nf(cuboidSize(i), 0, 1));
+  }
+}
+
+// Stores a size and shows it on its slider and typing box, without firing either.
+void showCuboidSize(int i, float v) {
+  switch (i) {
+    case 0:  uiCubTopLen = v; break;
+    case 1:  uiCubTopWid = v; break;
+    case 2:  uiCubBotLen = v; break;
+    default: uiCubBotWid = v; break;
+  }
+  Slider[]    sliders = { sCubTopLen, sCubTopWid, sCubBotLen, sCubBotWid };
+  Textfield[] fields  = { tfCubTopLen, tfCubTopWid, tfCubBotLen, tfCubBotWid };
+  boolean prevSync = _syncingUI;
+  _syncingUI = true;
+  if (sliders[i] != null) sliders[i].setValue(v);
+  if (fields[i]  != null) fields[i].setText(nf(v, 0, 1));
+  _syncingUI = prevSync;
+}
+
+// One of the cuboid's four size sliders, styled like the diameter sliders it replaces.
+Slider addCuboidSlider(String name, String label, int x, int y, int w, int h, float value) {
+  Slider s = cp5__prism.addSlider(name)
+    .setPosition(x, y).setSize(w, h)
+    .setLabel(label)
+    .setColorLabel(0)
+    .setDecimalPrecision(1)
+    .setRange(1, 120)
+    .setValue(value);
+  s.getCaptionLabel()
+    .setFont(uiFont(15))
+    .align(ControlP5.LEFT, ControlP5.TOP_OUTSIDE)
+    .setPaddingX(0)
+    .setPaddingY(6);
+  return s;
+}
+
+// The typing box beside a cuboid size slider.
+Textfield addCuboidField(String name, int x, int y, int w, int h, float value) {
+  Textfield t = cp5__prism.addTextfield(name)
+    .setPosition(x, y)
+    .setSize(w, h)
+    .setLabel("")
+    .setColorBackground(color(255))
+    .setColorForeground(color(200))
+    .setColorActive(color(50, 150, 255))
+    .setColorValue(color(0))
+    .setColorCursor(color(0))
+    .setAutoClear(false)
+    .setText(nf(value, 0, 1))
+    .setFocus(false);
+  t.getCaptionLabel().setVisible(false);
+  return t;
+}
+
 //----------------------------------------------------------
 // Helper: show/hide cuboid-specific controls
 // Reposition the secondary toggle group (hide folds / cut lines / split strip / hollow
@@ -3688,7 +3529,7 @@ void layoutSecondaryToggles() {
   // into its neighbour. ControlP5's getWidth() is just the 22px box, so the caption has to be
   // measured from its text.
   controlP5.Toggle[] advToggles = {
-    tCuboidMode, tHidePanelFolds, tLightGrayCutLines, tSplitStrip, tHollowMode, tKresling };
+    tHidePanelFolds, tLightGrayCutLines, tSplitStrip, tHollowMode, tKresling };
   float colW = (LEFT_SIDEBAR_WIDTH - 2 * SIDEBAR_PADDING) / 2.0;
   int gridRow = 0, gridCol = 0;
   for (int i = 0; i < advToggles.length; i++) {
@@ -3730,14 +3571,17 @@ void setCuboidControlsVisible(boolean vis) {
   if (tfCubBotLen != null) tfCubBotLen.setVisible(show);
   if (tfCubBotWid != null) tfCubBotWid.setVisible(show);
   if (tCubRatioLock != null) tCubRatioLock.setVisible(show);
-  if (tCubAspectLock != null) tCubAspectLock.setVisible(show);
-  // Hide the diameter sliders when cuboid mode is on
+  if (tCuboidMode != null) tCuboidMode.setVisible(inShapeTab);
+  // Hide the diameter sliders, and the sides control, when cuboid mode is on
   boolean showDiam = !vis && inShapeTab;
   if (sTopSize != null) sTopSize.setVisible(showDiam);
   if (sBotSize != null) sBotSize.setVisible(showDiam);
   if (tLock != null) tLock.setVisible(showDiam);
   if (tfTopSize != null) tfTopSize.setVisible(showDiam);
   if (tfBotSize != null) tfBotSize.setVisible(showDiam);
+  if (sNSides != null) sNSides.setVisible(showDiam);
+  if (btnSidesMinus != null) btnSidesMinus.setVisible(showDiam);
+  if (btnSidesPlus != null) btnSidesPlus.setVisible(showDiam);
 
   // Keep the secondary toggle group at the anchor matching the current cuboid state
   layoutSecondaryToggles();

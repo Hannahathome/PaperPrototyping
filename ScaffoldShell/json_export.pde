@@ -20,8 +20,10 @@
 //   scaffold              absent when the shape has no scaffold, otherwise:
 //     export                    "exported", or why this shape has no file of its own
 //     strut_radius_mm, clearance_mm, wall_flap_length_mm, dual_struts, strut_spacing_mm
-//     frame_top_radius_mm, frame_bottom_radius_mm, frame_height_mm   as the .scad builds it
-//     rigs                      w, d, h, off_x, off_y, off_z, rotation, preset, cutout_face,
+//     frame_top_radius_mm, frame_bottom_radius_mm, frame_height_mm   as the .scad builds it;
+//     a cuboid has frame_top_length_mm, frame_top_width_mm, frame_bottom_length_mm and
+//     frame_bottom_width_mm in place of the two radii
+//     rigs                     w, d, h, off_x, off_y, off_z, rotation, preset, cutout_face,
 //                               cutout_size
 //
 // Everything is millimetres, read from ShapeSpec fields, so like FrameSCAD.pde this never
@@ -113,8 +115,15 @@ JSONObject scaffoldRecord(ShapeSpec s, FrameExportEntry e) {
 
   if (frameAvailable(s)) {
     FrameScadParams p = frameScadParamsFor(s);
-    jsonPutRounded(o, "frame_top_radius_mm", p.topR);
-    jsonPutRounded(o, "frame_bottom_radius_mm", p.botR);
+    if (p.box) {
+      jsonPutRounded(o, "frame_top_length_mm", p.topL);
+      jsonPutRounded(o, "frame_top_width_mm", p.topW);
+      jsonPutRounded(o, "frame_bottom_length_mm", p.botL);
+      jsonPutRounded(o, "frame_bottom_width_mm", p.botW);
+    } else {
+      jsonPutRounded(o, "frame_top_radius_mm", p.topR);
+      jsonPutRounded(o, "frame_bottom_radius_mm", p.botR);
+    }
     jsonPutRounded(o, "frame_height_mm", p.height);
   }
 
@@ -145,7 +154,9 @@ final String[] RECORD_KEY_ORDER = {
   "wall_thickness_mm", "cuboid_mm", "top_length", "top_width", "bottom_length", "bottom_width",
   "edges_mm", "top", "bottom", "tab_depth_mm", "flap_depth_mm", "marker_id", "color",
   "scaffold", "export", "strut_radius_mm", "clearance_mm", "wall_flap_length_mm", "dual_struts",
-  "strut_spacing_mm", "frame_top_radius_mm", "frame_bottom_radius_mm", "frame_height_mm",
+  "strut_spacing_mm", "frame_top_radius_mm", "frame_bottom_radius_mm",
+  "frame_top_length_mm", "frame_top_width_mm", "frame_bottom_length_mm", "frame_bottom_width_mm",
+  "frame_height_mm",
   "rigs", "preset", "w", "d", "h", "off_x", "off_y", "off_z", "rotation",
   "cutout_face", "cutout_size"
 };

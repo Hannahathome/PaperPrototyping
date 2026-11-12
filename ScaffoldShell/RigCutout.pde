@@ -27,9 +27,16 @@
 // The frustum flat-height caveat in SidePanelFrame.pde's header applies: SF v is flat-pattern
 // millimetres, and the 3D slant is mapped onto it as a fraction, the same way it maps back.
 //
-// Scope: whatever frameAvailable() allows (uniform regular frustums). Wall cutouts are also
-// refused on kresling walls, as sidePanelFrameAvailable() refuses wall connections, because
-// drawPlan() shears the whole strip.
+// Scope: whatever frameAvailable() allows (uniform regular frustums and cuboids). Wall
+// cutouts are also refused on kresling walls, as sidePanelFrameAvailable() refuses wall
+// connections, because drawPlan() shears the whole strip.
+//
+// CUBOIDS. LidFrame and SidePanelFrame refuse cuboids, because connections do not handle
+// them yet, so the cutouts reach a cuboid's paper by their own two routes, which follow the
+// same conventions: the rectangular top lid is drawn with edge 0 (a length) along its top
+// side, so LF is the lid's centre with u = FS x and v = FS y, exactly as above; and the
+// strip is walked panel by panel with each panel's own width and height
+// (perEdgePanelPosesPx in SidePanelFrame.pde).
 
 final int RIG_CUT_NONE  = 0;
 final int RIG_CUT_TOP   = 1;
@@ -112,7 +119,8 @@ RigCutoutPlan planRigCutout(ShapeSpec s, FrameGeometry g, int i) {
     p.sizeMM  = rigCutoutSize(r, w, dp);
     p.gapMM   = d.height / 2 - (cz + h / 2);
     p.reaches = p.gapMM <= tol;
-    PVector[] lid = regularPolygonMM(d.n, s.cylinder.x / d.n, 0);
+    PVector[] lid = d.box ? frameRectCorners(d.topL / 2, d.topW / 2, 0)
+                          : regularPolygonMM(d.n, s.cylinder.x / d.n, 0);
     p.fits = squareInPoly(lid, p.localMM, p.rotDeg, p.sizeMM + 2 * RIG_CUT_FOLD_MARGIN_MM);
 
     p.status = rigCutoutDistanceText("the top lid", p.gapMM, tol);
@@ -125,7 +133,8 @@ RigCutoutPlan planRigCutout(ShapeSpec s, FrameGeometry g, int i) {
     return p;
   }
 
-  if (!sidePanelFrameAvailable(s)) {
+  // frameAvailable() has already refused every other strip sidePanelFrameAvailable() would.
+  if (kreslingMode) {
     p.status = "No cut: kresling walls cannot take a cutout.";
     return p;
   }
@@ -177,12 +186,12 @@ RigCutoutPlan planRigCutout(ShapeSpec s, FrameGeometry g, int i) {
   // The face centre, dropped onto the panel plane, in SF.
   PVector Q  = PVector.add(P, PVector.mult(best.n, PVector.sub(best.c, P).dot(best.n)));
   PVector dd = PVector.sub(Q, best.c);
-  float flatH = rigPanelFlatHeightMM(s, d.n);
+  float flatH = rigPanelFlatHeightMM(s, d, best.index);
   p.localMM = new PVector(dd.dot(best.u), dd.dot(best.v) * flatH / best.slant);
   p.rotDeg  = 0;   // the rig stands upright and faces the panel, so the square sits square
 
-  float b = s.cylinder.y / d.n / 2 - RIG_CUT_FOLD_MARGIN_MM;
-  float t = s.cylinder.x / d.n / 2 - RIG_CUT_FOLD_MARGIN_MM;
+  float b = best.bottomEdge / 2 - RIG_CUT_FOLD_MARGIN_MM;
+  float t = best.topEdge / 2 - RIG_CUT_FOLD_MARGIN_MM;
   float hh = flatH / 2 - RIG_CUT_FOLD_MARGIN_MM;
   PVector[] panelPoly = {
     new PVector(-b, -hh), new PVector(b, -hh), new PVector(t, hh), new PVector(-t, hh)
@@ -236,21 +245,20 @@ class RigPanelFS {
   PVector c;        // median midpoint -- SF (0,0)
   PVector u, v, n;  // along the median, up the panel, outward
   float slant;      // true slant height (mm)
+  float bottomEdge, topEdge;   // the panel's two parallel edges (mm)
 }
 
 // Panel k of the shell itself (no clearance), built like sidePanelBasis3D().
 RigPanelFS rigPanelFS(FrameDims d, int k) {
   int n = d.n, j = (k + 1) % n;
-  float a0 = radians(k * 360.0 / n + d.phaseDeg);
-  float a1 = radians(j * 360.0 / n + d.phaseDeg);
-  float zb = -d.height / 2, zt = d.height / 2;
-  PVector B0 = new PVector(d.botR * cos(a0), d.botR * sin(a0), zb);
-  PVector B1 = new PVector(d.botR * cos(a1), d.botR * sin(a1), zb);
-  PVector T0 = new PVector(d.topR * cos(a0), d.topR * sin(a0), zt);
-  PVector T1 = new PVector(d.topR * cos(a1), d.topR * sin(a1), zt);
+  PVector[] bot = frameShellCorners(d, false), top = frameShellCorners(d, true);
+  PVector B0 = bot[k], B1 = bot[j];
+  PVector T0 = top[k], T1 = top[j];
 
   RigPanelFS p = new RigPanelFS();
   p.index = k;
+  p.bottomEdge = PVector.dist(B0, B1);
+  p.topEdge    = PVector.dist(T0, T1);
   p.c = PVector.add(PVector.add(B0, B1), PVector.add(T0, T1)).mult(0.25);
   PVector mL = PVector.add(B0, T0).mult(0.5), mR = PVector.add(B1, T1).mult(0.5);
   PVector mB = PVector.add(B0, B1).mult(0.5), mT = PVector.add(T0, T1).mult(0.5);
@@ -265,9 +273,21 @@ RigPanelFS rigPanelFS(FrameDims d, int k) {
 
 // The panel's height as DRAWN FLAT, mirroring Param.pde's cylinderH_px (see the frustum note
 // in SidePanelFrame.pde's header). mm.
-float rigPanelFlatHeightMM(ShapeSpec s, int n) {
-  float edgeDiff = abs(s.cylinder.y - s.cylinder.x) / n;
-  return sqrt(sq(s.cylinder.z) + sq(edgeDiff));
+//
+// A cuboid's panels mirror Param.pde's edgeSlantH_px instead: a length panel leans by half
+// the change in width, a width panel by half the change in length, and that lean is added
+// on top of the height above -- so a cuboid's flat panel is taller than its 3D wall unless
+// its perimeter stays the same top to bottom. As there, the cut file is what this follows.
+// A split strip draws every panel at panel 0's height, so that is used here too.
+float rigPanelFlatHeightMM(ShapeSpec s, FrameDims d, int k) {
+  float edgeDiff = abs(s.cylinder.y - s.cylinder.x) / d.n;
+  float flatH = sqrt(sq(s.cylinder.z) + sq(edgeDiff));
+  if (d.box) {
+    if (s.splitStrip) k = 0;
+    float lean = (k % 2 == 0) ? (d.topW - d.botW) / 2 : (d.topL - d.botL) / 2;
+    return sqrt(sq(flatH) + sq(lean));
+  }
+  return flatH;
 }
 
 // ---------------------------------------------------------------------------
@@ -317,10 +337,15 @@ void drawRigCutoutSquare(RigCutoutPlan p) {
 // Call inside the TOP lid's matrix in drawPlan(), before the lid outline, like
 // drawConnectionSlits(): inner cuts go first so the sheet stays anchored.
 void drawRigCutoutsOnTopLid() {
-  if (!lidFrameAvailable()) return;
+  boolean box = cuboidMode && nSides == 4 && edgeTop_px != null;
+  if (!lidFrameAvailable() && !box) return;
   for (RigCutoutPlan p : rigCutoutsForDrawnShape()) {
     if (!p.onLid || !p.reaches) continue;
-    PVector at = lidLocalToPiecePx(p.localMM, true);
+    // drawRectangularLid() puts the rectangle at (tab, tab), so its centre is half a side on.
+    PVector at = box
+      ? new PVector(tabDepth_px + edgeTop_px[0] / 2 + p.localMM.x * MM_current,
+                    tabDepth_px + edgeTop_px[1] / 2 + p.localMM.y * MM_current)
+      : lidLocalToPiecePx(p.localMM, true);
     pushMatrix();
     translate(at.x, at.y);
     rotate(radians(p.rotDeg));
@@ -331,11 +356,12 @@ void drawRigCutoutsOnTopLid() {
 
 // Call at the strip origin, where drawConnectionSlitsOnPanels() is called.
 void drawRigCutoutsOnPanels() {
-  if (!sidePanelFrameAvailable()) return;
+  boolean box = cuboidMode && nSides == 4 && edgeSlantH_px != null;
+  if (!sidePanelFrameAvailable() && !box) return;
   SidePanelPose[] poses = null;
   for (RigCutoutPlan p : rigCutoutsForDrawnShape()) {
     if (p.onLid || !p.reaches || p.panel < 0) continue;
-    if (poses == null) poses = sidePanelPosesPx();
+    if (poses == null) poses = box ? cuboidPanelPosesPx() : sidePanelPosesPx();
     if (poses == null || p.panel >= poses.length || poses[p.panel] == null) continue;
     SidePanelPose pose = poses[p.panel];
     pushMatrix();

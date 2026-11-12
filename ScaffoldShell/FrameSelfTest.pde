@@ -19,6 +19,9 @@
 //   6. An export writes one file per different scaffold, counted on disk, and says so when
 //      a scaffold shares a file or is left out.
 //   7. The dimensions file, loaded back, rebuilds the same shapes and the same scaffolds.
+//   8. Cuboids: the cage sits in the shell's corners, the .scad builds the same box, the
+//      cutouts land on the rig's face, and the Cuboid toggle swaps the sides and diameters
+//      for X and Y and back.
 //
 // Enable with FRAME_SELFTEST = true and run the sketch: it prints a pass/fail table and
 // exits. Same shape as AUDIT_MODE in LayoutAudit.pde.
@@ -38,6 +41,7 @@ void frameSelfTestRun() {
   frameTestTabInteraction();
   frameTestExportSet();
   frameTestDimensionRecord();
+  frameTestCuboids();
   println("[FRAME SELFTEST] " + (_ftChecks - _ftFails) + "/" + _ftChecks + " passed"
         + (_ftFails == 0 ? "" : "   <-- " + _ftFails + " FAILED"));
   exit();
@@ -613,4 +617,252 @@ void frameTestDimensionRecord() {
   selectedShapeIdx = realSelected;
   loadGlobalsFrom(shapes.get(selectedShapeIdx));
   setParams(false);
+}
+
+// 8. Cuboids. Everything a regular shell is checked for above, for a shell whose top and
+//    bottom are rectangles -- including ones that taper in one direction only, where a
+//    length and a width wall lean differently.
+ShapeSpec ftCuboid(float topL, float topW, float botL, float botW, float h) {
+  ShapeSpec s = new ShapeSpec();
+  s.nSides     = 4;
+  s.uiSides    = 4;
+  s.cuboidMode = true;
+  s.uiCubTopLen = topL; s.uiCubTopWid = topW;
+  s.uiCubBotLen = botL; s.uiCubBotWid = botW;
+  s.cylinder = new PVector(2 * (topL + topW), 2 * (botL + botW), h);
+  s.frame.enabled = true;
+  return s;
+}
+
+// The cuboid's globals, with its edge arrays filled from its X and Y as applyToModel() does.
+void ftLoadCuboid(ShapeSpec s) {
+  loadGlobalsFrom(s);
+  syncEdgesFromPerimeters();
+  setParams(false);
+}
+
+void frameTestCuboids() {
+  println(" cuboids");
+  ArrayList<ShapeSpec> realShapes = shapes;
+  int realSelected = selectedShapeIdx;
+  int realTab = sidebar.activeMainTab;
+
+  // --- the cage against the shell's own corners ---
+  float[][] sizes = { {40, 40, 40, 40}, {60, 40, 60, 40}, {50, 40, 70, 40}, {40, 50, 60, 30} };
+  for (float[] sz : sizes) {
+    ShapeSpec s = ftCuboid(sz[0], sz[1], sz[2], sz[3], 50);
+    s.frame.strutRadius = 0;    // no inset, so the cage sits exactly on the shell
+    s.frame.clearanceMM = 0;
+    ftLoadCuboid(s);
+    PVector[] bot = getPolygonVertices(false), top = getPolygonVertices(true);
+    FrameGeometry g = buildFrameGeometry(s);
+    float worst = 0;
+    for (int i = 0; i < 4; i++) {
+      PVector fb = frameToLocalPx(g.cageWallStruts.get(i)[0]);
+      PVector ft = frameToLocalPx(g.cageWallStruts.get(i)[1]);
+      worst = max(worst, max(dist(fb.x, fb.z, bot[i].x, bot[i].z), dist(ft.x, ft.z, top[i].x, top[i].z)));
+    }
+    ftCheck("top " + nf(sz[0], 0, 0) + "x" + nf(sz[1], 0, 0) + ", bottom " + nf(sz[2], 0, 0) + "x"
+          + nf(sz[3], 0, 0) + ": cage corners on the shell's", worst < 0.01,
+            "worst gap " + nf(worst, 0, 5) + " px");
+  }
+
+  // --- clearance and strut radius, square off each wall ---
+  ShapeSpec s = ftCuboid(50, 40, 70, 40, 50);   // tapers along X only; strut 1, clearance 0.4
+  FrameGeometry g = buildFrameGeometry(s);
+  ftNear("inset: bottom corner 0 x", g.cageVertices.get(0).x, -(35 - 1.4), 1e-3);
+  ftNear("inset: bottom corner 0 y", g.cageVertices.get(0).y, -(20 - 1.4), 1e-3);
+  ftNear("inset: top corner 2 x", g.cageWallStruts.get(2)[1].x, 25 - 1.4, 1e-3);
+  ftNear("inset: top corner 2 y", g.cageWallStruts.get(2)[1].y, 20 - 1.4, 1e-3);
+
+  // --- the written file builds the same box ---
+  String[] mainLines   = loadStrings(FRAME_TEMPLATE_MAIN);
+  String[] helperLines = loadStrings(FRAME_TEMPLATE_HELPER);
+  s.frame.rigs.add(new Rig(24, 24, 31.5, 0, 0, 5, 0));
+  ftSetShapes(s);
+  String path = "output/selftest_cuboid.scad";
+  ftCheck("cuboid: writeFrameSCAD returned true", writeFrameSCAD(s, 0, path, mainLines, helperLines), "");
+  String[] out = loadStrings(path);
+  new java.io.File(sketchPath(path)).delete();
+  FrameScadParams p = frameScadParamsFor(s);
+  ftNear("cuboid: frame length is the shell's less two clearances", p.botL, 70 - 0.8, 1e-4);
+  String wantCall = "boxCage(" + scadNum(p.botL) + ", " + scadNum(p.botW) + ", " + scadNum(p.topL) + ", "
+                  + scadNum(p.topW) + ", " + scadNum(p.height) + ", " + scadNum(p.strutRadius) + ", true);";
+  String wantSlab = "cube([" + scadNum(p.topL + 2 * p.strutRadius) + ", " + scadNum(p.topW + 2 * p.strutRadius);
+  boolean callsBox = false, callsFrustum = false, definesBox = false, slab = false;
+  if (out != null) {
+    for (String line : out) {
+      String code = line.contains("//") ? line.substring(0, line.indexOf("//")) : line;
+      if (code.contains(wantCall)) callsBox = true;
+      if (trim(code).startsWith("frustumCage(")) callsFrustum = true;
+      if (code.contains("module boxCage")) definesBox = true;
+      if (code.contains(wantSlab)) slab = true;
+    }
+  }
+  ftCheck("cuboid: calls boxCage() with the preview's numbers", callsBox, wantCall);
+  ftCheck("cuboid: does not call frustumCage()", !callsFrustum, "");
+  ftCheck("cuboid: defines boxCage()", definesBox, "");
+  ftCheck("cuboid: trims the top with a slab its own shape", slab, wantSlab);
+  ftCheck("cuboid: balanced braces", out != null && frameCountChar(out, '{') == frameCountChar(out, '}'), "");
+  // What boxCage() computes for corner 0, against the preview's corner 0.
+  ftNear("cuboid: .scad corner 0 x is the preview's", -(p.botL / 2 - p.strutRadius), g.cageVertices.get(0).x, 1e-4);
+
+  // --- what it refuses ---
+  FrameScadParams tiny = frameScadParamsFor(ftCuboid(2, 2, 30, 30, 50));
+  ftCheck("cuboid: a 2 mm side is refused", !tiny.valid && tiny.problem.contains("width"), tiny.problem);
+  ShapeSpec five = ftCuboid(50, 40, 70, 40, 50);
+  five.nSides = 5;
+  ftCheck("cuboid mode at 5 sides gets no scaffold", !frameAvailable(five), frameUnavailableReason(five));
+
+  // --- one file per different scaffold ---
+  ftSetShapes(ftCuboid(50, 40, 70, 40, 50), ftCuboid(50, 40, 70, 40, 50));
+  ftCheck("cuboid: identical cuboids, one file", ftExportFiles() == 1, "");
+  ftSetShapes(ftCuboid(50, 40, 70, 40, 50), ftCuboid(40, 50, 40, 70, 50));
+  ftCheck("cuboid: the same cuboid turned 90 degrees, two files", ftExportFiles() == 2, "");
+
+  // --- the dimensions record ---
+  ftSetShapes(ftCuboid(50, 40, 70, 40, 50));
+  JSONObject rec = shapeRecord(frameExportPlan().get(0)).getJSONObject("scaffold");
+  ftCheck("cuboid record: frame lengths, not radii",
+          rec.hasKey("frame_bottom_length_mm") && !rec.hasKey("frame_top_radius_mm"), "");
+  ftNear("cuboid record: frame bottom length", rec.getFloat("frame_bottom_length_mm"), 69.2, 1e-4);
+
+  // --- cutouts: top lid ---
+  s = ftCuboid(50, 40, 70, 40, 50);
+  ftSetShapes(s);
+  ftLoadCuboid(s);
+  Rig r = new Rig(24, 24, 31.5, 5, -3, 0, 0);
+  s.frame.rigs.add(r);
+  g = buildFrameGeometry(s);
+  r.offZ = (s.cylinder.z / 2 - 1) - (g.zBottom - 2 * s.frame.strutRadius + r.h);
+  r.cutoutFace = RIG_CUT_TOP;
+  RigCutoutPlan cp = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("cuboid top: reaches the lid and fits", cp != null && cp.onLid && cp.reaches && cp.fits,
+          cp == null ? "null" : cp.status);
+  if (cp != null) {
+    PVector want = frameToLocalPx(new PVector(r.offX, r.offY, s.cylinder.z / 2));
+    ftNear("cuboid top: lands over the rig", PVector.dist(lidLocalTo3D(cp.localMM, true), want), 0, 0.01);
+  }
+  r.offX = 20;   // 20 + 8 + 2 mm of fold margin is past the top's 25 mm half length
+  cp = planRigCutout(s, buildFrameGeometry(s), 0);
+  ftCheck("cuboid top: past the lid's edge does not fit", cp != null && cp.reaches && !cp.fits,
+          cp == null ? "null" : cp.status);
+
+  // --- cutouts: every wall. The X walls lean (the length shrinks upward), the Y walls stand
+  //     straight. Each rig is pushed to 1.5 mm off its wall at the nearer end of its face. ---
+  r.offX = 0; r.offY = 0; r.offZ = 5; r.rot = 0;
+  g = buildFrameGeometry(s);
+  float zLo = g.rigBoxes.get(0)[2] - r.h / 2, zHi = zLo + r.h;
+  float H = s.cylinder.z;
+  int[]     faces  = { RIG_CUT_POS_X, RIG_CUT_NEG_X, RIG_CUT_POS_Y, RIG_CUT_NEG_Y };
+  int[]     panels = { 1, 3, 2, 0 };
+  float[][] dirs   = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+  for (int k = 0; k < faces.length; k++) {
+    boolean alongX = dirs[k][0] != 0;
+    float topHalf = (alongX ? s.uiCubTopLen : s.uiCubTopWid) / 2;
+    float botHalf = (alongX ? s.uiCubBotLen : s.uiCubBotWid) / 2;
+    float slope = (botHalf - topHalf) / H;                 // how far the wall comes in per mm up
+    float cosT  = 1 / sqrt(1 + slope * slope);
+    float wallAt = min((topHalf + botHalf) / 2 - zLo * slope, (topHalf + botHalf) / 2 - zHi * slope);
+    float off = wallAt - (alongX ? r.w : r.d) / 2 - 1.5 / cosT;
+    r.offX = dirs[k][0] * off;
+    r.offY = dirs[k][1] * off;
+    r.cutoutFace = faces[k];
+    g = buildFrameGeometry(s);
+    cp = planRigCutout(s, g, 0);
+    String name = "cuboid " + RIG_CUT_FACE_NAMES[faces[k]];
+    ftCheck(name + ": touches wall panel " + (panels[k] + 1),
+            cp != null && !cp.onLid && cp.reaches && cp.panel == panels[k], cp == null ? "null" : cp.status);
+    if (cp == null || cp.panel < 0) continue;
+    ftNear(name + ": gap", cp.gapMM, 1.5, 1e-3);
+
+    // The square, put on the sketch's own 3D wall, must sit on that wall straight out from
+    // the face's centre. The flat panel is edgeSlantH_px tall, so v is scaled to the 3D slant.
+    SidePanelBasis b = sidePanelBasis3D(cp.panel);
+    float vScale = b.slantPx / edgeSlantH_px[cp.panel];
+    PVector got = new PVector(b.c.x, b.c.y, b.c.z);
+    got.add(PVector.mult(b.u, cp.localMM.x * MM_current));
+    got.add(PVector.mult(b.v, cp.localMM.y * MM_current * vScale));
+    float[] box = g.rigBoxes.get(0);
+    PVector face = frameToLocalPx(new PVector(box[0] + dirs[k][0] * r.w / 2, box[1] + dirs[k][1] * r.d / 2, box[2]));
+    float offPlane = abs(PVector.sub(got, b.c).dot(b.n));
+    float sideways = PVector.sub(got, face).cross(b.n).mag();
+    ftCheck(name + ": lands on the wall over the face", offPlane < 0.01 && sideways < 0.01,
+            "off the wall " + nf(offPlane, 0, 4) + " px, off the face " + nf(sideways, 0, 4) + " px");
+  }
+
+  // The 3D view's hole for the last of those (-Y), straight out from the same face.
+  ArrayList<CutoutHole3D> holes = cutoutHoles3D(0, getPolygonVertices(false), getPolygonVertices(true));
+  ftCheck("cuboid 3D: one hole, in wall panel 1", holes.size() == 1 && holes.get(0).face == 0,
+          holes.size() + " holes");
+  if (holes.size() == 1) {
+    PVector mid = new PVector();
+    for (PVector v : holes.get(0).quad) mid.add(v);
+    mid.div(4);
+    SidePanelBasis b0 = sidePanelBasis3D(0);
+    float[] box0 = g.rigBoxes.get(0);
+    PVector face0 = frameToLocalPx(new PVector(box0[0], box0[1] - r.d / 2, box0[2]));
+    ftNear("cuboid 3D: the hole is straight out from the face",
+           PVector.sub(mid, face0).cross(b0.n).mag(), 0, 0.01);
+  }
+
+  // A long, narrow cuboid: its 18 mm end wall is far narrower than perimeter / 4 (49 mm), so a
+  // 16 mm window plus its fold margins fits the long wall but not the end wall.
+  ShapeSpec slim = ftCuboid(80, 18, 80, 18, 50);
+  Rig sr = new Rig(10, 10, 20, 0, 0, 5, 0);
+  sr.cutoutSize = 1;
+  slim.frame.rigs.add(sr);
+  ftSetShapes(slim);
+  ftLoadCuboid(slim);
+  sr.cutoutFace = RIG_CUT_POS_X;
+  sr.offX = 40 - 5 - 1.5;
+  cp = planRigCutout(slim, buildFrameGeometry(slim), 0);
+  ftCheck("cuboid: a 16 mm window does not fit the 18 mm end wall",
+          cp != null && cp.panel == 1 && cp.reaches && !cp.fits, cp == null ? "null" : cp.status);
+  sr.cutoutFace = RIG_CUT_POS_Y;
+  sr.offX = 0;
+  sr.offY = 9 - 5 - 1.5;
+  cp = planRigCutout(slim, buildFrameGeometry(slim), 0);
+  ftCheck("cuboid: but does fit the 80 mm long wall",
+          cp != null && cp.panel == 2 && cp.reaches && cp.fits, cp == null ? "null" : cp.status);
+
+  // --- the Cuboid toggle on the Shape tab ---
+  sidebar.activeMainTab = MAIN_TAB_SHAPE;
+  ShapeSpec hex = new ShapeSpec();
+  hex.nSides = 6; hex.uiSides = 6;
+  hex.uiTopW = 45; hex.uiBotW = 45;
+  ftSetShapes(hex);
+  selectedShapeIdx = 0;
+  syncUIToSelectedShape();
+  applyToModel();
+  float hexPerim = shapes.get(0).cylinder.x;
+
+  tCuboidMode.setValue(1);
+  ftCheck("toggle on: a cuboid with 4 sides", cuboidMode && uiSides == 4 && shapes.get(0).cuboidMode
+          && shapes.get(0).nSides == 4, "sides " + uiSides);
+  ftCheck("toggle on: X and Y replace the sides and diameters",
+          sCubTopLen.isVisible() && sCubBotWid.isVisible() && tCubRatioLock.isVisible()
+          && !sNSides.isVisible() && !sTopSize.isVisible() && tCuboidMode.isVisible(), "");
+
+  tCubRatioLock.setValue(1);
+  ftCheck("same as top: the bottom takes the top's size",
+          uiCubBotLen == uiCubTopLen && uiCubBotWid == uiCubTopWid, "");
+  sCubTopLen.setValue(55);
+  ftCheck("same as top: and follows it", uiCubBotLen == 55 && shapes.get(0).uiCubBotLen == 55,
+          "bottom X " + uiCubBotLen);
+  tCubRatioLock.setValue(0);
+  sCubTopLen.setValue(60);
+  ftCheck("same as top off: the bottom stays", uiCubBotLen == 55, "bottom X " + uiCubBotLen);
+
+  tCuboidMode.setValue(0);
+  ftCheck("toggle off: back to 6 sides", !cuboidMode && uiSides == 6 && shapes.get(0).nSides == 6,
+          "sides " + uiSides);
+  ftNear("toggle off: back to the diameter it had", shapes.get(0).cylinder.x, hexPerim, 1e-3);
+  ftCheck("toggle off: the sides and diameters are back",
+          sNSides.isVisible() && sTopSize.isVisible() && !sCubTopLen.isVisible() && !tCubRatioLock.isVisible(), "");
+
+  sidebar.activeMainTab = realTab;
+  shapes = realShapes;
+  selectedShapeIdx = realSelected;
+  syncUIToSelectedShape();
 }

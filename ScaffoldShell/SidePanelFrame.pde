@@ -203,6 +203,57 @@ SidePanelPose[] sidePanelPosesPx() {
   return out;
 }
 
+// The same for a cuboid's strip, whose panels differ in width and height. Replays
+// drawTrapezoidsPerEdge(): each panel turns by its own height, and the median midpoint is
+// still (bottom/2, h/2) because every panel is isosceles. A split strip is drawn at panel
+// 0's height throughout (drawTrapezoidsPerEdge_Range), so it is replayed at that height.
+// The rest of this file still refuses cuboids; only the rig cutouts use this.
+SidePanelPose[] cuboidPanelPosesPx() {
+  int n = min(edgeTop_px.length, min(edgeBot_px.length, edgeSlantH_px.length));
+  SidePanelPose[] out = new SidePanelPose[n];
+  boolean split = splitStrip && n >= 4;
+  float[] h = new float[n];
+  for (int i = 0; i < n; i++) h[i] = split ? edgeSlantH_px[0] : edgeSlantH_px[i];
+
+  if (!split) {
+    _fillPerEdgePanelPoses(out, 0, n, h, 0, 0, 0);
+    return out;
+  }
+  int splitAt = (int)ceil(n / 2.0);
+  float splitSpacing = getStripHeight() + tabDepth_px * 2 + 10 * MM_current;
+  _fillPerEdgePanelPoses(out, 0, splitAt, h,
+                         uiSplitHalf1OffsetX * MM_current,
+                         uiSplitHalf1OffsetY * MM_current,
+                         radians(uiSplitHalf1Rotation));
+  _fillPerEdgePanelPoses(out, splitAt, n, h,
+                         uiSplitHalf2OffsetX * MM_current,
+                         splitSpacing + uiSplitHalf2OffsetY * MM_current,
+                         radians(uiSplitHalf2Rotation));
+  return out;
+}
+
+void _fillPerEdgePanelPoses(SidePanelPose[] out, int panelStart, int panelEnd, float[] h,
+                            float originX, float originY, float originRot) {
+  Affine T = new Affine();
+  T.translate(originX, originY);
+  T.rotate(originRot);
+  for (int i = panelStart; i < panelEnd; i++) {
+    float wTop = max(0.001f, edgeTop_px[i]);
+    float wBot = max(0.001f, edgeBot_px[i]);
+    SidePanelPose p = new SidePanelPose();
+    p.index    = i;
+    p.originPx = T.apply(wBot / 2.0, h[i] / 2.0);
+    p.rotRad   = atan2(T.s, T.c);
+    out[i] = p;
+    if (i < panelEnd - 1) {
+      float wTopNext = max(0.001f, edgeTop_px[i + 1]);
+      float wBotNext = max(0.001f, edgeBot_px[i + 1]);
+      T.translate(wBot, 0);
+      T.rotate(rotNeeded(wTop, wBot, wTopNext, wBotNext, h[i]));
+    }
+  }
+}
+
 // SF mm on panel `pose` -> mm in the shape's pattern space. The inverse of what the flat
 // drag needs, and the forward map the pick test compares against.
 PVector sidePanelLocalToPatternMM(SidePanelPose pose, PVector localMM) {
